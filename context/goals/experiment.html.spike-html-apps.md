@@ -74,7 +74,7 @@ scratch.
 
 ## Progress
 
-slices 5/5 committed · checkpoints 2/3: A foundation v0.1.0 (PR #1, 12f4d53), B components v0.1.0 (PR #1, 9a4392e) released; C sdk awaiting the architect · standards done (all) · spec done, no gaps (layers); root spec — · editor —
+slices 5/5 committed · checkpoints 3/3 released: foundation (12f4d53), components (9a4392e), sdk (047e5d8), each v0.1.0 · standards done (all) · spec done, no gaps (layers); root running · editor —
 
 ## Decisions
 
