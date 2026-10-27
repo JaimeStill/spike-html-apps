@@ -38,9 +38,12 @@ state and profile, so the profiles, the menu, and a screenshot baseline must exi
    prints zero seconds, never "".
 6. The registry symbol, the keys family's symbol and settings key, and the preferences storage
    key are all named "spike-html-apps-foundation.<name>". No "spike-html-design." name remains.
-7. The lean page entry applies only the default profiles. The full page entry (page-full.css)
-   adds Primer, Catppuccin, Everforest, compact, and sans. Each entry's registration module
-   (register.js, register-full.js) lists exactly the profiles that entry ships.
+7. Each built-in profile is a unit: its sheet and its own registration module, at the public
+   subpaths ./profiles/<facet>/<name>.css and ./profiles/<facet>/<name>.js. A page composes the
+   lean page entry with whichever units it links. The full page entry (page-full.css) and its
+   registration module (register-full.js) are plain aggregators of the built-in units: they
+   import them and define nothing a profile needs in order to register or apply. The lean page
+   entry and register.js carry only the defaults.
 8. Every profile computes as v0.7.0's does, in light and in dark.
 9. Preferences: a stored choice applies before first paint. A profile name the page didn't
    register falls back to that facet's default and stays stored. Blocked storage reads as
@@ -65,7 +68,22 @@ state and profile, so the profiles, the menu, and a screenshot baseline must exi
     with focus visible: 36 captures. Images render into a temporary directory, are shown inline
     with kitty icat, and are removed on exit. check never runs the task; no screenshot is
     committed.
-15. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
+16. Extension: a profile from outside the package joins exactly as a built-in unit does, by
+    linking its sheet after the page entry and importing its registration module. It then
+    appears in the theme menu and applies by attribute and by stored choice, with no change to
+    the foundation.
+17. ./conformance exports check(facet, name) and RULES for all three facets, read through
+    computed values only. Color has v0.7.0's seven rules. Space and type each have the
+    structural rules (tokens, facet-only, layer, specificity, registered) plus one derived rule:
+    for space, the nine-step scale ascends strictly from its base; for type, the step scale
+    ascends strictly and each font stack resolves to a family. Every built-in profile passes. A
+    fixture profile breaking each rule fails by that rule's name.
+18. spike-html-apps-noctis, a standalone repository outside the layers, ships one color profile,
+    "noctis": Noctis Hibernus as the light half and Noctis Obscuro as the dark half, credited as
+    the built-in profiles credit their upstreams. It installs foundation v0.2.0 by tag, and its
+    tests prove behavior 16 for noctis and that check("color", "noctis") passes. It releases
+    v0.1.0.
+19. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
     size and time with the foundation's formatBytes and formatDateTime, with output unchanged.
     Every existing component case holds under every profile.
 
@@ -76,50 +94,59 @@ in the unit tier, and the pages, entries, and modules in the pinned headless bro
 
 Foundation:
 1. Upgrade: remove the typescript-eslint 8.72.1 age exclusions. The slice is done when install,
-   currency, and check pass after 2026-10-27T17:09:43Z. If it starts before then, it waits, and
-   the other foundation slices can run first. Never pin back. It lands before the checkpoint.
+   currency, and check pass after 2026-10-27T17:09:43Z.
 2. Formatters (behaviors 1–5): the TypeScript lib moves to es2025 for Intl.DurationFormat, the
    "spike-html-apps implements them" header is rewritten, and the README drops "types only".
-   Demo: each formatter is called from the demo page.
-3. Names (behavior 6). Demo: the keys demo binds and saves settings under the new names.
-4. Profiles and the full entry (behaviors 7–8). Demo: the tools page switches through each
-   profile by attribute.
-5. Preferences, `<sl-theme-menu>`, and the menu (behaviors 9–13). Demo: the tools page's Theme
-   button opens the menu, and the choice survives a reload and syncs to a second tab.
-6. Screenshots (behavior 14, foundation part), version 0.2.0, and a CHANGELOG [0.2.0] section.
+3. Names (behavior 6).
+4. Profiles and the full entry (behavior 8).
+5. Preferences, `<sl-theme-menu>`, and the menu (behaviors 9–13).
+6. Profile units (behaviors 7 and 16): each built-in profile becomes a sheet plus a registration
+   module at ./profiles/<facet>/<name>, and the full entry and register-full become aggregators
+   of them. Demo: a page links page.css plus one unit, and the menu lists it.
+7. Conformance for color, space, and type (behavior 17), with fixtures that conform and fixtures
+   that break each rule.
+8. Screenshots (behavior 14, foundation part), version 0.2.0, and a CHANGELOG [0.2.0] section.
    - **CHECKPOINT:** the foundation's checkpoint brief, with its 48 captures. Before asking for
-     acceptance, the session stops for the architect's review: it runs `mise run screenshots` inline, gives
-     the branch's diff against `main` with the files behind each capture (the menu, the
-     preferences, the profiles, the tools page), and waits while the architect looks through them. Only
-     after that review does the architect's acceptance authorize the merge and the v0.2.0 tag. No
-     components slice starts before the tag exists.
+     acceptance, the session stops for the architect's review: it runs `mise run screenshots`
+     inline, gives the branch's diff against `main` with the files behind each capture, and
+     waits while the architect looks through them. Only after that review does the architect's
+     acceptance authorize the merge and the v0.2.0 tag. No later slice starts before the tag
+     exists.
+
+Noctis:
+9. The repository (behavior 18): created public and Apache-2.0, with an init commit and the
+   layers' main ruleset, its check, CI, release.yml, STANDARDS.md, and CHANGELOG, installing
+   foundation #v0.2.0.
+10. The noctis profile and its extension tests (behaviors 16 and 18), version 0.1.0, and a
+    CHANGELOG [0.1.0] section. Demo: a page on page.css plus noctis, with the menu.
 
 Components:
-7. Upgrade: remove the age exclusions, move the foundation install to tag v0.2.0 and the peer to
-   ^0.2.0. Done when currency exits 0 and check passes.
-8. The entry on the foundation's formatters (behavior 15). Demo: the components demo renders the
-   same sizes and times.
-9. Specimen pages and screenshots (behavior 14, components part), version 0.2.0, and a CHANGELOG
-   [0.2.0] section. Then the session brief with its 36 captures. The same review comes first:
-   `mise run screenshots` inline, the components' diff against `main` with the specimen pages and
-   the entry's change, and a wait for the architect's review before acceptance. Nothing is published,
-   merged, or tagged until the architect accepts.
+11. Upgrade: remove the age exclusions, and move the foundation install to tag v0.2.0 and the
+    peer to ^0.2.0.
+12. The entry on the foundation's formatters (behavior 19).
+13. Specimen pages and screenshots (behavior 14, components part), version 0.2.0, and a
+    CHANGELOG [0.2.0] section. Then the session brief, with its 36 captures and noctis's. The
+    same review comes first: `mise run screenshots` inline, the diffs against `main`, and a wait
+    for the architect's review before acceptance. Nothing is published, merged, or tagged until
+    the architect accepts.
 
 **Out of scope.** The sdk's stale headers, and the root's and sdk's age exclusions (other
 repositories). The app's key table and its `t` binding (pipeline task). The eight new components
 and the brotli budgets (primitives task). The review script (spike-html-hosting). v0.7.0's
-conformance module. Firefox and WebKit (evidence 9). Pixel diffs and committed screenshots.
+Firefox and WebKit (evidence 9). Pixel diffs and committed screenshots.
 
-**Door.** One-way for the two release tags: a pushed tag reaches consumers and is never re-cut,
-and the stored names it ships are frozen with it. Two-way for the rest.
+**Door.** One-way for the three release tags and the new public repository: a pushed tag reaches
+consumers and is never re-cut, and the stored names and ./profiles subpaths it ships are frozen
+with it. Two-way for the rest.
 
 **Release**
 - spike-html-apps-foundation `v0.2.0` (at the checkpoint)
+- spike-html-apps-noctis `v0.1.0` (at the session brief)
 - spike-html-apps-components `v0.2.0` (at the session brief)
 
 ## Progress
 
-slices 5/9 committed · escalation open: profiles as modular, extensible units (before slice 6) · checkpoint — · standards — · spec — · editor —
+slices 5/13 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -282,6 +309,22 @@ slices 5/9 committed · escalation open: profiles as modular, extensible units (
 - foundation: the menu's demo is its own page, demo/theme.html, on page-full.css. The menu module
   loads through a static import() as keys-help does, and a failed load is forgotten so the next
   open retries. v0.7.0's CDN-timing flash cases weren't ported (implementer, slice 5).
+- foundation (escalation 1): each built-in profile is a unit, a sheet plus its own registration
+  module at ./profiles/<facet>/<name>, as v0.7.0 named them. page-full.css and register-full are
+  simple aggregators of the built-in units and define nothing a profile needs, decided by the
+  architect. Rejected: dropping the bundle, and the internal ./baseline/tokens path as public.
+- foundation (escalation 1): v0.7.0's conformance module is ported, and it covers space and type
+  as well as color, decided by the architect: a supported extension seam is fully demonstrated.
+- foundation (escalation 1): the extension proof is Noctis, in a standalone repository, decided by
+  the architect: Hibernus is the light half and Obscuro the dark half of one "noctis" profile,
+  attributed as the built-in profiles are. Rejected: a test fixture inside the foundation.
+- foundation (escalation 2): spike-html-apps-noctis ships the color profile only. The space and
+  type rules are proven by the foundation's own fixtures. The repository is public and
+  Apache-2.0 with the layers' ruleset, releases v0.1.0 by tag, and builds in this task after the
+  foundation's checkpoint.
+- foundation (escalation 2): the space and type conformance rules are the structural five (tokens,
+  facet-only, layer, specificity, registered) plus one derived rule each: space's scale ascends
+  from its base, and type's steps ascend and its stacks resolve to families.
 
 ## Pending edits
 
@@ -298,4 +341,9 @@ slices 5/9 committed · escalation open: profiles as modular, extensible units (
   layer's brotli budget (evidence 7).
 - standards-lab `context/roadmap.toml`, the `layers` task's summary: the task releases v0.1.0 of
   each layer, at a staged checkpoint per layer.
-- standards-lab `references.toml`: add spike-html-apps-foundation, -components, and -sdk.
+- standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, and -noctis.
+- standards-lab `context/roadmap.toml`: add spike-html-apps-noctis to the goal's repos and to the
+  foundation task's repos; the foundation task's summary names the profile units, conformance
+  for every facet, and the Noctis extension repository releasing v0.1.0.
+- standards-lab `.claude/marathon.toml` `[workspace.paths]`: spike-html-apps-noctis =
+  "~/experiments/spike-html-apps-noctis".
