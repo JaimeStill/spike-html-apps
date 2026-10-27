@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout running (escalation 6) · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -375,9 +375,11 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   ANSI mapping, and darkening values, which would leave upstream and break "recorded, never
   corrected".
 - foundation: the entry's kind column is a fixed 9ch, not max-content, since each entry is its own
-  shadow-root grid and max-content would misalign names across a list. Under a 30rem container
-  query the status moves below the kind. The entry is an inline-size container, so it no longer
-  sizes to its content in a shrink-to-fit parent (implementer, escalation 4 fix).
+  shadow-root grid and max-content would misalign names across a list. (implementer, escalation 4 fix).
+- foundation (escalation 6): the entry's narrow layout is an intrinsic wrapping layout, not a
+  container query: the entry sizes to its content in any parent, and the status wraps below only
+  when space runs short. Rejected: requiring a definite inline size from the host, and an
+  intrinsic-size fallback, which could overflow a narrow flex row.
 
 ## Pending edits
 
