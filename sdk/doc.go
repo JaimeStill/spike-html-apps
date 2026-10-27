@@ -1,3 +1,5 @@
+// Adapted from go-web-service (15e0bc3): sdk/doc.go, staging the spike's serving half.
+
 // Package sdk stages the spike's Go serving half: conventions proven here in
 // running code before they move outward, to go-web-service's sdk/ and then
 // go-web-sdk. The package is flat by design, a staging area meant to empty

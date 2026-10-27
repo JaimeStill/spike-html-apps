@@ -4,9 +4,9 @@
 # `<file>: ITEM PIN -> LATEST`, one line each, and exits nonzero when it reports any; with
 # everything current it prints nothing and exits 0. It reads the network and writes nothing. Run it
 # through `mise run currency`, which sets GOWORK=off.
-# The package.json scan is adapted from spike-html-apps-foundation (12f4d53): scripts/currency.sh;
-# the go.mod scans from go-web-sdk-template (b6ad574, template/v0.13.0):
-# template/scripts/currency.sh, for the root's one module, with JSON read by node.
+# Adapted from spike-html-apps-foundation (12f4d53): scripts/currency.sh, its package.json scan;
+# and from go-web-sdk-template (b6ad574): template/scripts/currency.sh, its go.mod scans, for the
+# root's one module, with JSON read by node.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

@@ -42,4 +42,5 @@ design to a finished product's bar at every layer.
 ## Code
 
 - A copied file names its source repository and commit in a provenance line, which reads
-  `From|Adapted from <repo> (<commit>): <path>`.
+  `From|Adapted from <repo> (<commit>): <path>`. It names the immediate source alone; that source
+  keeps the earlier lines.
