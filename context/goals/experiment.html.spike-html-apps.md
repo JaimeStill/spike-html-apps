@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint: awaiting the architect's review · standards — · spec — · editor —
+slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -344,6 +344,14 @@ slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gap
   the consumer. Rejected: layout utilities in the foundation before v0.2.0 (escalation 3).
 - foundation: the foundation's code and tests name no dependent, per
   principles/downward-dependencies (standards review).
+- foundation: the screenshots task runs with mise's `raw = true`. With dependencies, mise pipes
+  the task's output through its prefixer, so the script saw no terminal and showed no images.
+- foundation: the release workflow cuts the tag on main once the version changes, so SHIP checks
+  the CI-cut tag and its release rather than pushing one. v0.2.0's tag sits on the release commit,
+  whose tree is the pack and whose parent is the merge commit.
+- foundation: the foundation's PR merged before its own PR checks had registered: `gh pr checks
+  --watch` reported none, and a pipe hid the exit code. Main's CI on the merge commit then passed.
+  Later merges wait for a PR's checks to register.
 
 ## Pending edits
 
