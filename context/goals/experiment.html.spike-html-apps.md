@@ -389,6 +389,9 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   never inside a word, so the entry stays inside its box down to 14rem, its documented minimum.
   Below that the 9ch kind column leaves the clock and the status no room. Whole dates overflowed
   by 16–25px at 14rem (session, after the components spec re-review).
+- foundation: the components' screenshots are captured in tiles of at most 1200px, cut at section
+  or state tops, and shown with icat `--fit=both`. Full-height pages, up to 6457px, left the
+  architect's terminal stuck below the image (architect's review).
 
 ## Pending edits
 
