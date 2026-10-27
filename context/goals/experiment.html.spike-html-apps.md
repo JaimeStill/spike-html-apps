@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** foundation
+- **Branch:** foundation
 
 ## Tasks
 
@@ -13,6 +13,113 @@
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
+
+## Task brief · experiment.html.spike-html-apps · foundation
+
+**Problem.** The foundation declares five formatters with no runtime. It ships only
+spike-html-design v0.7.0's default profiles, with no stored preference and no theme menu, and it
+still uses spike-html-design's page-wide names. Every UI task after this one is reviewed per
+state and profile, so the profiles, the menu, and a screenshot baseline must exist first
+(evidence 2 and 10).
+
+**Behaviors**
+
+1. formatBytes, formatDate, formatDateTime, formatRelative, and formatDuration run. Their emitted
+   declaration matches foundation v0.1.0's handwritten one exactly.
+2. formatBytes picks the largest base-1000 byte unit (byte to petabyte) that keeps the value at 1
+   or more, and passes the caller's other Intl.NumberFormat options through.
+3. formatDate defaults to dateStyle "medium". formatDateTime adds timeStyle "short". Each default
+   applies only when the caller sets no date or time field, so a caller's year or hour never
+   throws.
+4. formatRelative uses the largest whole unit from seconds to years. Weeks count, months are 30
+   days, years are 365 days, and values are truncated. "Now" is options.now when given.
+5. formatDuration splits milliseconds into whole days, hours, minutes, and seconds through
+   Intl.DurationFormat, with style "short" by default. Zero, and anything under one second,
+   prints zero seconds, never "".
+6. The registry symbol, the keys family's symbol and settings key, and the preferences storage
+   key are all named "spike-html-apps-foundation.<name>". No "spike-html-design." name remains.
+7. The lean page entry applies only the default profiles. The full page entry (page-full.css)
+   adds Primer, Catppuccin, Everforest, compact, and sans. Each entry's registration module
+   (register.js, register-full.js) lists exactly the profiles that entry ships.
+8. Every profile computes as v0.7.0's does, in light and in dark.
+9. Preferences: a stored choice applies before first paint. A profile name the page didn't
+   register falls back to that facet's default and stays stored. Blocked storage reads as
+   nothing stored and never throws. Another tab's save applies live, except while the menu is
+   open.
+10. `<sl-theme-menu>` opens on its "--open" invoker command and binds no key. The menu module is
+    not fetched before the first open.
+11. The menu is a modal native dialog in light DOM. It has a radio row for color, scheme, space,
+    and type, and a live preview. Every change applies at once to the preview and the page.
+12. Menu keys: T or Save stores once and closes. Escape or Cancel restores what applied when the
+    menu opened (or another tab's save) and stores nothing. j/k and the up and down arrows move
+    between rows; h/l and the left and right arrows cycle a row. Every key the menu handles stops
+    at the dialog. A held T or Escape does nothing, and a backdrop click does nothing.
+13. The menu's sheet is a .css file imported as a CSS module script and adopted onto the document
+    once, in the layer foundation.theme-menu. That layer comes after foundation.utilities and
+    under every consumer layer, and both page entries name it in their order statements. Rows sit
+    beside the preview at 48rem and wider, and above it when narrower.
+14. `mise run screenshots` covers 12 profiles: 4 colors × light and dark at the defaults, plus
+    compact and sans × light and dark. The foundation captures 4 states (tools page, keys help
+    open, menu open wide, menu open narrow): 48 captures. The components capture one specimen page
+    each (status badge, entry, pagination), with every state on the page, at a narrow width and
+    with focus visible: 36 captures. Images render into a temporary directory, are shown inline
+    with kitty icat, and are removed on exit. check never runs the task; no screenshot is
+    committed.
+15. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
+    size and time with the foundation's formatBytes and formatDateTime, with output unchanged.
+    Every existing component case holds under every profile.
+
+**Test seams.** Each layer's built package, loaded as a consumer loads it: the formatter exports
+in the unit tier, and the pages, entries, and modules in the pinned headless browser tier.
+
+**Slices**
+
+Foundation:
+1. Upgrade: remove the typescript-eslint 8.72.1 age exclusions. The slice is done when install,
+   currency, and check pass after 2026-10-27T17:09:43Z. If it starts before then, it waits, and
+   the other foundation slices can run first. Never pin back. It lands before the checkpoint.
+2. Formatters (behaviors 1–5): the TypeScript lib moves to es2025 for Intl.DurationFormat, the
+   "spike-html-apps implements them" header is rewritten, and the README drops "types only".
+   Demo: each formatter is called from the demo page.
+3. Names (behavior 6). Demo: the keys demo binds and saves settings under the new names.
+4. Profiles and the full entry (behaviors 7–8). Demo: the tools page switches through each
+   profile by attribute.
+5. Preferences, `<sl-theme-menu>`, and the menu (behaviors 9–13). Demo: the tools page's Theme
+   button opens the menu, and the choice survives a reload and syncs to a second tab.
+6. Screenshots (behavior 14, foundation part), version 0.2.0, and a CHANGELOG [0.2.0] section.
+   - **CHECKPOINT:** the foundation's checkpoint brief, with its 48 captures. Before asking for
+     acceptance, the session stops for the architect's review: it runs `mise run screenshots` inline, gives
+     the branch's diff against `main` with the files behind each capture (the menu, the
+     preferences, the profiles, the tools page), and waits while the architect looks through them. Only
+     after that review does the architect's acceptance authorize the merge and the v0.2.0 tag. No
+     components slice starts before the tag exists.
+
+Components:
+7. Upgrade: remove the age exclusions, move the foundation install to tag v0.2.0 and the peer to
+   ^0.2.0. Done when currency exits 0 and check passes.
+8. The entry on the foundation's formatters (behavior 15). Demo: the components demo renders the
+   same sizes and times.
+9. Specimen pages and screenshots (behavior 14, components part), version 0.2.0, and a CHANGELOG
+   [0.2.0] section. Then the session brief with its 36 captures. The same review comes first:
+   `mise run screenshots` inline, the components' diff against `main` with the specimen pages and
+   the entry's change, and a wait for the architect's review before acceptance. Nothing is published,
+   merged, or tagged until the architect accepts.
+
+**Out of scope.** The sdk's stale headers, and the root's and sdk's age exclusions (other
+repositories). The app's key table and its `t` binding (pipeline task). The eight new components
+and the brotli budgets (primitives task). The review script (spike-html-hosting). v0.7.0's
+conformance module. Firefox and WebKit (evidence 9). Pixel diffs and committed screenshots.
+
+**Door.** One-way for the two release tags: a pushed tag reaches consumers and is never re-cut,
+and the stored names it ships are frozen with it. Two-way for the rest.
+
+**Release**
+- spike-html-apps-foundation `v0.2.0` (at the checkpoint)
+- spike-html-apps-components `v0.2.0` (at the session brief)
+
+## Progress
+
+slices 0/9 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -124,6 +231,42 @@
   directory and below, so each `apps/<name>/` holds a Go file beside its `dist/` that hands the
   embed.FS to `sdk.NewClient`. The emulator task settles the layout with the pipeline app in
   view, and the ESLint app tier and Prettier ignores follow it.
+
+- foundation: the formatters' runtime is a format.ts whose emitted declaration must match foundation
+  v0.1.0's handwritten format.d.ts, kept as a test fixture. Rejected: a handwritten format.js.
+- foundation: formatDuration rounds to whole seconds and prints zero seconds at zero and under one
+  second. Rejected: milliseconds as a fifth unit.
+- foundation: formatRelative uses fixed 30-day months and 365-day years, with weeks. Rejected:
+  calendar-aware differences, which need Temporal (esnext-only, no Safari support).
+- foundation: the five new profiles follow v0.7.0's split: page.css stays lean, and a full entry
+  and two registration modules carry the rest.
+- foundation: the theme menu's sheet is a .css file imported as a CSS module script by the lazy
+  menu module and adopted in the layer foundation.theme-menu, which both page entries name after
+  foundation.utilities. Rejected: linking it from page.css on every page.
+- foundation: every page-wide name moves to this spike, decided by the architect: the preferences
+  storage key, the registry symbol, and the keys symbol and storage key are each
+  "spike-html-apps-foundation.<name>". Rejected: keeping spike-html-design's names, and the
+  spike-wide "spike-html-apps." prefix, which stays free for the sdk and the apps.
+- foundation: the menu keeps v0.7.0's in-dialog keys (T saves, Escape cancels, j/k and h/l beside
+  the arrows), scoped to the modal.
+- foundation: the menu's tag is sl-theme-menu, with the components' prefix.
+- foundation: the full entry is page-full.css, with register.js and register-full.js.
+- foundation: the screenshot matrix is 12 profiles per state: 4 colors × light and dark at the
+  defaults, plus compact and sans × light and dark. Rejected: the full 32-profile product.
+- foundation: screenshots come from a separate `mise run screenshots` per layer. It renders them
+  into a mktemp directory and shows them inline with kitty icat. They are never committed, and
+  check never runs it. Rejected: committed PNGs, and captures inside check.
+- foundation: the foundation captures the tools page, keys help, and the menu at a wide and a
+  narrow viewport (48). Each component gets one specimen page holding all its states (36).
+- foundation: the architect reviews the screenshots and the code behind them before accepting the
+  checkpoint brief and the session brief.
+- foundation: a staged checkpoint: accepting the foundation's brief authorizes its merge and the
+  v0.2.0 tag before any components slice. The components release v0.2.0 in this task, peering
+  ^0.2.0 and installing #v0.2.0.
+- foundation: the entry component uses the foundation's formatBytes and formatDateTime in place of
+  its own.
+- foundation: the foundation's TypeScript lib moves to es2025 for Intl.DurationFormat, which
+  Safari 16.4 and Chrome 129 support.
 
 ## Pending edits
 
