@@ -74,7 +74,7 @@ scratch.
 
 ## Progress
 
-slices 2/5 committed (foundation, sdk) · checkpoints 0/3, A (foundation) awaiting the architect · standards done (foundation, sdk) · spec done, no gaps (foundation, sdk) · editor —
+slices 2/5 committed (foundation, sdk) · checkpoints 1/3: A foundation v0.1.0 released (PR #1, 12f4d53), installs by tag · standards done (foundation, sdk) · spec done, no gaps (foundation, sdk) · editor —
 
 ## Decisions
 
