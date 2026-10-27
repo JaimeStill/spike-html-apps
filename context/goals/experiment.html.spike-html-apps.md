@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** handoff
+- **Task:** foundation
+- **Branch:** foundation
 
 ## Tasks
 
@@ -144,6 +144,18 @@ with it. Two-way for the rest.
 - spike-html-apps-noctis `v0.1.0` (at the session brief)
 - spike-html-apps-components `v0.2.0` (at the session brief)
 
+
+## Handoff
+
+- Next move: fix the components' failing PR check, then merge components PR #2 (release
+  v0.2.0), then publish and merge the root's `foundation` branch.
+- Failing check: components CI on PR #2, run 40586651841. "from 20rem down to 14rem, every part of
+  the entry keeps inside its button ..." fails in flexoki/regular/mono/light at 14rem:
+  brand-guide.pdf overflows its button by 3px. It passes locally; the runner's monospace font
+  differs. Proposed fix: make 16rem the documented minimum, where local overflow was 0 with
+  margin, and drop 14rem from the case.
+- Done: noctis PR #1 merged (4066fdf), v0.1.0 released (tag on d7… release commit 2fdc0cd).
+  Foundation v0.2.0 released earlier.
 
 ## Decisions
 
