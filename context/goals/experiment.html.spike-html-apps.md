@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** building
+- **State:** brief ready
 - **Task:** layers
 - **Branch:** layers
 
@@ -74,7 +74,7 @@ scratch.
 
 ## Progress
 
-slices 5/5 committed · checkpoints 3/3 released: foundation (12f4d53), components (9a4392e), sdk (047e5d8), each v0.1.0 · standards done (all) · spec done, no gaps (layers); root running · editor —
+slices 5/5 committed · checkpoints 3/3 released · standards done · spec done, no gaps · editor done
 
 ## Decisions
 
