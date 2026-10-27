@@ -119,7 +119,7 @@ and the stored names it ships are frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 1/9 committed · checkpoint — · standards — · spec — · editor —
+slices 2/9 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -271,6 +271,10 @@ slices 1/9 committed · checkpoint — · standards — · spec — · editor �
   round 1, and is younger than pnpm's minimum release age until 2026-10-28T15:27Z. Excluding it
   would bring back the kind of entry the upgrade slice just removed. The next currency pass takes
   it, reading its v7.4.0 upgrade notes on `node:`-prefixed built-ins and extglobs.
+- foundation: the formatters' demo is its own page, demo/format.html, because the browser tier
+  compares every element on tools.html against v0.7.0. formatBytes scales by the absolute value,
+  and formatDate and formatDateTime let a caller's dateStyle or timeStyle replace only the default
+  it names (implementer, slice 2).
 
 ## Pending edits
 
