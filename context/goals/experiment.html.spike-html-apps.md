@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** building
+- **State:** brief ready
 - **Task:** foundation
 - **Branch:** foundation
 
