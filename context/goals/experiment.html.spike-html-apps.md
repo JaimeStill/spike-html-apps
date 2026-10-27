@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 9/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 10/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -352,6 +352,14 @@ slices 9/13 committed · foundation standards ✓ · foundation spec ✓ (no gap
 - foundation: the foundation's PR merged before its own PR checks had registered: `gh pr checks
   --watch` reported none, and a pipe hid the exit code. Main's CI on the merge commit then passed.
   Later merges wait for a PR's checks to register.
+- foundation: noctis maps by role where Noctis's own swatches don't fit the contract: Obscuro's
+  --bg-1 is input.background, because its sideBar is darker than its editor; both borders come from
+  the guide lines, because Noctis's *.border swatches are transparent or equal a surface; --orange
+  is ansiBrightYellow and --purple the NUMBER token color, since there's no ANSI slot for either;
+  Hibernus's --yellow is the CONSTANT token color, because its ansiYellow is an orange. Contrast
+  is recorded, never corrected (implementer, slice 10).
+- foundation: noctis needs no ESLint plugins beyond recommended, so it holds nothing at 7.3.0
+  (implementer, slice 9).
 
 ## Pending edits
 
