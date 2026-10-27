@@ -384,10 +384,10 @@ with it. Two-way for the rest.
   and PB, as formatBytes is specified (behavior 2), and the components' CHANGELOG says so rather
   than "unchanged" (spec review).
 - foundation: the entry's clock and size never break, and its date may break at its own spaces but
-  never inside a word, so the entry stays inside its box down to 16rem, its documented minimum. 14rem was chosen first,
-  but on the CI runner, whose monospace font is wider, it overflowed by 3px.
+  never inside a word, so the entry stays inside its box down to 16rem, its documented minimum.
   Below that the 9ch kind column leaves the clock and the status no room. Whole dates overflowed
-  by 16–25px at 14rem (session, after the components spec re-review).
+  by 16–25px at 14rem. 14rem was chosen first, but it overflowed by 3px on the CI runner, whose
+  monospace font is wider (session, after the components spec re-review; PR #2's check).
 - foundation: the components' screenshots are captured in tiles of at most 1200px, cut at section
   or state tops, and shown with icat `--fit=both`. Full-height pages, up to 6457px, left the
   architect's terminal stuck below the image (architect's review).
