@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The currency command, outside the check: reports every mise.toml pin, and go.mod's go directive
-# and direct requirements, that trail their latest release, as `<file>: ITEM PIN -> LATEST`, one
-# line each, and exits nonzero when it reports any; with everything current it prints nothing and
-# exits 0. It reads the network and writes nothing. Run it through `mise run currency`, which sets
-# GOWORK=off. The layers task extends it to the package dependencies.
-# The go.mod scans are adapted from go-web-sdk-template (b6ad574, template/v0.13.0):
+# The currency command, outside the check: reports every mise.toml pin, package.json pin, and
+# go.mod's go directive and direct requirements, that trail their latest release, as
+# `<file>: ITEM PIN -> LATEST`, one line each, and exits nonzero when it reports any; with
+# everything current it prints nothing and exits 0. It reads the network and writes nothing. Run it
+# through `mise run currency`, which sets GOWORK=off.
+# The package.json scan is adapted from spike-html-apps-foundation (12f4d53): scripts/currency.sh;
+# the go.mod scans from go-web-sdk-template (b6ad574, template/v0.13.0):
 # template/scripts/currency.sh, for the root's one module, with JSON read by node.
 set -euo pipefail
 
@@ -27,6 +28,27 @@ lines=$(node -e '
 while read -r line; do
   [[ -z "$line" ]] || report "mise.toml: $line"
 done <<<"$lines"
+
+# Each package.json pin against its latest on the registry.
+pins=$(node -p '
+  const { dependencies, devDependencies } = require("./package.json");
+  Object.entries({ ...dependencies, ...devDependencies })
+    .map(([name, pin]) => name + " " + pin)
+    .join("\n")
+')
+typescript_eslint=$(node -p 'require("./package.json").devDependencies["typescript-eslint"]')
+while read -r package pin; do
+  [[ -n "$package" ]] || continue
+  latest=$(pnpm view "$package" version)
+  # typescript is held to the newest version typescript-eslint's peer range accepts.
+  if [[ $package == typescript ]]; then
+    range=$(pnpm view "typescript-eslint@$typescript_eslint" peerDependencies.typescript)
+    accepted=$(pnpm view "typescript@$range" version --json)
+    latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
+      sort -V | tail -n 1)
+  fi
+  [[ $pin == "$latest" ]] || report "package.json: $package $pin -> $latest"
+done <<<"$pins"
 
 # Each scan captures its output before reading it, so under set -e a scan that fails (a go list
 # missing a go.sum entry) fails currency instead of reporting nothing.
