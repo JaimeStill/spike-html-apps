@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 8/13 committed · checkpoint — · standards — · spec — · editor —
+slices 8/13 committed · foundation standards ✓ · escalation 3 open (demo-page layout) · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
