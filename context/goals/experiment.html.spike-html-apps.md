@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wrap at spaces running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wraps at spaces, 14rem minimum ✓ · editor running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
