@@ -154,7 +154,7 @@ with it. Two-way for the rest.
   brand-guide.pdf overflows its button by 3px. It passes locally; the runner's monospace font
   differs. Proposed fix: make 16rem the documented minimum, where local overflow was 0 with
   margin, and drop 14rem from the case.
-- Done: noctis PR #1 merged (4066fdf), v0.1.0 released (tag on d7… release commit 2fdc0cd).
+- Done: noctis PR #1 merged (4066fdf), v0.1.0 released (tag on release commit 2fdc0cd).
   Foundation v0.2.0 released earlier.
 
 ## Decisions
