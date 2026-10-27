@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 5/13 committed · checkpoint — · standards — · spec — · editor —
+slices 6/13 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
