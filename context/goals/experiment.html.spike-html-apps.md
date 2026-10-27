@@ -119,7 +119,7 @@ and the stored names it ships are frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 0/9 committed · checkpoint — · standards — · spec — · editor —
+slices 1/9 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -267,6 +267,10 @@ slices 0/9 committed · checkpoint — · standards — · spec — · editor �
   its own.
 - foundation: the foundation's TypeScript lib moves to es2025 for Intl.DurationFormat, which
   Safari 16.4 and Chrome 129 support.
+- foundation: held eslint-plugin-boundaries at 7.3.0: 7.4.0 was published 2026-10-27T15:27Z, after
+  round 1, and is younger than pnpm's minimum release age until 2026-10-28T15:27Z. Excluding it
+  would bring back the kind of entry the upgrade slice just removed. The next currency pass takes
+  it, reading its v7.4.0 upgrade notes on `node:`-prefixed built-ins and extglobs.
 
 ## Pending edits
 
