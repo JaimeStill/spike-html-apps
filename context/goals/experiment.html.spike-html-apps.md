@@ -119,7 +119,7 @@ and the stored names it ships are frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 2/9 committed · checkpoint — · standards — · spec — · editor —
+slices 3/9 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
