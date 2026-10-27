@@ -152,6 +152,31 @@ slices 5/5 committed · checkpoints 3/3 released: foundation (12f4d53), componen
 - layers: the root's browser tier waits for its first real subject, the emulator's live cases.
 - layers: the brotli budget is set in the primitives task, from a baseline where all three layers
   hold real content.
+- layers: each copied file carries one provenance line, which names the immediate source; that
+  source keeps the earlier chain. "Adapted from" marks any change beyond the line itself. The
+  three layers' STANDARDS.md and the root's state the rule.
+- layers: the components' release test fails when the foundation devDependency points at another
+  repository or a fork.
+- layers: the root's apps live at `apps/<name>/`. An app may import only its own files and the
+  three layer packages, so Lit isn't in the ESLint table; the pipeline task adds it if an app
+  imports Lit directly.
+- layers: the root's go.mod names the minor, `go 1.27`, as the template writes it, and mise pins
+  Go 1.27.3. The root sets `GOWORK=off` and `GOTOOLCHAIN=local`.
+- layers: the root's Go steps keep the template's `-tags integration`, though the root has no
+  integration tier yet, so an integration suite compiles and lints when one comes.
+- layers: the root's STANDARDS.md doesn't adopt the layers' "one script or command per mise task"
+  rule or their 2–4-line header bar; the `go` task keeps the template's form.
+- layers: every repository excludes typescript-eslint 8.72.1 from pnpm's minimum release age until
+  the release ages; the next currency pass removes the entries.
+- layers: the components keep the copied `8ch` and `4ch` widths. They size content rather than
+  space it, so the token rule doesn't apply.
+- layers: the root's package currency scan doesn't read `github:` tag dependencies. The first task
+  that makes the root depend on a layer by tag teaches it to, as spike-html-conventions'
+  `scripts/currency.sh` does.
+- layers: the emulator task checks whether the github.com/standards-lab Go modules need
+  GOPRIVATE.
+- layers: some declaration headers in the foundation and sdk still say "spike-html-apps implements
+  it"; the foundation and sdk tasks rewrite them.
 
 ## Pending edits
 
@@ -166,4 +191,6 @@ slices 5/5 committed · checkpoints 3/3 released: foundation (12f4d53), componen
 - standards-lab `context/roadmap.toml`: the foundation task releases foundation v0.2.0 and the
   sdk task sdk v0.2.0, since layers released v0.1.0 of each. The primitives task sets each
   layer's brotli budget (evidence 7).
+- standards-lab `context/roadmap.toml`, the `layers` task's summary: the task releases v0.1.0 of
+  each layer, at a staged checkpoint per layer.
 - standards-lab `references.toml`: add spike-html-apps-foundation, -components, and -sdk.

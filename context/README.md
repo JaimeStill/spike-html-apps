@@ -62,7 +62,8 @@ outbox, or containers: the spike proves the client, not the capstone's backend.
 
 ## Capabilities
 
-- **Layers:** the foundation, components, and SDK repositories, released by tag.
+- **Layers:** the foundation, components, and SDK repositories, each with its own check and
+  released by tag.
 - **SDK runtime:** the router, the API client, the token provider, and the domain service.
 - **Event sync:** the event-sequence interface and its NATS-over-WebSocket adapter.
 - **Emulator:** the in-memory pipeline service with embedded NATS.
@@ -75,14 +76,16 @@ outbox, or containers: the spike proves the client, not the capstone's backend.
 
 The tasks, in the order they run; each cites the evidence it proves.
 
-1. `layers`: the three layer repositories from spike-html-packages' tags, each with its check,
-   CI, release.yml, and STANDARDS.md; the root's check grown (evidence 7, 9).
+1. `layers`: the three layer repositories, copied from spike-html-packages' tags and each
+   released at v0.1.0 with its check, CI, release.yml, and STANDARDS.md; the root's check grown to
+   the Node and Go code (evidence 7, 9).
 2. `foundation`: the formatters, spike-html-design's profiles, preferences, and theme menu, and
-   the screenshot baseline (evidence 2, 10).
-3. `sdk`: the runtime and the event-sequence interface with its adapter (evidence 1, 3).
+   the screenshot baseline, released as foundation v0.2.0 (evidence 2, 10).
+3. `sdk`: the runtime and the event-sequence interface with its adapter, released as sdk v0.2.0
+   (evidence 1, 3).
 4. `emulator`: the service, its domains, embedded NATS, the chat stream, `NewClient`, and CORS
    (evidence 3, 4).
-5. `primitives`: the eight new components (evidence 5, 10).
+5. `primitives`: the eight new components and each layer's brotli budget (evidence 5, 7, 10).
 6. `pipeline`: the pipeline app, its shortcuts, the external client, and the full-sequence
    walkthrough (evidence 6, 8, 10).
 7. `answer`: consumption by tag, the gaps, and the answer (evidence 9).
@@ -96,8 +99,9 @@ table; no component binds a key.
 
 ## Releases
 
-Each layer repository releases at 0.y.z, `@jaimestill/spike-html-apps-<layer>`, starting at
-v0.1.0; the components peer the foundation at its current minor. The root releases nothing.
+Each layer repository releases `@jaimestill/spike-html-apps-<layer>` at 0.y.z, by tag, from
+v0.1.0. The components depend on the foundation by tag and peer it at its current minor. The
+root releases nothing.
 
 ## References
 

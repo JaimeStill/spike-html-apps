@@ -15,7 +15,7 @@ workflow; start from `context/README.md`.
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-apps`. Its goal record
   is `context/goals/experiment.html.spike-html-apps.md`.
 - **Repositories:** the root and three layer repositories, spike-html-apps-foundation,
-  -components, and -sdk, which the layers task creates; the coordinator's `[workspace.paths]`
+  -components, and -sdk, each released by tag; the coordinator's `[workspace.paths]`
   locates them.
 - **References:** the repositories this spike reads are listed in `context/README.md`. The spike
   reads them and never writes to them.
