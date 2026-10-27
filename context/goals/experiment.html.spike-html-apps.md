@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** layers
+- **Branch:** layers
 
 ## Tasks
 
@@ -13,6 +13,68 @@
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
+
+## Task brief · layers
+
+```
+Problem       The spike's three layers don't exist. Every later task builds on
+              them by release tag, and the root has no check for the Node and Go
+              code that's coming.
+Behaviors     1. spike-html-apps-foundation, -components, and -sdk exist on GitHub
+                 (public, Apache-2.0, main ruleset). Each holds its source layer's
+                 code from spike-html-packages-foundation 5dd8a58, -components
+                 4c0a5d8, and -sdk 9d10ca6, with a provenance line per copied file,
+                 renamed to @jaimestill/spike-html-apps-<layer>.
+              2. Each layer has its own mise check (lint, types, build, unit, and a
+                 browser tier where the source had one), currency (exits 0), CI,
+                 release.yml, CHANGELOG with [0.1.0], a STANDARDS.md that restates
+                 the design bar for its layer, a README, and a marathon.toml.
+              3. Each layer is released as v0.1.0 by its own release.yml, in order:
+                 foundation, components, sdk. Each release is a GitHub release with
+                 the tarball, and installs by tag.
+              4. The components depend on and peer the foundation only as
+                 github:JaimeStill/spike-html-apps-foundation#v0.1.0 (peer ^0.1.0).
+                 No earlier spike's repository appears in any manifest or lockfile.
+              5. The root's `mise run check` runs pnpm-based ESLint (app-tier
+                 direction table, with its violation tree under node --test),
+                 Prettier, shellcheck, tsc, and the template's seven Go steps over
+                 the root module with its doc-only `sdk` package. It passes.
+              6. The root's `mise run currency` also reports package dependencies
+                 and go.mod (requirements and the go directive) that trail, and
+                 exits 0 at the end of the task.
+Test seams    each repository's `mise run check` and `mise run currency`; each
+              layer's CI and release runs; `pnpm add` by tag from a scratch dir
+Slices        1. foundation: repo created; copy, rename, check, CI, release
+                 → checkpoint A: architect accepts, PR merged, v0.1.0 released
+              2. components: copy on foundation#v0.1.0, check incl. browser tier
+                 → checkpoint B: accepted, merged, v0.1.0 released
+              3. sdk: copy, check → checkpoint C: accepted, merged, v0.1.0 released
+              4. root Go: module, doc-only sdk package, the seven steps, go.mod
+                 currency
+              5. root Node: package.json + pnpm, ESLint/Prettier/tsc, check as
+                 named tasks, package currency
+              → reviews, editor, session brief (root PR + goal record)
+Out of scope  formatters/theming (foundation task), the SDK runtime (sdk task),
+              the root's browser tier, brotli budgets (primitives), other package
+              managers (answer), the emulator
+Door          one-way for the three v0.1.0 tags (each published at its
+              checkpoint); two-way for the root
+Release       spike-html-apps-foundation v0.1.0, spike-html-apps-components
+              v0.1.0, spike-html-apps-sdk v0.1.0
+```
+
+No upgrade slice comes first: the root is current, and each copy takes current pins
+(eslint-plugin-boundaries 7.3.0, typescript-eslint 8.72.1, jdx/mise-action v5.2.4). The root
+takes go 1.27.3 and golangci-lint 2.15.0.
+
+Checkpoint brief, per layer: what was copied and changed, the check and CI results, and the
+version. On acceptance, the layer is published with `gh pr create`, merged, and its release.yml
+run is confirmed: the tag, the GitHub release, and the tarball. Then `pnpm add` by tag is run from
+scratch.
+
+## Progress
+
+slices 0/5 committed · checkpoints 0/3 · standards — · spec — · editor —
 
 ## Decisions
 
@@ -69,6 +131,28 @@
   spike-model-layout, spike-model-gateway, spike-ai-pipeline's own tasks, and spike-html-apps, not
   on either experiment's intake.
 
+- layers: the three layer repositories are created after this brief's approval: init commit,
+  public, Apache-2.0, and the source layers' main ruleset. Every other file lands through a `layers`
+  pull request.
+- layers: each layer is staged and released in sequence (foundation, components, sdk). A repo
+  exists and installs by tag before the next repo builds on it. No dependency on an earlier
+  spike's repositories and no alias: the components resolve
+  `github:JaimeStill/spike-html-apps-foundation#v0.1.0`.
+- layers: one task with a staged release checkpoint per layer, decided by the architect. At each
+  checkpoint the architect accepts that layer's checkpoint brief, which authorizes its publish,
+  merge, and CI-cut release. This is a deliberate exception to the single session-brief gate.
+  Rejected: splitting `layers` into three tasks, as too many sessions for a light setup.
+- layers: each layer ships 0.1.0 with a `[0.1.0]` CHANGELOG section, and release.yml is copied
+  with names changed and pins current. Rejected: a CHANGELOG guard, and shipping at 0.0.0.
+- layers: the root's Go is one module at the root, `github.com/JaimeStill/spike-html-apps`, whose
+  first package is the doc-only `sdk` package, as go-web-service stages `sdk/`.
+- layers: the root's Go check is go-web-sdk-template template/v0.13.0's seven steps with its
+  `.golangci.yml`.
+- layers: the root uses pnpm alone; other package managers are the answer task's evidence 9.
+- layers: the root's browser tier waits for its first real subject, the emulator's live cases.
+- layers: the brotli budget is set in the primitives task, from a baseline where all three layers
+  hold real content.
+
 ## Pending edits
 
 - v1.client: `NewClient`, proven in spike-html-apps' `sdk` package, moves to go-web-service's
@@ -79,3 +163,7 @@
   spike-html-apps layer tags and the SDK's event-sequence interface; the answer task names the
   tags.
 - standards-lab `context/roadmap.toml`, the spike-ai-pipeline summary: the same clause.
+- standards-lab `context/roadmap.toml`: the foundation task releases foundation v0.2.0 and the
+  sdk task sdk v0.2.0, since layers released v0.1.0 of each. The primitives task sets each
+  layer's brotli budget (evidence 7).
+- standards-lab `references.toml`: add spike-html-apps-foundation, -components, and -sdk.
