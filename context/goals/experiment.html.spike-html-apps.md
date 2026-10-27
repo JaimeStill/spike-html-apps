@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec: 2 gaps, closing (existing cases under every profile; meta values split at 20rem) · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wrap at spaces running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -383,6 +383,9 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
 - foundation: the entry's sizes match the old formatter up to 999 GB. From 1 TB they scale to TB
   and PB, as formatBytes is specified (behavior 2), and the components' CHANGELOG says so rather
   than "unchanged" (spec review).
+- foundation: the entry's clock and size never break, and its date may break at its own spaces but
+  never inside a word, so the entry stays inside its box below 20rem. Whole dates overflowed by
+  up to 57px at 12rem (session, after the components spec re-review).
 
 ## Pending edits
 
