@@ -3,19 +3,49 @@
 [settings]
 task.run_auto_install = false
 
-# spike-html-packages' toolchain, at its pins; the layers task adds the rest of it and Go.
+# spike-html-packages' toolchain, at its pins, and Go with golangci-lint at their latest; the
+# layers task adds the rest of the Node toolchain.
 [tools]
+go = "1.27.3"
+golangci-lint = "2.15.0"
 node = "26.12.1"
 shellcheck = "0.11.0"
 
-[tasks.check]
-description = "Lint the shell scripts with shellcheck; reads no network, writes nothing. The layers task grows it to spike-html-conventions' check plus the Go steps"
+[env]
+# The root module alone, outside any go.work; and the pinned Go, never a toolchain go.mod asks
+# for, so no Go step downloads one.
+GOWORK = "off"
+GOTOOLCHAIN = "local"
+
+[tasks."lint:shell"]
+description = "Shellcheck every .sh file outside node_modules/ and .git/; reads no network, writes nothing"
 run = '''
 set -eu
-cd "$MISE_PROJECT_ROOT"
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
   | xargs -0 -r shellcheck
 '''
+dir = "{{config_root}}"
+
+# go-web-sdk-template template/v0.13.0's seven steps, over the root module: vet, fix, and lint
+# take its integration tag, so an integration suite compiles and lints when one comes.
+[tasks.go]
+description = "Build, vet, format-check, fix-check, tidy-check, test (-race), and lint (golangci-lint with .golangci.yml) the root module; reads no network, writes nothing outside Go's caches"
+run = '''
+set -eu
+go build ./...
+go vet -tags integration ./...
+unformatted=$(gofmt -l .)
+if [ -n "$unformatted" ]; then echo "gofmt: unformatted files:"; echo "$unformatted"; exit 1; fi
+go fix -tags integration -diff ./...
+go mod tidy -diff
+go test -race ./...
+golangci-lint run --build-tags integration ./...
+'''
+dir = "{{config_root}}"
+
+[tasks.check]
+description = "Run every check: shellcheck and the Go steps; reads no network, writes nothing outside Go's caches. The layers task grows it to spike-html-conventions' Node check"
+depends = ["lint:shell", "go"]
 
 [tasks.install]
 description = "Install every mise.toml pin; reads the network"
@@ -23,7 +53,7 @@ run = "mise install"
 dir = "{{config_root}}"
 
 [tasks.currency]
-description = "Report every mise tool pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+description = "Report every mise tool pinned behind its latest, and go.mod's go directive and direct requirements behind theirs, one line each, exiting nonzero if any; reads the network, writes nothing"
 run = "scripts/currency.sh"
 # Without mise's own command echo, so a current tree prints nothing at all.
 quiet = true
