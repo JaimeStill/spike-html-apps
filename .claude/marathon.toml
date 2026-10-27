@@ -2,7 +2,8 @@
 # pipeline emulator, checked by `mise run check` (ESLint with the app tier's direction table,
 # Prettier, shellcheck, tsc, the unit tier, and the seven Go steps). Its goals live in the
 # coordinator's roadmap (standards-lab/context/roadmap.toml). `mise run currency` reports every
-# mise tool, package.json pin, and go.mod go directive and requirement behind its latest. No gate.
+# mise tool, package.json pin, and go.mod go directive and direct requirement behind its latest.
+# No gate.
 [project]
 kind = "code"
 check = "mise run check"
