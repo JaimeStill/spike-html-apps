@@ -1,0 +1,4 @@
+# marathon working files.
+.claude/plans/
+.claude/briefs/
+node_modules

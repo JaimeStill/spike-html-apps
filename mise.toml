@@ -1,0 +1,30 @@
+# mise run never installs a missing tool first (task.run_auto_install, on by default): the check
+# reads no network, and fails naming mise run install, the one task that installs tools.
+[settings]
+task.run_auto_install = false
+
+# spike-html-packages' toolchain, at its pins; the layers task adds the rest of it and Go.
+[tools]
+node = "26.12.1"
+shellcheck = "0.11.0"
+
+[tasks.check]
+description = "Lint the shell scripts with shellcheck; reads no network, writes nothing. The layers task grows it to spike-html-conventions' check plus the Go steps"
+run = '''
+set -eu
+cd "$MISE_PROJECT_ROOT"
+find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
+  | xargs -0 -r shellcheck
+'''
+
+[tasks.install]
+description = "Install every mise.toml pin; reads the network"
+run = "mise install"
+dir = "{{config_root}}"
+
+[tasks.currency]
+description = "Report every mise tool pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+run = "scripts/currency.sh"
+# Without mise's own command echo, so a current tree prints nothing at all.
+quiet = true
+dir = "{{config_root}}"

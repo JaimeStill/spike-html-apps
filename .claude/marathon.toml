@@ -1,0 +1,15 @@
+# Project kind: this spike builds a client application over the web stack's layers and a Go
+# pipeline emulator, checked by `mise run check`. Its goals live in the coordinator's roadmap
+# (standards-lab/context/roadmap.toml). `mise run currency` reports every mise tool pinned behind
+# its latest; the layers task extends it to the package dependencies and go.mod. No gate.
+[project]
+kind = "code"
+check = "mise run check"
+currency = "mise run currency"
+
+# Remote platform and the commands that publish and merge a finished branch. The root releases
+# nothing and runs no CI, so the merge doesn't wait on checks.
+[remote]
+platform = "github"
+publish = "gh pr create"
+merge = "gh pr merge --merge --delete-branch"
