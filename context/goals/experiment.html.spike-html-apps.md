@@ -119,7 +119,7 @@ and the stored names it ships are frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 3/9 committed · checkpoint — · standards — · spec — · editor —
+slices 4/9 committed · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -275,6 +275,10 @@ slices 3/9 committed · checkpoint — · standards — · spec — · editor �
   compares every element on tools.html against v0.7.0. formatBytes scales by the absolute value,
   and formatDate and formatDateTime let a caller's dateStyle or timeStyle replace only the default
   it names (implementer, slice 2).
+- foundation: the profile comparison scopes a profile's attribute under a root whose facet tokens are
+  set to a sentinel, so a dropped token that equals the default's value still fails. The profiles
+  demo is its own page, demo/profiles.html, framing tools.html, since the comparison asserts no
+  profile attribute inside tools.html (implementer, slice 4).
 
 ## Pending edits
 
