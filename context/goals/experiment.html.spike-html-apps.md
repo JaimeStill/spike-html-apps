@@ -119,7 +119,7 @@ and the stored names it ships are frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 4/9 committed · checkpoint — · standards — · spec — · editor —
+slices 5/9 committed · escalation open: profiles as modular, extensible units (before slice 6) · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -279,6 +279,9 @@ slices 4/9 committed · checkpoint — · standards — · spec — · editor �
   set to a sentinel, so a dropped token that equals the default's value still fails. The profiles
   demo is its own page, demo/profiles.html, framing tools.html, since the comparison asserts no
   profile attribute inside tools.html (implementer, slice 4).
+- foundation: the menu's demo is its own page, demo/theme.html, on page-full.css. The menu module
+  loads through a static import() as keys-help does, and a failed load is forgotten so the next
+  open retries. v0.7.0's CDN-timing flash cases weren't ported (implementer, slice 5).
 
 ## Pending edits
 
