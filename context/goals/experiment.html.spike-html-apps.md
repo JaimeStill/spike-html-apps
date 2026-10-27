@@ -392,6 +392,10 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
 - foundation: the components' screenshots are captured in tiles of at most 1200px, cut at section
   or state tops, and shown with icat `--fit=both`. Full-height pages, up to 6457px, left the
   architect's terminal stuck below the image (architect's review).
+- foundation: the components' screenshots default to one short sequence, each page in light and
+  dark at flexoki, regular, and mono. `--palette <name>`, `--space <name>`, and `--type <name>`
+  each pick that facet's profile for the run, so a reviewer runs compact or sans as its own short
+  sequence. `--all` keeps the full 12-profile matrix (architect, escalation 7).
 
 ## Pending edits
 
