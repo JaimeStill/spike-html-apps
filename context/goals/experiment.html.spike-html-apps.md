@@ -1,80 +1,18 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** layers
-- **Branch:** layers
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
-1. [ ] layers
+1. [x] layers
 2. [ ] foundation
 3. [ ] sdk
 4. [ ] emulator
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
-
-## Task brief · layers
-
-```
-Problem       The spike's three layers don't exist. Every later task builds on
-              them by release tag, and the root has no check for the Node and Go
-              code that's coming.
-Behaviors     1. spike-html-apps-foundation, -components, and -sdk exist on GitHub
-                 (public, Apache-2.0, main ruleset). Each holds its source layer's
-                 code from spike-html-packages-foundation 5dd8a58, -components
-                 4c0a5d8, and -sdk 9d10ca6, with a provenance line per copied file,
-                 renamed to @jaimestill/spike-html-apps-<layer>.
-              2. Each layer has its own mise check (lint, types, build, unit, and a
-                 browser tier where the source had one), currency (exits 0), CI,
-                 release.yml, CHANGELOG with [0.1.0], a STANDARDS.md that restates
-                 the design bar for its layer, a README, and a marathon.toml.
-              3. Each layer is released as v0.1.0 by its own release.yml, in order:
-                 foundation, components, sdk. Each release is a GitHub release with
-                 the tarball, and installs by tag.
-              4. The components depend on and peer the foundation only as
-                 github:JaimeStill/spike-html-apps-foundation#v0.1.0 (peer ^0.1.0).
-                 No earlier spike's repository appears in any manifest or lockfile.
-              5. The root's `mise run check` runs pnpm-based ESLint (app-tier
-                 direction table, with its violation tree under node --test),
-                 Prettier, shellcheck, tsc, and the template's seven Go steps over
-                 the root module with its doc-only `sdk` package. It passes.
-              6. The root's `mise run currency` also reports package dependencies
-                 and go.mod (requirements and the go directive) that trail, and
-                 exits 0 at the end of the task.
-Test seams    each repository's `mise run check` and `mise run currency`; each
-              layer's CI and release runs; `pnpm add` by tag from a scratch dir
-Slices        1. foundation: repo created; copy, rename, check, CI, release
-                 → checkpoint A: architect accepts, PR merged, v0.1.0 released
-              2. components: copy on foundation#v0.1.0, check incl. browser tier
-                 → checkpoint B: accepted, merged, v0.1.0 released
-              3. sdk: copy, check → checkpoint C: accepted, merged, v0.1.0 released
-              4. root Go: module, doc-only sdk package, the seven steps, go.mod
-                 currency
-              5. root Node: package.json + pnpm, ESLint/Prettier/tsc, check as
-                 named tasks, package currency
-              → reviews, editor, session brief (root PR + goal record)
-Out of scope  formatters/theming (foundation task), the SDK runtime (sdk task),
-              the root's browser tier, brotli budgets (primitives), other package
-              managers (answer), the emulator
-Door          one-way for the three v0.1.0 tags (each published at its
-              checkpoint); two-way for the root
-Release       spike-html-apps-foundation v0.1.0, spike-html-apps-components
-              v0.1.0, spike-html-apps-sdk v0.1.0
-```
-
-No upgrade slice comes first: the root is current, and each copy takes current pins
-(eslint-plugin-boundaries 7.3.0, typescript-eslint 8.72.1, jdx/mise-action v5.2.4). The root
-takes go 1.27.3 and golangci-lint 2.15.0.
-
-Checkpoint brief, per layer: what was copied and changed, the check and CI results, and the
-version. On acceptance, the layer is published with `gh pr create`, merged, and its release.yml
-run is confirmed: the tag, the GitHub release, and the tarball. Then `pnpm add` by tag is run from
-scratch.
-
-## Progress
-
-slices 5/5 committed · checkpoints 3/3 released · standards done · spec done, no gaps · editor done
 
 ## Decisions
 
