@@ -3,27 +3,91 @@
 [settings]
 task.run_auto_install = false
 
-# spike-html-packages' toolchain, at its pins; the layers task adds the rest of it and Go.
+# The layers' Node toolchain, at their pins, and Go with golangci-lint at their latest.
 [tools]
+go = "1.27.3"
+golangci-lint = "2.15.0"
 node = "26.12.1"
+pnpm = "12.15.0"
 shellcheck = "0.11.0"
+"github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
 
-[tasks.check]
-description = "Lint the shell scripts with shellcheck; reads no network, writes nothing. The layers task grows it to spike-html-conventions' check plus the Go steps"
+[env]
+# The root module alone, outside any go.work; and the pinned Go, never a toolchain go.mod asks
+# for, so no Go step downloads one.
+GOWORK = "off"
+GOTOOLCHAIN = "local"
+
+[tasks.preflight]
+description = "Fail naming mise run install when the node_modules tooling is missing; reads node_modules/.bin, writes nothing"
+hide = true
+run = "scripts/preflight.sh"
+dir = "{{config_root}}"
+
+[tasks.lint]
+description = "Run the linters: ESLint, Prettier, and shellcheck; reads no network, writes nothing"
+depends = ["lint:eslint", "lint:format", "lint:shell"]
+
+[tasks."lint:eslint"]
+description = "Lint the code with ESLint (eslint.config.js), the app tier's direction in apps/ included; reads no network, writes nothing"
+depends = ["preflight"]
+run = "pnpm exec eslint ."
+dir = "{{config_root}}"
+
+[tasks."lint:format"]
+description = "Check the code, JSON, and CSS format with Prettier (.prettierrc.json, .prettierignore); reads no network, writes nothing"
+depends = ["preflight"]
+run = "pnpm exec prettier --check ."
+dir = "{{config_root}}"
+
+[tasks."lint:shell"]
+description = "Shellcheck every .sh file outside node_modules/ and .git/; reads no network, writes nothing"
 run = '''
 set -eu
-cd "$MISE_PROJECT_ROOT"
 find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 \
   | xargs -0 -r shellcheck
 '''
+dir = "{{config_root}}"
+
+[tasks.types]
+description = "Type-check tsconfig.json's inputs (eslint.config.js, and apps/) with tsc; reads no network, writes nothing"
+run = "tsc -p ."
+dir = "{{config_root}}"
+
+[tasks."test:unit"]
+description = "Run the unit tier under node --test: the app tier's violation tree, linted in a scratch directory of TMPDIR, removed after; reads no network, writes nothing in the repository"
+depends = ["preflight"]
+run = "node --test 'test/unit/*.test.js'"
+dir = "{{config_root}}"
+
+# go-web-sdk-template template/v0.13.0's seven steps, over the root module: vet, fix, and lint
+# take its integration tag, so an integration suite compiles and lints when one comes.
+[tasks.go]
+description = "Build, vet, format-check, fix-check, tidy-check, test (-race), and lint (golangci-lint with .golangci.yml) the root module; reads no network, writes nothing outside Go's caches"
+run = '''
+set -eu
+go build ./...
+go vet -tags integration ./...
+unformatted=$(gofmt -l .)
+if [ -n "$unformatted" ]; then echo "gofmt: unformatted files:"; echo "$unformatted"; exit 1; fi
+go fix -tags integration -diff ./...
+go mod tidy -diff
+go test -race ./...
+golangci-lint run --build-tags integration ./...
+'''
+dir = "{{config_root}}"
+
+[tasks.check]
+description = "Run every check: lint, types, test:unit, and the Go steps; reads no network, writes nothing outside TMPDIR and Go's caches"
+depends = ["lint", "types", "test:unit", "go"]
 
 [tasks.install]
-description = "Install every mise.toml pin; reads the network"
-run = "mise install"
+description = "Install every mise.toml pin and node_modules from pnpm-lock.yaml; reads the network, writes node_modules/"
+run = ["mise install", "pnpm install --frozen-lockfile"]
 dir = "{{config_root}}"
 
 [tasks.currency]
-description = "Report every mise tool pinned behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+description = "Report every mise tool, package.json pin, and go.mod go directive and direct requirement behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
 run = "scripts/currency.sh"
 # Without mise's own command echo, so a current tree prints nothing at all.
 quiet = true

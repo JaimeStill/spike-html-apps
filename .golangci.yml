@@ -1,0 +1,18 @@
+# From go-web-sdk-template (b6ad574): template/.golangci.yml.
+# golangci-lint v2 configuration, run per module by `mise run check`.
+version: "2"
+
+linters:
+  # The standard set (errcheck, govet, ineffassign, staticcheck, unused),
+  # plus testpackage, which keeps tests black-box. testpackage skips only
+  # export_test.go, the one white-box file allowed, and only to export a
+  # clock, probe, or reactor hook the API cannot reach deterministically
+  # (internal/app's AppendReactor adds a fixture reactor the template does
+  # not define); every other test lives in <pkg>_test and drives the
+  # exported API.
+  default: standard
+  enable:
+    - testpackage
+  settings:
+    testpackage:
+      skip-regexp: export_test\.go

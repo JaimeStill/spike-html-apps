@@ -6,14 +6,16 @@ needs, live over a minimal Go pipeline emulator. The repository is managed with 
 workflow; start from `context/README.md`.
 
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
-- **Check:** `mise run check`: shellcheck. The layers task grows it to spike-html-conventions'
-  check plus the Go steps.
-- **Currency:** `mise run currency`: every mise tool pinned behind its latest.
+- **Check:** `mise run check`, after `mise run install`: ESLint (with the app tier's direction
+  table over apps/, and its violation tree under `node --test`), Prettier, shellcheck, tsc, and
+  go-web-sdk-template's seven Go steps over the root module. It reads no network.
+- **Currency:** `mise run currency`: every mise tool, package.json pin, and go.mod go directive
+  and direct requirement behind its latest; silent when all are current.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-apps`. Its goal record
   is `context/goals/experiment.html.spike-html-apps.md`.
 - **Repositories:** the root and three layer repositories, spike-html-apps-foundation,
-  -components, and -sdk, which the layers task creates; the coordinator's `[workspace.paths]`
+  -components, and -sdk, each released by tag; the coordinator's `[workspace.paths]`
   locates them.
 - **References:** the repositories this spike reads are listed in `context/README.md`. The spike
   reads them and never writes to them.
