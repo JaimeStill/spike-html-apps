@@ -3,7 +3,8 @@
 // test/unit/apps-tree.js's tree.
 // Adapted from spike-html-apps-foundation (12f4d53): eslint.config.js, its layer table replaced
 // by the app tier's, on spike-html-conventions (a88828a) eslint.config.js's app rows; without the
-// CSS module script rule and the manifest rules, which the root has no source to hold to yet.
+// CSS module script rule, the declarations rule, and the manifest rules, which the root has no
+// source to hold to yet.
 
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
@@ -81,7 +82,6 @@ export default defineConfig([
           default: "disallow",
           checkAllOrigins: true,
           checkUnknownLocals: true,
-          checkInternals: true,
           policies,
         },
       ],
