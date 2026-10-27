@@ -74,7 +74,7 @@ scratch.
 
 ## Progress
 
-slices 2/5 committed (foundation, sdk) · checkpoints 0/3 · standards running (foundation, sdk) · spec — · editor —
+slices 2/5 committed (foundation, sdk) · checkpoints 0/3, A (foundation) awaiting the architect · standards done (foundation, sdk) · spec done, no gaps (foundation, sdk) · editor —
 
 ## Decisions
 
