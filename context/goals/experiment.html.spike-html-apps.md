@@ -1,13 +1,13 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** foundation
-- **Branch:** foundation
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] layers
-2. [ ] foundation
+2. [x] foundation
 3. [ ] sdk
 4. [ ] emulator
 5. [ ] primitives
@@ -144,9 +144,6 @@ with it. Two-way for the rest.
 - spike-html-apps-noctis `v0.1.0` (at the session brief)
 - spike-html-apps-components `v0.2.0` (at the session brief)
 
-## Progress
-
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wraps at spaces, 14rem minimum ✓ · editor ✓ · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
