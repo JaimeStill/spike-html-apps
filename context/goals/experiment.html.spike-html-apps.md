@@ -72,7 +72,7 @@ state and profile, so the profiles, the menu, and a screenshot baseline must exi
     linking its sheet after the page entry and importing its registration module. It then
     appears in the theme menu and applies by attribute and by stored choice, with no change to
     the foundation.
-16. ./conformance exports check(facet, name) and RULES for all three facets, read through
+16. ./conformance.js exports check(facet, name) and RULES for all three facets, read through
     computed values only. Color has v0.7.0's seven rules. Space and type each have the
     structural rules (tokens, facet-only, layer, specificity, registered) plus one derived rule:
     for space, the nine-step scale ascends strictly from its base; for type, the step scale
@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 8/13 committed · foundation standards ✓ · escalation 3 open (demo-page layout) · checkpoint — · standards — · spec — · editor —
+slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · escalation 3 open (demo-page layout) · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
