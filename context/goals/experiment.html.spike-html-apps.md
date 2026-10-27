@@ -116,6 +116,15 @@
 - layers: some declaration headers in the foundation and sdk still say "spike-html-apps implements
   it"; the foundation and sdk tasks rewrite them.
 
+- plan: the emulator task generates go-web-sdk-template template/v0.13.0 with gonew into scratch
+  and moves it to the root, replacing the layers stand-in (go.mod, the go mise task,
+  .golangci.yml, currency's go.mod scan) with the template's own; `sdk/` and the Node half stay
+  the spike's.
+- plan: an app embeds its build as herald's `app` package does: `//go:embed` reaches only its own
+  directory and below, so each `apps/<name>/` holds a Go file beside its `dist/` that hands the
+  embed.FS to `sdk.NewClient`. The emulator task settles the layout with the pipeline app in
+  view, and the ESLint app tier and Prettier ignores follow it.
+
 ## Pending edits
 
 - v1.client: `NewClient`, proven in spike-html-apps' `sdk` package, moves to go-web-service's
