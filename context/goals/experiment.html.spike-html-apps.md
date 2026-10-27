@@ -74,7 +74,7 @@ scratch.
 
 ## Progress
 
-slices 0/5 committed · checkpoints 0/3 · standards — · spec — · editor —
+slices 2/5 committed (foundation, sdk) · checkpoints 0/3 · standards running (foundation, sdk) · spec — · editor —
 
 ## Decisions
 
