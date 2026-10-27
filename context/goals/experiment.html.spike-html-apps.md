@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · checkpoint — · standards — · spec — · editor —
+slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint: awaiting the architect's review · standards — · spec — · editor —
 
 ## Decisions
 
@@ -259,76 +259,91 @@ slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gap
   embed.FS to `sdk.NewClient`. The emulator task settles the layout with the pipeline app in
   view, and the ESLint app tier and Prettier ignores follow it.
 
-- foundation: the formatters' runtime is a format.ts whose emitted declaration must match foundation
-  v0.1.0's handwritten format.d.ts, kept as a test fixture. Rejected: a handwritten format.js.
+- foundation: the formatters' runtime is src/format.ts, whose emitted declaration must match
+  foundation v0.1.0's handwritten format.d.ts, kept as a test fixture. Rejected: a handwritten
+  format.js.
 - foundation: formatDuration rounds to whole seconds and prints zero seconds at zero and under one
   second. Rejected: milliseconds as a fifth unit.
 - foundation: formatRelative uses fixed 30-day months and 365-day years, with weeks. Rejected:
   calendar-aware differences, which need Temporal (esnext-only, no Safari support).
 - foundation: the five new profiles follow v0.7.0's split: page.css stays lean, and a full entry
   and two registration modules carry the rest.
-- foundation: the theme menu's sheet is a .css file imported as a CSS module script by the lazy
-  menu module and adopted in the layer foundation.theme-menu, which both page entries name after
+- foundation: the theme menu's sheet is a .css file that the lazy menu module imports as a CSS
+  module script and adopts in the layer foundation.theme-menu, which both page entries name after
   foundation.utilities. Rejected: linking it from page.css on every page.
-- foundation: every page-wide name moves to this spike, decided by the architect: the preferences
-  storage key, the registry symbol, and the keys symbol and storage key are each
-  "spike-html-apps-foundation.<name>". Rejected: keeping spike-html-design's names, and the
-  spike-wide "spike-html-apps." prefix, which stays free for the sdk and the apps.
+- foundation: every page-wide name moves to this spike: the preferences storage key, the registry
+  symbol, and the keys symbol and storage key are each "spike-html-apps-foundation.<name>".
+  Rejected: keeping spike-html-design's names, and the spike-wide "spike-html-apps." prefix, which
+  stays free for the sdk and the apps (architect).
 - foundation: the menu keeps v0.7.0's in-dialog keys (T saves, Escape cancels, j/k and h/l beside
   the arrows), scoped to the modal.
 - foundation: the menu's tag is sl-theme-menu, with the components' prefix.
 - foundation: the full entry is page-full.css, with register.js and register-full.js.
 - foundation: the screenshot matrix is 12 profiles per state: 4 colors × light and dark at the
   defaults, plus compact and sans × light and dark. Rejected: the full 32-profile product.
-- foundation: screenshots come from a separate `mise run screenshots` per layer. It renders them
-  into a mktemp directory and shows them inline with kitty icat. They are never committed, and
-  check never runs it. Rejected: committed PNGs, and captures inside check.
+- foundation: screenshots come from a separate `mise run screenshots` per layer, which renders
+  them into a mktemp directory and shows them inline with kitty icat. They are never committed,
+  and check never runs the task. Rejected: committed PNGs, and captures inside check.
 - foundation: the foundation captures the tools page, keys help, and the menu at a wide and a
   narrow viewport (48). Each component gets one specimen page holding all its states (36).
 - foundation: the architect reviews the screenshots and the code behind them before accepting the
   checkpoint brief and the session brief.
-- foundation: a staged checkpoint: accepting the foundation's brief authorizes its merge and the
-  v0.2.0 tag before any components slice. The components release v0.2.0 in this task, peering
+- foundation: the checkpoint is staged: accepting the foundation's brief authorizes its merge and
+  the v0.2.0 tag before any components slice. The components release v0.2.0 in this task, peering
   ^0.2.0 and installing #v0.2.0.
 - foundation: the entry component uses the foundation's formatBytes and formatDateTime in place of
   its own.
 - foundation: the foundation's TypeScript lib moves to es2025 for Intl.DurationFormat, which
   Safari 16.4 and Chrome 129 support.
-- foundation: held eslint-plugin-boundaries at 7.3.0: 7.4.0 was published 2026-10-27T15:27Z, after
-  round 1, and is younger than pnpm's minimum release age until 2026-10-28T15:27Z. Excluding it
-  would bring back the kind of entry the upgrade slice just removed. The next currency pass takes
-  it, reading its v7.4.0 upgrade notes on `node:`-prefixed built-ins and extglobs.
+- foundation: eslint-plugin-boundaries stays at 7.3.0. 7.4.0 was published 2026-10-27T15:27Z,
+  after round 1, and is younger than pnpm's minimum release age until 2026-10-28T15:27Z;
+  excluding it would bring back the kind of entry the upgrade slice removed. The next currency
+  pass takes it, reading its v7.4.0 upgrade notes on `node:`-prefixed built-ins and extglobs.
 - foundation: the formatters' demo is its own page, demo/format.html, because the browser tier
-  compares every element on tools.html against v0.7.0. formatBytes scales by the absolute value,
-  and formatDate and formatDateTime let a caller's dateStyle or timeStyle replace only the default
-  it names (implementer, slice 2).
-- foundation: the profile comparison scopes a profile's attribute under a root whose facet tokens are
-  set to a sentinel, so a dropped token that equals the default's value still fails. The profiles
-  demo is its own page, demo/profiles.html, framing tools.html, since the comparison asserts no
-  profile attribute inside tools.html (implementer, slice 4).
-- foundation: the menu's demo is its own page, demo/theme.html, on page-full.css. The menu module
-  loads through a static import() as keys-help does, and a failed load is forgotten so the next
-  open retries. v0.7.0's CDN-timing flash cases weren't ported (implementer, slice 5).
-- foundation (escalation 1): each built-in profile is a unit, a sheet plus its own registration
-  module at ./profiles/<facet>/<name>, as v0.7.0 named them. page-full.css and register-full are
-  simple aggregators of the built-in units and define nothing a profile needs, decided by the
-  architect. Rejected: dropping the bundle, and the internal ./baseline/tokens path as public.
-- foundation (escalation 1): v0.7.0's conformance module is ported, and it covers space and type
-  as well as color, decided by the architect: a supported extension seam is fully demonstrated.
-- foundation (escalation 1): the extension proof is Noctis, in a standalone repository, decided by
-  the architect: Hibernus is the light half and Obscuro the dark half of one "noctis" profile,
-  attributed as the built-in profiles are. Rejected: a test fixture inside the foundation.
-- foundation (escalation 2): spike-html-apps-noctis ships the color profile only. The space and
-  type rules are proven by the foundation's own fixtures. The repository is public and
-  Apache-2.0 with the layers' ruleset, releases v0.1.0 by tag, and builds in this task after the
-  foundation's checkpoint.
-- foundation (escalation 2): the space and type conformance rules are the structural five (tokens,
-  facet-only, layer, specificity, registered) plus one derived rule each: space's scale ascends
-  from its base, and type's steps ascend and its stacks resolve to families.
-- foundation (escalation 3): the screenshot review's four defects are fixed in the demo pages
-  only: page gutters and section spacing in a demo layout layer, the scroller sized to whole
-  lines, and keys help's Close inside a <footer>. The sheets match v0.7.0, which leaves page
-  layout to the consumer. Rejected: layout utilities in the foundation before v0.2.0.
+  compares every element on tools.html against v0.7.0 (implementer, slice 2).
+- foundation: formatBytes scales by the absolute value, and formatDate and formatDateTime let a
+  caller's dateStyle or timeStyle replace only the default it names (implementer, slice 2).
+- foundation: the profile comparison scopes a profile's attribute under a root whose facet tokens
+  are set to a sentinel, so a dropped token that equals the default's value still fails
+  (implementer, slice 4).
+- foundation: the profiles demo is its own page, demo/profiles.html, framing tools.html, since the
+  comparison asserts no profile attribute inside tools.html (implementer, slice 4).
+- foundation: the menu's demo is its own page, demo/theme.html, on page-full.css (implementer,
+  slice 5).
+- foundation: the menu module loads through a static import() as keys-help does, and a failed load
+  is forgotten so the next open retries. v0.7.0's CDN-timing flash cases weren't ported
+  (implementer, slice 5).
+- foundation: each built-in profile is a unit, a sheet plus its own registration module at
+  ./profiles/<facet>/<name>, as v0.7.0 named them. page-full.css and register-full are simple
+  aggregators of the built-in units and define nothing a profile needs. Rejected: dropping the
+  bundle, and the internal ./baseline/tokens path as public (architect, escalation 1).
+- foundation: the unit sheets move from src/baseline/tokens/<facet>/ to src/profiles/<facet>/, so
+  the existing ./*.css and ./*.js wildcards map the public paths and the exports map is unchanged;
+  the facets' contract sheets stay in baseline/tokens/ (implementer, slice 6).
+- foundation: v0.7.0's conformance module is ported and covers space and type as well as color,
+  so a supported extension seam is fully demonstrated (architect, escalation 1).
+- foundation: the conformance module imports nothing at runtime, keeping its own copy of FACETS
+  and reading the registry's store by its symbol. v0.7.0's CDN case becomes a cross-origin case
+  served from a second loopback origin (implementer, slice 7).
+- foundation: the extension proof is Noctis, in a standalone repository: Hibernus is the light
+  half and Obscuro the dark half of one "noctis" profile, attributed as the built-in profiles
+  are. Rejected: a test fixture inside the foundation (architect, escalation 1).
+- foundation: spike-html-apps-noctis ships the color profile only, and the foundation's own
+  fixtures prove the space and type rules. The repository is public and Apache-2.0 with the
+  layers' ruleset, releases v0.1.0 by tag, and builds in this task after the foundation's
+  checkpoint (escalation 2).
+- foundation: the space and type conformance rules are the structural five (tokens, facet-only,
+  layer, specificity, registered) plus one derived rule each: space's scale ascends from its base,
+  and type's steps ascend and its stacks resolve to families (escalation 2).
+- foundation: `mise run screenshots` applies each profile itself: every capture points the page's
+  first stylesheet link at page-full.css and sets the four attributes on its root, so no demo page
+  changes. `--keep` leaves the captures' directory in place (implementer, slice 8).
+- foundation: the screenshot review's four defects are fixed in the demo pages only: page gutters
+  and section spacing in a demo layout layer, demo/demo.css, the scroller sized to whole lines,
+  and keys help's Close inside a <footer>. The sheets match v0.7.0, which leaves page layout to
+  the consumer. Rejected: layout utilities in the foundation before v0.2.0 (escalation 3).
+- foundation: the foundation's code and tests name no dependent, per
+  principles/downward-dependencies (standards review).
 
 ## Pending edits
 

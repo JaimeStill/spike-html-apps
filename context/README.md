@@ -64,6 +64,9 @@ outbox, or containers: the spike proves the client, not the capstone's backend.
 
 - **Layers:** the foundation, components, and SDK repositories, each with its own check and
   released by tag.
+- **Foundation:** the Intl formatters; spike-html-design's profiles, each a unit of a sheet and a
+  registration module that a page or an outside package adds; the stored preference and the theme
+  menu; and the conformance check for color, space, and type profiles.
 - **SDK runtime:** the router, the API client, the token provider, and the domain service.
 - **Event sync:** the event-sequence interface and its NATS-over-WebSocket adapter.
 - **Emulator:** the in-memory pipeline service with embedded NATS.
@@ -79,8 +82,9 @@ The tasks, in the order they run; each cites the evidence it proves.
 1. `layers`: the three layer repositories, copied from spike-html-packages' tags and each
    released at v0.1.0 with its check, CI, release.yml, and STANDARDS.md; the root's check grown to
    the Node and Go code (evidence 7, 9).
-2. `foundation`: the formatters, spike-html-design's profiles, preferences, and theme menu, and
-   the screenshot baseline, released as foundation v0.2.0 (evidence 2, 10).
+2. `foundation`: the formatters, spike-html-design's profiles as units, preferences, theme menu,
+   and conformance check, and the screenshot baseline, released as foundation v0.2.0 (evidence 2,
+   10).
 3. `sdk`: the runtime and the event-sequence interface with its adapter, released as sdk v0.2.0
    (evidence 1, 3).
 4. `emulator`: the service, its domains, embedded NATS, the chat stream, `NewClient`, and CORS
