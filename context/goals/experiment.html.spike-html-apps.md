@@ -368,6 +368,12 @@ slices 13/13 committed · noctis standards ✓ · component style fixes running 
 - foundation: noctis's Hibernus focus outline (--blue, just under 3:1) and --border-2 (1.9:1) are
   recorded, never corrected. A profile sets only its sixteen color tokens, and a page that needs
   more sets the foundation's --interaction-color itself (standards review).
+- foundation (escalation 5): noctis's Hibernus red, green, and cyan move to the highest-contrast
+  same-hue upstream swatches (list.errorForeground #c9481d 4.37:1,
+  gitDecoration.addedResourceForeground #009456 3.6:1, textBlockQuote.border #00899e 3.82:1).
+  Orange, blue, and magenta have no better upstream swatch and stay, recorded. Rejected: keeping the
+  ANSI mapping, and darkening values, which would leave upstream and break "recorded, never
+  corrected".
 
 ## Pending edits
 
