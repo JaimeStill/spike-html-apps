@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wraps at spaces, 14rem minimum ✓ · editor running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards ✓ · entry intrinsic layout ✓ (escalation 6) · components spec ✓ (2 gaps closed, re-reviewed) · entry date wraps at spaces, 14rem minimum ✓ · editor ✓ · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -239,16 +239,18 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
 - layers: the root's STANDARDS.md doesn't adopt the layers' "one script or command per mise task"
   rule or their 2–4-line header bar; the `go` task keeps the template's form.
 - layers: every repository excludes typescript-eslint 8.72.1 from pnpm's minimum release age until
-  the release ages; the next currency pass removes the entries.
+  the release ages; the next currency pass removes the entries. Done for the foundation and the
+  components by the foundation task.
 - layers: the components keep the copied `8ch` and `4ch` widths. They size content rather than
-  space it, so the token rule doesn't apply.
+  space it, so the token rule doesn't apply. Superseded for the entry's 8ch kind column by
+  foundation, escalation 4; the 4ch stands.
 - layers: the root's package currency scan doesn't read `github:` tag dependencies. The first task
   that makes the root depend on a layer by tag teaches it to, as spike-html-conventions'
   `scripts/currency.sh` does.
 - layers: the emulator task checks whether the github.com/standards-lab Go modules need
   GOPRIVATE.
 - layers: some declaration headers in the foundation and sdk still say "spike-html-apps implements
-  it"; the foundation and sdk tasks rewrite them.
+  it"; the foundation and sdk tasks rewrite them. Done for the foundation by the foundation task.
 
 - plan: the emulator task generates go-web-sdk-template template/v0.13.0 with gonew into scratch
   and moves it to the root, replacing the layers stand-in (go.mod, the go mise task,
@@ -266,8 +268,9 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   second. Rejected: milliseconds as a fifth unit.
 - foundation: formatRelative uses fixed 30-day months and 365-day years, with weeks. Rejected:
   calendar-aware differences, which need Temporal (esnext-only, no Safari support).
-- foundation: the five new profiles follow v0.7.0's split: page.css stays lean, and a full entry
-  and two registration modules carry the rest.
+- foundation: the profiles follow v0.7.0's split: page.css and register.js carry only the
+  defaults, and the full entry, page-full.css with register-full.js, carries the rest. Escalation 1
+  makes the full entry an aggregator of profile units.
 - foundation: the theme menu's sheet is a .css file that the lazy menu module imports as a CSS
   module script and adopts in the layer foundation.theme-menu, which both page entries name after
   foundation.utilities. Rejected: linking it from page.css on every page.
@@ -278,14 +281,13 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
 - foundation: the menu keeps v0.7.0's in-dialog keys (T saves, Escape cancels, j/k and h/l beside
   the arrows), scoped to the modal.
 - foundation: the menu's tag is sl-theme-menu, with the components' prefix.
-- foundation: the full entry is page-full.css, with register.js and register-full.js.
-- foundation: the screenshot matrix is 12 profiles per state: 4 colors × light and dark at the
-  defaults, plus compact and sans × light and dark. Rejected: the full 32-profile product.
+- foundation: the screenshot matrix is 12 profiles per state, 4 colors × light and dark at the
+  defaults plus compact and sans × light and dark: the foundation captures the tools page, keys
+  help, and the menu at a wide and a narrow viewport (48), and each component one specimen page
+  holding all its states (36). Rejected: the full 32-profile product.
 - foundation: screenshots come from a separate `mise run screenshots` per layer, which renders
   them into a mktemp directory and shows them inline with kitty icat. They are never committed,
   and check never runs the task. Rejected: committed PNGs, and captures inside check.
-- foundation: the foundation captures the tools page, keys help, and the menu at a wide and a
-  narrow viewport (48). Each component gets one specimen page holding all its states (36).
 - foundation: the architect reviews the screenshots and the code behind them before accepting the
   checkpoint brief and the session brief.
 - foundation: the checkpoint is staged: accepting the foundation's brief authorizes its merge and
@@ -360,26 +362,26 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   is recorded, never corrected (implementer, slice 10).
 - foundation: noctis needs no ESLint plugins beyond recommended, so it holds nothing at 7.3.0
   (implementer, slice 9).
-- foundation (escalation 4): the four component style defects the specimen captures showed are
-  fixed in this task, before components v0.2.0 is tagged: the entry's kind column is sized to its
-  longest kind, the entry gets an even meta-row rhythm and a fair name share at narrow widths,
-  pagination's labels stay on one line, and its step buttons keep their own height. This
-  supersedes the layers decision keeping 8ch for the kind column.
+- foundation: the four component style defects the specimen captures showed are fixed in this
+  task, before components v0.2.0 is tagged: the entry's kind column is sized to its longest kind,
+  the entry gets an even meta-row rhythm and a fair name share at narrow widths, pagination's
+  labels stay on one line, and its step buttons keep their own height. Supersedes the layers
+  decision keeping 8ch for the kind column (escalation 4).
 - foundation: noctis's Hibernus focus outline (--blue, just under 3:1) and --border-2 (1.9:1) are
   recorded, never corrected. A profile sets only its sixteen color tokens, and a page that needs
   more sets the foundation's --interaction-color itself (standards review).
-- foundation (escalation 5): noctis's Hibernus red, green, and cyan move to the highest-contrast
-  same-hue upstream swatches (list.errorForeground #c9481d 4.37:1,
-  gitDecoration.addedResourceForeground #009456 3.6:1, textBlockQuote.border #00899e 3.82:1).
-  Orange, blue, and magenta have no better upstream swatch and stay, recorded. Rejected: keeping the
-  ANSI mapping, and darkening values, which would leave upstream and break "recorded, never
-  corrected".
+- foundation: noctis's Hibernus red, green, and cyan move from their ANSI slots to the
+  highest-contrast same-hue upstream swatches: list.errorForeground #c9481d (4.37:1),
+  gitDecoration.addedResourceForeground #009456 (3.6:1), and textBlockQuote.border #00899e
+  (3.82:1). Orange, blue, and magenta have no better upstream swatch and stay, recorded.
+  Rejected: keeping the ANSI mapping, and darkening values, which would leave upstream and break
+  "recorded, never corrected" (escalation 5).
 - foundation: the entry's kind column is a fixed 9ch, not max-content, since each entry is its own
-  shadow-root grid and max-content would misalign names across a list. (implementer, escalation 4 fix).
-- foundation (escalation 6): the entry's narrow layout is an intrinsic wrapping layout, not a
-  container query: the entry sizes to its content in any parent, and the status wraps below only
-  when space runs short. Rejected: requiring a definite inline size from the host, and an
-  intrinsic-size fallback, which could overflow a narrow flex row.
+  shadow-root grid and max-content would misalign names across a list (implementer, escalation 4).
+- foundation: the entry's narrow layout is an intrinsic wrapping layout, not a container query:
+  the entry sizes to its content in any parent, and the status wraps below only when space runs
+  short. Rejected: requiring a definite inline size from the host, and an intrinsic-size
+  fallback, which could overflow a narrow flex row (escalation 6).
 - foundation: the entry's sizes match the old formatter up to 999 GB. From 1 TB they scale to TB
   and PB, as formatBytes is specified (behavior 2), and the components' CHANGELOG says so rather
   than "unchanged" (spec review).
@@ -398,14 +400,17 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   spike-html-apps layer tags and the SDK's event-sequence interface; the answer task names the
   tags.
 - standards-lab `context/roadmap.toml`, the spike-ai-pipeline summary: the same clause.
-- standards-lab `context/roadmap.toml`: the foundation task releases foundation v0.2.0 and the
-  sdk task sdk v0.2.0, since layers released v0.1.0 of each. The primitives task sets each
-  layer's brotli budget (evidence 7).
 - standards-lab `context/roadmap.toml`, the `layers` task's summary: the task releases v0.1.0 of
   each layer, at a staged checkpoint per layer.
+- standards-lab `context/roadmap.toml`, the `foundation` task's summary: in place of "Releases
+  foundation v0.1.0, with components following its minor", it names the profile units,
+  conformance for color, space, and type, and the releases: foundation v0.2.0, components v0.2.0
+  on the foundation's formatters and peering `^0.2.0`, and the extension repository
+  spike-html-apps-noctis at v0.1.0.
+- standards-lab `context/roadmap.toml`: the sdk task releases sdk v0.2.0, since layers released
+  v0.1.0, and the primitives task sets each layer's brotli budget (evidence 7).
+- standards-lab `context/roadmap.toml`: add spike-html-apps-noctis to the goal's `repos` and to
+  the `foundation` task's `repos`.
 - standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, and -noctis.
-- standards-lab `context/roadmap.toml`: add spike-html-apps-noctis to the goal's repos and to the
-  foundation task's repos; the foundation task's summary names the profile units, conformance
-  for every facet, and the Noctis extension repository releasing v0.1.0.
 - standards-lab `.claude/marathon.toml` `[workspace.paths]`: spike-html-apps-noctis =
   "~/experiments/spike-html-apps-noctis".
