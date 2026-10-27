@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · escalation 4 open (component style defects) · noctis standards running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · component style fixes running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -360,6 +360,14 @@ slices 13/13 committed · escalation 4 open (component style defects) · noctis 
   is recorded, never corrected (implementer, slice 10).
 - foundation: noctis needs no ESLint plugins beyond recommended, so it holds nothing at 7.3.0
   (implementer, slice 9).
+- foundation (escalation 4): the four component style defects the specimen captures showed are
+  fixed in this task, before components v0.2.0 is tagged: the entry's kind column is sized to its
+  longest kind, the entry gets an even meta-row rhythm and a fair name share at narrow widths,
+  pagination's labels stay on one line, and its step buttons keep their own height. This
+  supersedes the layers decision keeping 8ch for the kind column.
+- foundation: noctis's Hibernus focus outline (--blue, just under 3:1) and --border-2 (1.9:1) are
+  recorded, never corrected. A profile sets only its sixteen color tokens, and a page that needs
+  more sets the foundation's --interaction-color itself (standards review).
 
 ## Pending edits
 
