@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** handoff
-- **Task:** foundation
-- **Branch:** foundation
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -145,17 +145,6 @@ with it. Two-way for the rest.
 - spike-html-apps-components `v0.2.0` (at the session brief)
 
 
-## Handoff
-
-- Next move: fix the components' failing PR check, then merge components PR #2 (release
-  v0.2.0), then publish and merge the root's `foundation` branch.
-- Failing check: components CI on PR #2, run 40586651841. "from 20rem down to 14rem, every part of
-  the entry keeps inside its button ..." fails in flexoki/regular/mono/light at 14rem:
-  brand-guide.pdf overflows its button by 3px. It passes locally; the runner's monospace font
-  differs. Proposed fix: make 16rem the documented minimum, where local overflow was 0 with
-  margin, and drop 14rem from the case.
-- Done: noctis PR #1 merged (4066fdf), v0.1.0 released (tag on release commit 2fdc0cd).
-  Foundation v0.2.0 released earlier.
 
 ## Decisions
 
@@ -395,7 +384,8 @@ with it. Two-way for the rest.
   and PB, as formatBytes is specified (behavior 2), and the components' CHANGELOG says so rather
   than "unchanged" (spec review).
 - foundation: the entry's clock and size never break, and its date may break at its own spaces but
-  never inside a word, so the entry stays inside its box down to 14rem, its documented minimum.
+  never inside a word, so the entry stays inside its box down to 16rem, its documented minimum. 14rem was chosen first,
+  but on the CI runner, whose monospace font is wider, it overflowed by 3px.
   Below that the 9ch kind column leaves the clock and the status no room. Whole dates overflowed
   by 16–25px at 14rem (session, after the components spec re-review).
 - foundation: the components' screenshots are captured in tiles of at most 1200px, cut at section
@@ -405,6 +395,9 @@ with it. Two-way for the rest.
   dark at flexoki, regular, and mono. `--palette <name>`, `--space <name>`, and `--type <name>`
   each pick that facet's profile for the run, so a reviewer runs compact or sans as its own short
   sequence. `--all` keeps the full 12-profile matrix (architect, escalation 7).
+- foundation: shipped. foundation v0.2.0 (PR #2, release commit d7efb8e), noctis v0.1.0 (PR #1,
+  release commit 2fdc0cd), components v0.2.0 (PR #2, release commit d31b110), each cut by its
+  release workflow on merge to main with CI green.
 
 ## Pending edits
 
