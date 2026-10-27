@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
+slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · escalation 5 hues remapped · component style fixes ✓ · components standards running · foundation standards ✓ · foundation spec ✓ (no gaps) · demo fixes ✓ · foundation editor ✓ · checkpoint accepted · foundation v0.2.0 released (PR #2, merge 679e550, tag on release commit d7efb8e) · noctis repository created (public, Apache-2.0, main ruleset) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -374,6 +374,10 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   Orange, blue, and magenta have no better upstream swatch and stay, recorded. Rejected: keeping the
   ANSI mapping, and darkening values, which would leave upstream and break "recorded, never
   corrected".
+- foundation: the entry's kind column is a fixed 9ch, not max-content, since each entry is its own
+  shadow-root grid and max-content would misalign names across a list. Under a 30rem container
+  query the status moves below the kind. The entry is an inline-size container, so it no longer
+  sizes to its content in a shrink-to-fit parent (implementer, escalation 4 fix).
 
 ## Pending edits
 
