@@ -146,7 +146,7 @@ with it. Two-way for the rest.
 
 ## Progress
 
-slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · escalation 3 open (demo-page layout) · checkpoint — · standards — · spec — · editor —
+slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gaps) · checkpoint — · standards — · spec — · editor —
 
 ## Decisions
 
@@ -325,6 +325,10 @@ slices 8/13 committed · foundation standards ✓ · foundation spec ✓ (no gap
 - foundation (escalation 2): the space and type conformance rules are the structural five (tokens,
   facet-only, layer, specificity, registered) plus one derived rule each: space's scale ascends
   from its base, and type's steps ascend and its stacks resolve to families.
+- foundation (escalation 3): the screenshot review's four defects are fixed in the demo pages
+  only: page gutters and section spacing in a demo layout layer, the scroller sized to whole
+  lines, and keys help's Close inside a <footer>. The sheets match v0.7.0, which leaves page
+  layout to the consumer. Rejected: layout utilities in the foundation before v0.2.0.
 
 ## Pending edits
 
