@@ -68,22 +68,22 @@ state and profile, so the profiles, the menu, and a screenshot baseline must exi
     with focus visible: 36 captures. Images render into a temporary directory, are shown inline
     with kitty icat, and are removed on exit. check never runs the task; no screenshot is
     committed.
-16. Extension: a profile from outside the package joins exactly as a built-in unit does, by
+15. Extension: a profile from outside the package joins exactly as a built-in unit does, by
     linking its sheet after the page entry and importing its registration module. It then
     appears in the theme menu and applies by attribute and by stored choice, with no change to
     the foundation.
-17. ./conformance exports check(facet, name) and RULES for all three facets, read through
+16. ./conformance exports check(facet, name) and RULES for all three facets, read through
     computed values only. Color has v0.7.0's seven rules. Space and type each have the
     structural rules (tokens, facet-only, layer, specificity, registered) plus one derived rule:
     for space, the nine-step scale ascends strictly from its base; for type, the step scale
     ascends strictly and each font stack resolves to a family. Every built-in profile passes. A
     fixture profile breaking each rule fails by that rule's name.
-18. spike-html-apps-noctis, a standalone repository outside the layers, ships one color profile,
+17. spike-html-apps-noctis, a standalone repository outside the layers, ships one color profile,
     "noctis": Noctis Hibernus as the light half and Noctis Obscuro as the dark half, credited as
     the built-in profiles credit their upstreams. It installs foundation v0.2.0 by tag, and its
-    tests prove behavior 16 for noctis and that check("color", "noctis") passes. It releases
+    tests prove behavior 15 for noctis and that check("color", "noctis") passes. It releases
     v0.1.0.
-19. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
+18. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
     size and time with the foundation's formatBytes and formatDateTime, with output unchanged.
     Every existing component case holds under every profile.
 
@@ -100,10 +100,10 @@ Foundation:
 3. Names (behavior 6).
 4. Profiles and the full entry (behavior 8).
 5. Preferences, `<sl-theme-menu>`, and the menu (behaviors 9–13).
-6. Profile units (behaviors 7 and 16): each built-in profile becomes a sheet plus a registration
+6. Profile units (behaviors 7 and 15): each built-in profile becomes a sheet plus a registration
    module at ./profiles/<facet>/<name>, and the full entry and register-full become aggregators
    of them. Demo: a page links page.css plus one unit, and the menu lists it.
-7. Conformance for color, space, and type (behavior 17), with fixtures that conform and fixtures
+7. Conformance for color, space, and type (behavior 16), with fixtures that conform and fixtures
    that break each rule.
 8. Screenshots (behavior 14, foundation part), version 0.2.0, and a CHANGELOG [0.2.0] section.
    - **CHECKPOINT:** the foundation's checkpoint brief, with its 48 captures. Before asking for
@@ -114,16 +114,16 @@ Foundation:
      exists.
 
 Noctis:
-9. The repository (behavior 18): created public and Apache-2.0, with an init commit and the
+9. The repository (behavior 17): created public and Apache-2.0, with an init commit and the
    layers' main ruleset, its check, CI, release.yml, STANDARDS.md, and CHANGELOG, installing
    foundation #v0.2.0.
-10. The noctis profile and its extension tests (behaviors 16 and 18), version 0.1.0, and a
+10. The noctis profile and its extension tests (behaviors 15 and 17), version 0.1.0, and a
     CHANGELOG [0.1.0] section. Demo: a page on page.css plus noctis, with the menu.
 
 Components:
 11. Upgrade: remove the age exclusions, and move the foundation install to tag v0.2.0 and the
     peer to ^0.2.0.
-12. The entry on the foundation's formatters (behavior 19).
+12. The entry on the foundation's formatters (behavior 18).
 13. Specimen pages and screenshots (behavior 14, components part), version 0.2.0, and a
     CHANGELOG [0.2.0] section. Then the session brief, with its 36 captures and noctis's. The
     same review comes first: `mise run screenshots` inline, the diffs against `main`, and a wait
