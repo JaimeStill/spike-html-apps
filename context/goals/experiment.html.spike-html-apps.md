@@ -384,8 +384,9 @@ slices 13/13 committed · noctis standards ✓ · noctis spec ✓ (no gaps) · e
   and PB, as formatBytes is specified (behavior 2), and the components' CHANGELOG says so rather
   than "unchanged" (spec review).
 - foundation: the entry's clock and size never break, and its date may break at its own spaces but
-  never inside a word, so the entry stays inside its box below 20rem. Whole dates overflowed by
-  up to 57px at 12rem (session, after the components spec re-review).
+  never inside a word, so the entry stays inside its box down to 14rem, its documented minimum.
+  Below that the 9ch kind column leaves the clock and the status no room. Whole dates overflowed
+  by 16–25px at 14rem (session, after the components spec re-review).
 
 ## Pending edits
 
