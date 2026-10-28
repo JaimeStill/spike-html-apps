@@ -8,143 +8,149 @@
 
 1. [x] layers
 2. [x] foundation
-3. [ ] sdk
+3. [x] sdk
 4. [ ] emulator
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
 
-## Task brief · experiment.html.spike-html-apps · foundation
+## Task brief · experiment.html.spike-html-apps · sdk
 
-**Problem.** The foundation declares five formatters with no runtime. It ships only
-spike-html-design v0.7.0's default profiles, with no stored preference and no theme menu, and it
-still uses spike-html-design's page-wide names. Every UI task after this one is reviewed per
-state and profile, so the profiles, the menu, and a screenshot baseline must exist first
-(evidence 2 and 10).
+**Problem.** The sdk is four handwritten declarations with no runtime: nothing routes, calls an
+API, or carries a token, and the SDK has no live transport. The emulator, the primitives, and the
+pipeline app build on a working client, router, and event sequence, and no later task touches the
+sdk. So this task builds them, closes the gaps an audit of v0.1.0's declarations found (uploads
+with progress, streamed responses, problem extensions, decoding, the router's change and failure
+handling), and releases them together (evidence 1 and 3).
 
 **Behaviors**
 
-1. formatBytes, formatDate, formatDateTime, formatRelative, and formatDuration run. Their emitted
-   declaration matches foundation v0.1.0's handwritten one exactly.
-2. formatBytes picks the largest base-1000 byte unit (byte to petabyte) that keeps the value at 1
-   or more, and passes the caller's other Intl.NumberFormat options through.
-3. formatDate defaults to dateStyle "medium". formatDateTime adds timeStyle "short". Each default
-   applies only when the caller sets no date or time field, so a caller's year or hour never
-   throws.
-4. formatRelative uses the largest whole unit from seconds to years. Weeks count, months are 30
-   days, years are 365 days, and values are truncated. "Now" is options.now when given.
-5. formatDuration splits milliseconds into whole days, hours, minutes, and seconds through
-   Intl.DurationFormat, with style "short" by default. Zero, and anything under one second,
-   prints zero seconds, never "".
-6. The registry symbol, the keys family's symbol and settings key, and the preferences storage
-   key are all named "spike-html-apps-foundation.<name>". No "spike-html-design." name remains.
-7. Each built-in profile is a unit: its sheet and its own registration module, at the public
-   subpaths ./profiles/<facet>/<name>.css and ./profiles/<facet>/<name>.js. A page composes the
-   lean page entry with whichever units it links. The full page entry (page-full.css) and its
-   registration module (register-full.js) are plain aggregators of the built-in units: they
-   import them and define nothing a profile needs in order to register or apply. The lean page
-   entry and register.js carry only the defaults.
-8. Every profile computes as v0.7.0's does, in light and in dark.
-9. Preferences: a stored choice applies before first paint. A profile name the page didn't
-   register falls back to that facet's default and stays stored. Blocked storage reads as
-   nothing stored and never throws. Another tab's save applies live, except while the menu is
-   open.
-10. `<sl-theme-menu>` opens on its "--open" invoker command and binds no key. The menu module is
-    not fetched before the first open.
-11. The menu is a modal native dialog in light DOM. It has a radio row for color, scheme, space,
-    and type, and a live preview. Every change applies at once to the preview and the page.
-12. Menu keys: T or Save stores once and closes. Escape or Cancel restores what applied when the
-    menu opened (or another tab's save) and stores nothing. j/k and the up and down arrows move
-    between rows; h/l and the left and right arrows cycle a row. Every key the menu handles stops
-    at the dialog. A held T or Escape does nothing, and a backdrop click does nothing.
-13. The menu's sheet is a .css file imported as a CSS module script and adopted onto the document
-    once, in the layer foundation.theme-menu. That layer comes after foundation.utilities and
-    under every consumer layer, and both page entries name it in their order statements. Rows sit
-    beside the preview at 48rem and wider, and above it when narrower.
-14. `mise run screenshots` covers 12 profiles: 4 colors × light and dark at the defaults, plus
-    compact and sans × light and dark. The foundation captures 4 states (tools page, keys help
-    open, menu open wide, menu open narrow): 48 captures. The components capture one specimen page
-    each (status badge, entry, pagination), with every state on the page, at a narrow width and
-    with focus visible: 36 captures. Images render into a temporary directory, are shown inline
-    with kitty icat, and are removed on exit. check never runs the task; no screenshot is
-    committed.
-15. Extension: a profile from outside the package joins exactly as a built-in unit does, by
-    linking its sheet after the page entry and importing its registration module. It then
-    appears in the theme menu and applies by attribute and by stored choice, with no change to
-    the foundation.
-16. ./conformance.js exports check(facet, name) and RULES for all three facets, read through
-    computed values only. Color has v0.7.0's seven rules. Space and type each have the
-    structural rules (tokens, facet-only, layer, specificity, registered) plus one derived rule:
-    for space, the nine-step scale ascends strictly from its base; for type, the step scale
-    ascends strictly and each font stack resolves to a family. Every built-in profile passes. A
-    fixture profile breaking each rule fails by that rule's name.
-17. spike-html-apps-noctis, a standalone repository outside the layers, ships one color profile,
-    "noctis": Noctis Hibernus as the light half and Noctis Obscuro as the dark half, credited as
-    the built-in profiles credit their upstreams. It installs foundation v0.2.0 by tag, and its
-    tests prove behavior 15 for noctis and that check("color", "noctis") passes. It releases
-    v0.1.0.
-18. The components peer the foundation at ^0.2.0 and install it by tag v0.2.0. The entry formats
-    size and time with the foundation's formatBytes and formatDateTime, with output unchanged.
-    Every existing component case holds under every profile.
+API client
+1. Each call resolves to a Result and never rejects. A success's data is decoded by content type:
+   JSON (application/json or any +json) parsed, text/* a string, any other type a Blob, and no
+   body (204, 205, or empty) undefined.
+2. A problem document (application/problem+json) keeps every member, extensions included; a
+   missing title becomes "HTTP <status>". Any other failing response becomes an "about:blank"
+   problem titled with its status text, or "HTTP <status>" when that is empty.
+3. Client-made problems have status 0 and fixed titles: urn:standards-lab:problem:network
+   ("Network error"), :abort ("Request aborted"), :timeout ("Request timed out"); a 2xx body that
+   doesn't decode as its type claims is :decode ("Response not decodable"), carrying the status; a
+   body that can't be encoded as JSON is :encode ("Request not encodable"), with nothing sent
+   (escalation 1).
+4. A path joins under the base with or without a leading "/" (base "/api" + "documents/5" or
+   "/documents/5" → /api/documents/5). The base defaults to "/api" and may be an absolute URL on
+   another origin. Request options take query parameters and headers.
+5. FormData, Blob, ArrayBuffer and views, and URLSearchParams bodies are sent as they are; every
+   other body as JSON with content-type application/json.
+6. Each call carries `Authorization: Bearer <token>` when the provider has one, and none
+   otherwise. On a 401 the client refreshes and retries once; with no new token it returns the
+   401's problem. Concurrent 401s share one pending refresh. `anonymous` gives no token and never
+   refreshes.
+7. upload(path, body, options) sends over XMLHttpRequest, reports progress (bytes sent, total),
+   aborts on the signal, and resolves to the same Result, problems, token, and 401 retry as every
+   call. A retry restarts the progress.
+8. stream(path, body?, options?) sends a POST with a body, else a GET, with Accept:
+   text/event-stream. It resolves to a Result before the first event, with any failure up to then
+   a problem (behaviors 2, 3, 6). On success the data is an async iterable of server-sent events
+   (type, default "message"; data; id when set), parsed by the sdk's own WHATWG event-stream
+   parser: BOM; CR, LF, CRLF; comments; multi-line data; a field with no value. The signal ends
+   the iteration quietly; a network failure mid-stream throws an error carrying a :network problem.
 
-**Test seams.** Each layer's built package, loaded as a consumer loads it: the formatter exports
-in the unit tier, and the pages, entries, and modules in the pinned headless browser tier.
+Router
+9. The base is the option, else the pathname of the `<base>` element's href, else "/". Patterns and
+   navigate() paths are relative to it.
+10. Once started, the router intercepts every same-origin navigation under the base that the
+    Navigation API allows (link clicks, back and forward, navigate()), leaving reloads, downloads,
+    fragment-only changes, form posts, and anything outside the base to the browser (reloads
+    amended by escalation 1). The first
+    matching pattern in table order wins; its element replaces the outlet's content with each path
+    param as an attribute; current reports pattern, tag, params, and query.
+11. A path no pattern matches mounts notFound; with no notFound, the outlet empties and current is
+    undefined.
+12. A rejecting loader, or a tag undefined once its loader resolves (the error names the tag),
+    fails the route. On a navigation the router didn't start (a user's click, back or forward,
+    another script's navigation) the URL is already committed: the router mounts the error
+    option's element, or empties the outlet, and the Navigation API reports navigateerror. On
+    start() it mounts the same way and start() rejects.
+13. navigate(path, options) loads the route first. On failure it rejects with the URL, outlet,
+    and current unchanged; otherwise it pushes an entry (or replaces with replace) and resolves
+    once the element is mounted.
+14. start() resolves once the current location's route is mounted. query(changes, options) sets
+    parameters (undefined deletes), keeps the rest, replaces the entry by default, and resolves
+    once current.query is updated, with the element still mounted. stop() stops intercepting.
+15. The router is an EventTarget that dispatches "change" after each mount and query change, with
+    current already updated.
+
+Event sequence
+16. `./events.js` declares CloudEvent<T> (specversion "1.0", id, source, type; optional subject,
+    time, datacontenttype, dataschema, data; extensions in their own member), Cursor (an opaque
+    string), and EventSequence, whose read({ after?, types?, signal? }) is an async iterable of
+    deliveries (event and cursor), ended by the signal or a break.
+17. A read with no cursor starts at the oldest kept event; with a cursor, at the event after it.
+    types limits the read to those event types.
+
+NATS adapter
+18. `./events/nats.js` connects over WebSocket to the given servers and stream with the token
+    provider's token. On an authorization failure it refreshes once and reconnects; with no token,
+    the read fails. It reads a JetStream ordered consumer: deliver-all without a cursor, start
+    sequence cursor+1 with one. The cursor is the stream sequence as a decimal string; a cursor
+    the adapter didn't write fails the read. close() ends every read and the connection.
+19. It decodes binary content mode as go-messaging nats/v0.2.0 publishes it: ce-* headers as
+    attributes, other ce-* headers as extensions, content-type as datacontenttype. data decodes by
+    datacontenttype (JSON parsed, text/* a string, otherwise a Uint8Array); data that doesn't
+    parse ends the read with an error naming the event's id.
+20. Against the pinned nats-server: the WebSocket transport, a refused token, order and resume
+    from a cursor without gap or duplicate across reads, the type filter, decoding, and a server
+    restart mid-read resuming after the last delivered event.
+21. @nats-io/nats-core and @nats-io/jetstream are optional peers at ^3.4.0. Only `./events/nats.js`
+    imports them; every other subpath loads without them.
+
+Package
+22. Emitted declarations equal v0.1.0's handwritten ones (kept as fixtures) except an expected
+    list of differences: problem extension members; the :decode type; query and headers options;
+    upload and stream; the router's error option and "change" event; start() and query()
+    returning promises; the base's `<base href>` fallback; the new subpaths; and (escalation 1) the
+    :encode type and `.ts` relative specifiers in place of `.js`. A sample domain service
+    holding get, list, upload, and stream endpoints satisfies Service unchanged.
+23. Every subpath is a .js module with types and default conditions; the pack is the build plus
+    package.json, README, and LICENSE.
+
+**Test seams.** The built package, loaded as a consumer loads it. The Node unit tier runs the
+client, parser, event sequence, and adapter against a loopback HTTP server and the pinned
+nats-server; the browser tier runs the router and upload in pinned chrome-headless-shell.
 
 **Slices**
 
-Foundation:
-1. Upgrade: remove the typescript-eslint 8.72.1 age exclusions. The slice is done when install,
-   currency, and check pass after 2026-10-27T17:09:43Z.
-2. Formatters (behaviors 1–5): the TypeScript lib moves to es2025 for Intl.DurationFormat, the
-   "spike-html-apps implements them" header is rewritten, and the README drops "types only".
-3. Names (behavior 6).
-4. Profiles and the full entry (behavior 8).
-5. Preferences, `<sl-theme-menu>`, and the menu (behaviors 9–13).
-6. Profile units (behaviors 7 and 15): each built-in profile becomes a sheet plus a registration
-   module at ./profiles/<facet>/<name>, and the full entry and register-full become aggregators
-   of them. Demo: a page links page.css plus one unit, and the menu lists it.
-7. Conformance for color, space, and type (behavior 16), with fixtures that conform and fixtures
-   that break each rule.
-8. Screenshots (behavior 14, foundation part), version 0.2.0, and a CHANGELOG [0.2.0] section.
-   - **CHECKPOINT:** the foundation's checkpoint brief, with its 48 captures. Before asking for
-     acceptance, the session stops for the architect's review: it runs `mise run screenshots`
-     inline, gives the branch's diff against `main` with the files behind each capture, and
-     waits while the architect looks through them. Only after that review does the architect's
-     acceptance authorize the merge and the v0.2.0 tag. No later slice starts before the tag
-     exists.
+1. Upgrade: eslint-plugin-boundaries 7.3.0 → 7.4.0; remove the 11 typescript-eslint 8.72.1 age
+   exclusions. Done when install, currency, and check pass (after 2026-10-28T15:27:58Z). Adapt the
+   layers test's `.well-known` / `..x` cases if 7.4.0's dot-file fix changes them.
+2. Runtime build and `anonymous` (behaviors 6's default, 22, 23): TS sources emitting .js and .d.ts,
+   v0.1.0 declarations as fixtures, exports with types and default; the "spike-html-apps
+   implements it" headers rewritten. Demo: `anonymous` imported from the pack.
+3. API client (1–6) and the sample service's get and list. Demo: a script against a loopback
+   server printing a success, an untitled problem, and a timeout.
+4. Streamed response and parser (8). Demo: a loopback event stream printed event by event.
+5. Browser tier adapted from the foundation's v0.2.0 (chrome-headless-shell at its current
+   version), and the router (9–15). Demo: links, a deep link, back and forward, a failing loader,
+   notFound.
+6. Upload with progress (7). Demo: a browser page uploading to a loopback endpoint, progress logged.
+7. Event-sequence declarations (16, 17), with a test-only in-memory sequence.
+8. NATS adapter (18–21): nats-server v2.15.2 pinned in mise, started by the unit tier with
+   WebSocket (no TLS, loopback), JetStream on a temp store, and a token; a JS publisher writing
+   go-messaging's binary mode, citing its source. Demo: read, stop, resume from the cursor.
+9. Service proof (22's sample); README, STANDARDS.md, context/README no longer "types only",
+   optional peers named; version 0.2.0; CHANGELOG [0.2.0] with Changed naming the three breaks.
 
-Noctis:
-9. The repository (behavior 17): created public and Apache-2.0, with an init commit and the
-   layers' main ruleset, its check, CI, release.yml, STANDARDS.md, and CHANGELOG, installing
-   foundation #v0.2.0.
-10. The noctis profile and its extension tests (behaviors 15 and 17), version 0.1.0, and a
-    CHANGELOG [0.1.0] section. Demo: a page on page.css plus noctis, with the menu.
+**Out of scope.** The root's currency (emulator task). The adapter's live cases against the
+emulator and go-messaging's encoding end to end (emulator task). Structured content mode.
+Performance figures. Real auth and OIDC (v1.auth). View Transitions. Firefox and WebKit
+(evidence 9). Screenshots (no UI). The brotli budget (primitives task).
 
-Components:
-11. Upgrade: remove the age exclusions, and move the foundation install to tag v0.2.0 and the
-    peer to ^0.2.0.
-12. The entry on the foundation's formatters (behavior 18).
-13. Specimen pages and screenshots (behavior 14, components part), version 0.2.0, and a
-    CHANGELOG [0.2.0] section. Then the session brief, with its 36 captures and noctis's. The
-    same review comes first: `mise run screenshots` inline, the diffs against `main`, and a wait
-    for the architect's review before acceptance. Nothing is published, merged, or tagged until
-    the architect accepts.
-
-**Out of scope.** The sdk's stale headers, and the root's and sdk's age exclusions (other
-repositories). The app's key table and its `t` binding (pipeline task). The eight new components
-and the brotli budgets (primitives task). The review script (spike-html-hosting). v0.7.0's
-Firefox and WebKit (evidence 9). Pixel diffs and committed screenshots.
-
-**Door.** One-way for the three release tags and the new public repository: a pushed tag reaches
-consumers and is never re-cut, and the stored names and ./profiles subpaths it ships are frozen
-with it. Two-way for the rest.
+**Door.** One-way for the v0.2.0 tag: the subpath names (`./events.js`, `./events/nats.js`), the
+declarations, and the cursor format ship frozen with it. Two-way for the rest.
 
 **Release**
-- spike-html-apps-foundation `v0.2.0` (at the checkpoint)
-- spike-html-apps-noctis `v0.1.0` (at the session brief)
-- spike-html-apps-components `v0.2.0` (at the session brief)
-
-
+- spike-html-apps-sdk `v0.2.0` (cut by release.yml on merge)
 
 ## Decisions
 
@@ -399,6 +405,97 @@ with it. Two-way for the rest.
   release commit 2fdc0cd), components v0.2.0 (PR #2, release commit d31b110), each cut by its
   release workflow on merge to main with CI green.
 
+- sdk: the runtime is TypeScript sources whose emitted declarations are checked against v0.1.0's
+  handwritten ones, kept as test fixtures. Rejected: handwritten .js.
+- sdk: v0.2.0 takes additions and three breaks, since nothing installs v0.1.0: start() and query()
+  return promises, the base falls back to `<base href>`, and Client gains the required stream and
+  upload (escalation 1). The fixture comparison expects a listed set of differences. Rejected:
+  freezing the declarations, and additions only.
+- sdk: the router is tested in a browser tier adapted from the foundation's. Rejected: a
+  Navigation API fake in Node.
+- sdk: a route that can't be shown is handled by its cause and its navigation's initiator. A path
+  nothing matches mounts notFound. A failed load on a user's or another script's navigation, or on
+  start(), mounts the error element at the committed URL, and the navigation reports
+  navigateerror; navigate() loads first and on failure rejects with nothing changed. Rejected:
+  notFound for failed loads, the error element everywhere, and keeping the previous element.
+  Precommit handlers aren't Baseline.
+- sdk: a problem document with no title gets "HTTP <status>", and any other failing response
+  becomes a problem titled with its status text, or "HTTP <status>" when that is empty. Rejected:
+  Go's "status code N" phrase.
+- sdk: CloudEvent is the sdk's own type-only declaration. Rejected: the cloudevents 10.0.0
+  package, which brings ajv, uuid, json-bigint, and polyfills.
+- sdk: an event sequence is read as an async iterable of deliveries. Rejected: subscribe(callback).
+- sdk: a read with no cursor starts at the oldest kept event. Rejected: starting at new events.
+- sdk: the adapter is tested against nats-server pinned in mise, revising the setup decision that
+  the sdk tests the interface with a fake; its live cases against the emulator stay in the root.
+  Rejected: a nats.js fake; a container, which brings Docker, an image pull, and the network into
+  the check; and deferring the tests to the emulator task.
+- sdk: the in-memory sequence is test-only. Rejected: a public subpath.
+- sdk: upload with progress, over XMLHttpRequest, ships in v0.2.0. Rejected: a later sdk release.
+- sdk: the streamed response ships in v0.2.0. Rejected: a later release, and the app calling fetch
+  itself.
+- sdk: Service needs no type change, since upload and stream fit Endpoint (the planner's
+  correction to D1).
+- sdk: the sdk parses event streams with its own parser. Rejected: eventsource-parser 4.1.3, a
+  runtime dependency.
+- sdk: the tests' publisher is JavaScript writing go-messaging nats/v0.2.0's binary content mode.
+  Rejected: publishing through go-messaging from Go.
+- sdk: the adapter decodes an event's data by its datacontenttype, and data that doesn't decode
+  ends the read with an error naming the event's id. Rejected: delivering the raw bytes.
+- sdk: some choices had no alternative: the base is the option, else `<base href>`, else "/"; a
+  failed route with no error option empties the outlet; the adapter reads binary content mode
+  only; currency covers the nats-server pin; and boundaries 7.4.0 is installed only once its
+  release age clears.
+- sdk: a request body that JSON can't encode is a fifth client-made problem,
+  urn:standards-lab:problem:encode, with status 0 and nothing sent. Rejected: widening :network's
+  doc, and letting the call reject (escalation 1, standards review).
+- sdk: Client's new required stream and upload are a third break, listed in the CHANGELOG.
+  Rejected: optional members, which every app would have to check (escalation 1).
+- sdk: the router leaves reloads to the browser, which picks up a new build and clears bad state.
+  Rejected: intercepting a reload and remounting in place (escalation 1, spec review).
+- sdk: the emitted declarations keep `.ts` relative specifiers, as the foundation's do and
+  STANDARDS.md states, and a consumer typecheck proves they resolve. Rejected: `.js` specifiers in
+  the sources (escalation 1, spec review).
+- sdk: a NATS cursor past the stream's last sequence fails the read. Only a read with a cursor
+  requests the stream info that checks it (spec review, 3a60dac).
+- sdk: upload takes a `progress(sent, total)` option, called with 0 as each send starts, a retry's
+  included, and with the total once the whole body is sent, and a `method`, POST by default or
+  PUT (implementer, slice 6).
+- sdk: the router treats a navigation to the mounted pathname as a query-only change, keeping the
+  element, focus, and scroll. Each mount commits only while it is the latest, so a slow load never
+  replaces a later navigation's element. navigate() and query() reject before start(), since
+  nothing would intercept them and the browser would load the page (implementer, slice 5).
+- sdk: the NATS adapter's reads share one connection, opened by the first read and reopened by a
+  read after it is lost. A read's types are its consumer's filter subjects, and the adapter also
+  matches each event's type against them exactly, so a type holding a NATS wildcard can't widen
+  the read. Across a server restart the connection reconnects within nats-core's defaults (10
+  attempts, 2 s apart) and each read resumes with no gap or duplicate; the path where the
+  connection is lost for good, failing every read, is untested. A message that isn't a CloudEvent
+  in binary content mode ends the read with an error (implementer, slice 8).
+- sdk: Cursor is a branded string, so it serializes as a string and tsc refuses any string a
+  sequence didn't give out. CloudEvent holds its extension attributes in their own `extensions`
+  member, so none can shadow a context attribute and tsc still refuses a misspelled one
+  (implementer, slice 7).
+- sdk: package.json's exports list the six public subpaths by name, in place of the `./*.js`
+  pattern, so the internal event-stream parser isn't importable (implementer, slice 9).
+- sdk: a body that can't be encoded is the encode problem even when the call's signal has
+  aborted, since the encoding fails before anything is sent (implementer, afa7b8b).
+- sdk: pnpm writes a minimumReleaseAgeExclude entry on its own for a dependency younger than the
+  release age, unless minimumReleaseAgeStrict is set. Upgrading to eslint-plugin-boundaries 7.4.0
+  pulled in @boundaries/elements 3.3.0, published 96 s after the plugin, and pnpm wrote an
+  exclusion for it; the entry was removed and the install rerun once the age cleared. The other
+  repositories' boundaries upgrades check for the same entry (implementer, slice 1).
+- sdk: the root still pins eslint-plugin-boundaries 7.3.0 and holds the typescript-eslint 8.72.1
+  age exclusions. The emulator task's upgrade slice takes 7.4.0, checking for pnpm's own
+  @boundaries/elements entry, and removes the exclusions.
+- sdk: the emulator embeds nats-server as the Go module nats-server/v2, which the root's currency
+  keeps current, separately from the sdk's mise pin of nats-server 2.15.2.
+- sdk: a cross-origin upload with progress sends a CORS preflight, because the progress listener
+  on xhr.upload forces one, so the external client's uploads (pipeline task) need the emulator's
+  CORS to answer it.
+- sdk: shipped. sdk v0.2.0 (PR #2, merge 6c06200, release commit 6d5fb1c), cut by its release
+  workflow on merge to main with CI green.
+
 ## Pending edits
 
 - v1.client: `NewClient`, proven in spike-html-apps' `sdk` package, moves to go-web-service's
@@ -416,8 +513,17 @@ with it. Two-way for the rest.
   conformance for color, space, and type, and the releases: foundation v0.2.0, components v0.2.0
   on the foundation's formatters and peering `^0.2.0`, and the extension repository
   spike-html-apps-noctis at v0.1.0.
-- standards-lab `context/roadmap.toml`: the sdk task releases sdk v0.2.0, since layers released
-  v0.1.0, and the primitives task sets each layer's brotli budget (evidence 7).
+- standards-lab `context/roadmap.toml`, the `sdk` task's summary: "tested against a fake" becomes
+  "tested against a pinned nats-server", and in place of "Releases sdk v0.1.0" it names upload
+  with progress and the streamed response on the client, the router's change event and failure
+  handling, and the release of sdk v0.2.0 (layers released v0.1.0).
+- standards-lab `context/roadmap.toml`: the primitives task sets each layer's brotli budget
+  (evidence 7).
+- standards-lab `context/roadmap.toml`, the `emulator` task's `repos`: add spike-html-apps-sdk,
+  so a defect the adapter's live cases find is fixed in that task.
+- standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", the live-transport
+  bullet: the sdk proves the adapter against a pinned nats-server, and the emulator proves it end
+  to end.
 - standards-lab `context/roadmap.toml`: add spike-html-apps-noctis to the goal's `repos` and to
   the `foundation` task's `repos`.
 - standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, and -noctis.
