@@ -36,5 +36,8 @@
     "stage_interval": "750ms",
     "instance": ""
   },
+  "conversations": {
+    "delta_interval": "50ms"
+  },
   "shutdown_timeout": "10s"
 }

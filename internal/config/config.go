@@ -16,7 +16,8 @@ const envPrefix = "emulator"
 
 // Config is the service's root configuration: the library capability blocks
 // plus the service-owned read and cross-origin policies, the embedded NATS
-// server's block, and the emulated pipeline's documents and runs blocks. It embeds the
+// server's block, the emulated pipeline's documents and runs blocks, and the
+// scripted replies' conversations block. It embeds the
 // lifecycle Coordinator's configuration by value and untagged, so its
 // shutdown_timeout is a top-level key and ShutdownTimeout a promoted field;
 // Config.Config is that lifecycle block, the one the composition root hands
@@ -31,6 +32,8 @@ type Config struct {
 	NATS      NATSConfig      `json:"nats"`
 	Documents DocumentsConfig `json:"documents"`
 	Runs      RunsConfig      `json:"runs"`
+
+	Conversations ConversationsConfig `json:"conversations"`
 }
 
 // Merge overlays src's set fields onto the receiver, delegating each block
@@ -47,6 +50,7 @@ func (c *Config) Merge(src *Config) {
 	c.NATS.Merge(&src.NATS)
 	c.Documents.Merge(&src.Documents)
 	c.Runs.Merge(&src.Runs)
+	c.Conversations.Merge(&src.Conversations)
 }
 
 // Finalize finalizes each block under the same prefix, the lifecycle block
@@ -81,6 +85,9 @@ func (c *Config) Finalize(envPrefix string) error {
 	}
 	if err := c.Runs.Finalize(envPrefix); err != nil {
 		return fmt.Errorf("runs: %w", err)
+	}
+	if err := c.Conversations.Finalize(envPrefix); err != nil {
+		return fmt.Errorf("conversations: %w", err)
 	}
 	return nil
 }

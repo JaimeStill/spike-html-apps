@@ -130,7 +130,7 @@ spike-ai-pipeline repositories, which the roadmap's `path` and `[workspace.paths
 - `go-web-sdk` v0.15.2, `go-core` v0.10.0, and `go-messaging` v0.2.0: the emulator's
   dependencies.
 - `go-web-service`, at 15e0bc3: the `sdk/` staging shape and the composition.
-- `spike-ai-pipeline`, at main 315ccec, and `spike-ai-pipeline-client`, at v0.1.0: the
+- `spike-ai-pipeline`, at main 315ccec, and `spike-ai-pipeline-client`, at v0.4.0: the
   capstone's evidence and the Open Responses decisions.
 - `herald`, at 6fc22b3: a frame of reference only.
 

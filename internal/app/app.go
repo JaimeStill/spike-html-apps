@@ -13,6 +13,7 @@ import (
 	"github.com/standards-lab/go-messaging"
 	"github.com/standards-lab/go-web-sdk"
 
+	"github.com/JaimeStill/spike-html-apps/domain/conversation"
 	"github.com/JaimeStill/spike-html-apps/domain/document"
 	"github.com/JaimeStill/spike-html-apps/domain/run"
 	"github.com/JaimeStill/spike-html-apps/domain/search"
@@ -37,17 +38,18 @@ type App struct {
 // layers' nodes from that same value. Each node's name, in the field's
 // comment, is the name the lifecycle labels its errors with.
 type Nodes struct {
-	Config    *graph.Node[*config.Config]              // "config"
-	Logger    *graph.Node[*slog.Logger]                // "logger"
-	NATS      *graph.Node[*natsserver.Server]          // "nats"
-	Broker    *graph.Node[messaging.Broker]            // "broker"
-	Runs      *graph.Node[*run.Service]                // "runs"
-	Documents *graph.Node[*document.Service]           // "documents"
-	Search    *graph.Node[*search.Service]             // "search"
-	Runner    *graph.Node[*reactor.Reactor[time.Time]] // "runner"
-	Readiness *graph.Node[*lifecycle.Readiness]        // "readiness"
-	Router    *graph.Node[*web.Router]                 // "router"
-	Server    *graph.Node[*web.Server]                 // "server"
+	Config        *graph.Node[*config.Config]              // "config"
+	Logger        *graph.Node[*slog.Logger]                // "logger"
+	NATS          *graph.Node[*natsserver.Server]          // "nats"
+	Broker        *graph.Node[messaging.Broker]            // "broker"
+	Runs          *graph.Node[*run.Service]                // "runs"
+	Documents     *graph.Node[*document.Service]           // "documents"
+	Search        *graph.Node[*search.Service]             // "search"
+	Conversations *graph.Node[*conversation.Service]       // "conversations"
+	Runner        *graph.Node[*reactor.Reactor[time.Time]] // "runner"
+	Readiness     *graph.Node[*lifecycle.Readiness]        // "readiness"
+	Router        *graph.Node[*web.Router]                 // "router"
+	Server        *graph.Node[*web.Server]                 // "server"
 
 	// Reactors are the reactor layer's Build roots: a reactor is reached by
 	// no Use, so Run builds each as a root, and the server orders itself

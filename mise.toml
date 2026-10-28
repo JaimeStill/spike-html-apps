@@ -105,8 +105,8 @@ description = "Run every check: lint, types, test:unit, the Go steps, and test:i
 depends = ["lint", "types", "test:unit", "go", "test:integration"]
 
 [tasks.install]
-description = "Install every mise.toml pin and node_modules from pnpm-lock.yaml; reads the network, writes node_modules/"
-run = ["mise install", "pnpm install --frozen-lockfile"]
+description = "Install every mise.toml pin, node_modules from pnpm-lock.yaml, and the root module's requirements into Go's module cache; reads the network, writes node_modules/ and Go's caches"
+run = ["mise install", "pnpm install --frozen-lockfile", "go mod download"]
 dir = "{{config_root}}"
 
 [tasks.currency]
