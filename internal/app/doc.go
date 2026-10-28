@@ -9,8 +9,8 @@
 //     stream;
 //   - admin.go: defineAdmin, the administrative services, and their /admin
 //     mount;
-//   - domain.go: defineDomain, the domain services, runs and documents, and
-//     their /api mount;
+//   - domain.go: defineDomain, the domain services, runs, documents, and
+//     search, and their /api mount;
 //   - reactors.go: defineReactors, the process-lifetime entry points an
 //     occurrence drives, each a node whose value is a go-core
 //     reactor.Reactor: runner, which advances the runs;

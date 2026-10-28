@@ -6,6 +6,7 @@ import (
 
 	"github.com/JaimeStill/spike-html-apps/domain/document"
 	"github.com/JaimeStill/spike-html-apps/domain/run"
+	"github.com/JaimeStill/spike-html-apps/domain/search"
 )
 
 // defineDomain defines the domain services on g into n, one node per
@@ -18,14 +19,18 @@ import (
 // reactors.go, if it reacts to an external occurrence for the life of the
 // process.
 //
-// The emulator's two layers are runs, the emulated pipeline runs, which
-// publish their stage events through the broker node, and documents, the
+// The emulator's three layers are runs, the emulated pipeline runs, which
+// publish their stage events through the broker node; documents, the
 // uploaded files, each of whose uploads starts a run through the runs
-// node. It constructs nothing.
+// node; and search, which reads the documents node's store. It constructs
+// nothing.
 func defineDomain(g *graph.Graph, n *Nodes) {
 	n.Runs = g.Define("runs", newRuns(n))
 	n.Documents = g.Define("documents", func(s *graph.Scope) (*document.Service, error) {
 		return document.New(s.Use(n.Runs)), nil
+	})
+	n.Search = g.Define("search", func(s *graph.Scope) (*search.Service, error) {
+		return search.New(s.Use(n.Documents)), nil
 	})
 }
 
@@ -55,5 +60,6 @@ func mountAPI(s *graph.Scope, n *Nodes) *web.Group {
 	reads := cfg.Reads.Limits()
 	api.Mount(document.Routes(s.Use(n.Documents), reads, cfg.Server.Transfer(*cfg.Documents.MaxSize), logger))
 	api.Mount(run.Routes(s.Use(n.Runs), reads, logger))
+	api.Mount(search.Routes(s.Use(n.Search), reads, logger))
 	return api
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/JaimeStill/spike-html-apps/domain/document"
 	"github.com/JaimeStill/spike-html-apps/domain/run"
+	"github.com/JaimeStill/spike-html-apps/domain/search"
 	"github.com/JaimeStill/spike-html-apps/internal/config"
 	"github.com/JaimeStill/spike-html-apps/internal/natsserver"
 )
@@ -42,6 +43,7 @@ type Nodes struct {
 	Broker    *graph.Node[messaging.Broker]            // "broker"
 	Runs      *graph.Node[*run.Service]                // "runs"
 	Documents *graph.Node[*document.Service]           // "documents"
+	Search    *graph.Node[*search.Service]             // "search"
 	Runner    *graph.Node[*reactor.Reactor[time.Time]] // "runner"
 	Readiness *graph.Node[*lifecycle.Readiness]        // "readiness"
 	Router    *graph.Node[*web.Router]                 // "router"

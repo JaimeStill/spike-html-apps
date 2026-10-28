@@ -19,7 +19,8 @@
 // The package's API:
 //
 //   - [Service], built by [New]: Upload, Document, List, and Content, the
-//     layer's operations, one per endpoint.
+//     layer's operations, one per endpoint; and All, every document with
+//     its bytes, the read the search layer scans.
 //   - [Starter]: what starts a run for an accepted document, the run
 //     layer's service in the composition.
 //   - [Routes]: the route group the composition root mounts.

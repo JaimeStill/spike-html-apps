@@ -3,6 +3,8 @@ package document
 import (
 	"fmt"
 	"io"
+	"iter"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -104,6 +106,24 @@ func (s *Service) List(q web.Query) ([]Document, web.Paging, error) {
 		items = append(items, rec.doc)
 	}
 	return items, web.Paging{Total: &total, More: to < total}, nil
+}
+
+// All yields every document with its bytes, in acceptance order: the
+// order of the store when it is called, read under the lock once, so a
+// caller ranging over it holds no lock and sees no upload that lands
+// meanwhile. The bytes are the store's own; a document's bytes never
+// change, and the caller must not modify them.
+func (s *Service) All() iter.Seq2[Document, []byte] {
+	s.mu.Lock()
+	records := slices.Clone(s.order)
+	s.mu.Unlock()
+	return func(yield func(Document, []byte) bool) {
+		for _, rec := range records {
+			if !yield(rec.doc, rec.bytes) {
+				return
+			}
+		}
+	}
 }
 
 // Content returns the document id's bytes as the download serves them, or
