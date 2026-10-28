@@ -232,7 +232,7 @@ one-way door) to this brief.
 
 ## Progress
 
-slices 6/11 committed · standards — · spec — · editor —
+slices 7/11 committed · standards — · spec — · editor —
 
 ## Decisions
 
