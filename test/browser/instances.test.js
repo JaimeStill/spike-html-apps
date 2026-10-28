@@ -44,7 +44,11 @@ async function runsShown(page) {
 }
 
 test("neither instance's events reach the other's stream", async (t) => {
-  instances.push(...(await Promise.all([start(), start()])));
+  // Settled, not all: an instance that booted is stopped by after() even when the other failed,
+  // so a failed boot fails the case rather than leaving a process that keeps node running.
+  const booted = await Promise.allSettled([start(), start()]);
+  for (const result of booted) if (result.status === "fulfilled") instances.push(result.value);
+  for (const result of booted) if (result.status === "rejected") throw result.reason;
   const [a, b] = instances;
   const ports = [a.origin, a.wsURL, b.origin, b.wsURL].map((url) => new URL(url).port);
   ports.push(String(a.natsPort), String(b.natsPort));
