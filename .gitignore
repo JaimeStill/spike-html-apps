@@ -17,3 +17,7 @@ coverage.html
 go.work
 go.work.sum
 tmp/
+
+# The apps' builds (mise run build:app); each dist/ directory's contents, not the directory, so a
+# committed file in it can be let back in.
+apps/*/dist/*

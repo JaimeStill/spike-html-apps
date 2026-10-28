@@ -8,6 +8,6 @@ fail() {
   exit 1
 }
 
-for bin in eslint prettier; do
+for bin in eslint prettier vite; do
   [[ -x node_modules/.bin/$bin ]] || fail "$bin (devDependencies)"
 done

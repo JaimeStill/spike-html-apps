@@ -7,7 +7,7 @@
 // source to hold to yet.
 
 import js from "@eslint/js";
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import boundaries from "eslint-plugin-boundaries";
 import importX from "eslint-plugin-import-x";
 import globals from "globals";
@@ -57,6 +57,8 @@ const policies = layers.map(({ name, may }) => ({
 }));
 
 export default defineConfig([
+  // The apps' builds (mise run build:app), which .gitignore lists and ESLint doesn't read.
+  globalIgnores(["apps/*/dist/"]),
   { files: code, extends: [js.configs.recommended, tseslint.configs.recommended] },
   { files: code, languageOptions: { globals: globals.browser } },
   // The suite and the config run on node.

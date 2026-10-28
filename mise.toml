@@ -54,7 +54,7 @@ find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 
 dir = "{{config_root}}"
 
 [tasks.types]
-description = "Type-check tsconfig.json's inputs (eslint.config.js, and apps/) with tsc; reads no network, writes nothing"
+description = "Type-check tsconfig.json's inputs (eslint.config.js, vite.config.ts, and apps/) with tsc; reads no network, writes nothing"
 run = "tsc -p ."
 dir = "{{config_root}}"
 
@@ -100,6 +100,12 @@ description = "Run the emulator locally under the local overlay, on localhost:80
 run = "go run ./cmd/server"
 dir = "{{config_root}}"
 
+[tasks."build:app"]
+description = "Build the pipeline app with Vite (vite.config.ts): apps/pipeline/src/ into apps/pipeline/dist/, with its manifest in .vite/manifest.json; outside the check; reads no network, writes apps/pipeline/dist/"
+depends = ["preflight"]
+run = "pnpm exec vite build"
+dir = "{{config_root}}"
+
 [tasks.check]
 description = "Run every check: lint, types, test:unit, the Go steps, and test:integration; reads no network, writes nothing outside TMPDIR and Go's caches"
 depends = ["lint", "types", "test:unit", "go", "test:integration"]
@@ -110,7 +116,7 @@ run = ["mise install", "pnpm install --frozen-lockfile", "go mod download"]
 dir = "{{config_root}}"
 
 [tasks.currency]
-description = "Report every mise tool, package.json pin, and go.mod go directive and direct requirement behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
+description = "Report every mise tool, package.json pin (a registry version or a github: tag), and go.mod go directive and direct requirement behind its latest, one line each, exiting nonzero if any; reads the network, writes nothing"
 run = "scripts/currency.sh"
 # Without mise's own command echo, so a current tree prints nothing at all.
 quiet = true
