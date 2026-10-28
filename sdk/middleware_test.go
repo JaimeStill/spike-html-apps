@@ -22,13 +22,17 @@ var served = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusTeapot)
 })
 
+// methods are the methods the tests' API serves: GET, HEAD, and POST, as
+// the emulator's does, so PUT, PATCH, and DELETE are methods it does not.
+var methods = []string{http.MethodGet, http.MethodHead, http.MethodPost}
+
 // do sends req through the CORS middleware over served, admitting the
 // allowed origin and a second one, so matching is per origin and not the
-// first entry alone.
+// first entry alone, for methods.
 func do(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	sdk.CORS([]string{"https://other.example:8443", allowed})(served).ServeHTTP(rec, req)
+	sdk.CORS([]string{"https://other.example:8443", allowed}, methods)(served).ServeHTTP(rec, req)
 	return rec
 }
 
@@ -66,11 +70,11 @@ func varies(h http.Header, name string) bool {
 	return false
 }
 
-// Each API method is preflighted with the Authorization and Content-Type
-// headers, and each is admitted for the allowed origin without reaching the
-// handler.
+// Each method the caller allows is preflighted with the Authorization and
+// Content-Type headers, and each is admitted for the allowed origin without
+// reaching the handler.
 func TestCORS_PreflightFromAllowedOrigin(t *testing.T) {
-	for _, method := range []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"} {
+	for _, method := range methods {
 		t.Run(method, func(t *testing.T) {
 			rec := do(t, preflight(allowed, method, "authorization,content-type"))
 
@@ -128,6 +132,9 @@ func TestCORS_PreflightRefused(t *testing.T) {
 		"disallowed origin":   preflight(disallowed, http.MethodPost, "authorization,content-type"),
 		"origin with a path":  preflight(allowed+"/", http.MethodPost, ""),
 		"method not in API":   preflight(allowed, "PROPFIND", ""),
+		"PUT, not allowed":    preflight(allowed, http.MethodPut, "authorization,content-type"),
+		"PATCH, not allowed":  preflight(allowed, http.MethodPatch, "authorization,content-type"),
+		"DELETE, not allowed": preflight(allowed, http.MethodDelete, "authorization"),
 		"header not admitted": preflight(allowed, http.MethodPost, "authorization,x-custom"),
 		"no origin":           preflight("", http.MethodPost, "authorization"),
 	}
@@ -191,7 +198,7 @@ func TestCORS_RequestPassesThroughWithoutCORS(t *testing.T) {
 func TestCORS_EmptyListAdmitsNothing(t *testing.T) {
 	for _, origins := range [][]string{nil, {}} {
 		rec := httptest.NewRecorder()
-		sdk.CORS(origins)(served).ServeHTTP(rec, preflight(allowed, http.MethodPost, "authorization"))
+		sdk.CORS(origins, methods)(served).ServeHTTP(rec, preflight(allowed, http.MethodPost, "authorization"))
 
 		assertNoCORS(t, rec.Header())
 		if rec.Header().Get("X-Served") != "yes" {
@@ -209,7 +216,22 @@ func TestCORS_PanicsOnInvalidOrigin(t *testing.T) {
 			t.Error("CORS accepted the wildcard origin")
 		}
 	}()
-	sdk.CORS([]string{allowed, "*"})
+	sdk.CORS([]string{allowed, "*"}, methods)
+}
+
+// Origins with no methods panic rather than fall back to rs/cors's default
+// methods, which would admit methods the caller never named.
+func TestCORS_PanicsOnNoMethods(t *testing.T) {
+	for _, none := range [][]string{nil, {}} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("CORS accepted origins with methods %#v", none)
+				}
+			}()
+			sdk.CORS([]string{allowed}, none)
+		}()
+	}
 }
 
 func TestValidateOrigin(t *testing.T) {

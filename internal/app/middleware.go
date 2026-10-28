@@ -1,12 +1,18 @@
 package app
 
 import (
+	"net/http"
+
 	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-web-sdk"
 	mw "github.com/standards-lab/go-web-sdk/middleware"
 
 	"github.com/JaimeStill/spike-html-apps/sdk"
 )
+
+// apiMethods are the methods the API serves, the ones a preflight may ask
+// for: GET, with the HEAD the router answers through it, and POST.
+var apiMethods = []string{http.MethodGet, http.MethodHead, http.MethodPost}
 
 // middleware declares the router-level stack, outermost first. It reads
 // infrastructure nodes only: request logging, and cross-cutting concerns
@@ -26,13 +32,13 @@ import (
 // every mount, so it answers the preflight for any path, the probes' and an
 // unrouted one's included, before a route's method matching could refuse
 // the OPTIONS. Its origins are the config node's cors block, the one list the
-// service admits browser clients from.
+// service admits browser clients from, and its methods are [apiMethods].
 func middleware(s *graph.Scope, n *Nodes) []web.Middleware {
 	logger := s.Use(n.Logger)
 	return []web.Middleware{
 		mw.RequestID(),
 		mw.RequestLogger(logger),
-		sdk.CORS(s.Use(n.Config).CORS.AllowedOrigins),
+		sdk.CORS(s.Use(n.Config).CORS.AllowedOrigins, apiMethods),
 		mw.Recoverer(logger),
 	}
 }

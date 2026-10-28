@@ -11,18 +11,6 @@ import (
 	"github.com/standards-lab/go-web-sdk"
 )
 
-// corsMethods are the methods a preflight may ask for: the API's verbs. GET,
-// HEAD, and POST are CORS-safelisted, but a request carrying Authorization
-// is preflighted whatever its method, so they are listed with the rest.
-var corsMethods = []string{
-	http.MethodGet,
-	http.MethodHead,
-	http.MethodPost,
-	http.MethodPut,
-	http.MethodPatch,
-	http.MethodDelete,
-}
-
 // corsHeaders are the request headers a preflight may ask for: Authorization
 // for the bearer token, and Content-Type for a JSON body or a raw upload's
 // file type, which is not a CORS-safelisted value. An upload sent with an
@@ -31,13 +19,17 @@ var corsMethods = []string{
 var corsHeaders = []string{"Authorization", "Content-Type"}
 
 // CORS returns the middleware that admits cross-origin browser requests from
-// allowedOrigins, over github.com/rs/cors.
+// allowedOrigins, for the methods in allowedMethods, over github.com/rs/cors.
+// The caller lists the methods its API serves; GET, HEAD, and POST are
+// CORS-safelisted, but a request carrying Authorization is preflighted
+// whatever its method, so they are listed like any other.
 //
-// A preflight from an allowed origin, asking for one of the API's methods
-// (GET, HEAD, POST, PUT, PATCH, DELETE) and no request headers beyond
-// Authorization and Content-Type, is answered 204 with
+// A preflight from an allowed origin, asking for one of allowedMethods and
+// no request headers beyond Authorization and Content-Type, is answered 204
+// with
 // Access-Control-Allow-Origin naming the origin and the asked-for method and
-// headers allowed; it never reaches the wrapped handler. Any other request
+// headers allowed; it never reaches the wrapped handler. A preflight asking
+// for any other method is refused like a disallowed origin's. Any other request
 // from an allowed origin reaches the handler with Access-Control-Allow-Origin
 // naming the origin. A disallowed origin gets no Access-Control-* header: its
 // preflight is answered 204 bare, which the browser reads as a refusal, and
@@ -58,8 +50,10 @@ var corsHeaders = []string{"Authorization", "Content-Type"}
 //
 // CORS panics on an origin [ValidateOrigin] rejects. A configuration
 // validates its origins with ValidateOrigin when it finalizes, so the panic
-// marks a caller that skipped the check.
-func CORS(allowedOrigins []string) web.Middleware {
+// marks a caller that skipped the check. It panics, too, on allowed origins
+// with no allowedMethods, which rs/cors would read as its own default
+// methods; the methods an API serves are the caller's to name.
+func CORS(allowedOrigins, allowedMethods []string) web.Middleware {
 	if len(allowedOrigins) == 0 {
 		return func(next http.Handler) http.Handler { return next }
 	}
@@ -68,9 +62,12 @@ func CORS(allowedOrigins []string) web.Middleware {
 			panic("sdk: CORS: " + err.Error())
 		}
 	}
+	if len(allowedMethods) == 0 {
+		panic("sdk: CORS: no allowed methods")
+	}
 	c := cors.New(cors.Options{
 		AllowedOrigins: allowedOrigins,
-		AllowedMethods: corsMethods,
+		AllowedMethods: allowedMethods,
 		AllowedHeaders: corsHeaders,
 	})
 	return c.Handler

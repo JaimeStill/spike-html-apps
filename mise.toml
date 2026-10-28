@@ -147,8 +147,11 @@ dir = "{{config_root}}"
 description = "Run every check: lint, types, test:unit, the Go steps, test:integration, and test:browser, the last two after the pipeline app's build; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["lint", "types", "test:unit", "go", "test:integration", "test:browser"]
 
+# go mod download fetches go.mod's requirements, spike-ai-pipeline-client v0.4.0 among them, from
+# the Go module proxy, so on a clean machine its first run reads the network; later runs, and every
+# Go step of the check, read the module cache it fills.
 [tasks.install]
-description = "Install every mise.toml pin, node_modules from pnpm-lock.yaml, and the root module's requirements into Go's module cache; reads the network, writes node_modules/ and Go's caches"
+description = "Install every mise.toml pin, node_modules from pnpm-lock.yaml, and the root module's requirements into Go's module cache, which go mod download fetches from the Go module proxy (spike-ai-pipeline-client v0.4.0 among them), so a clean machine's first run needs the network; reads the network, writes node_modules/ and Go's caches"
 run = ["mise install", "pnpm install --frozen-lockfile", "go mod download"]
 dir = "{{config_root}}"
 

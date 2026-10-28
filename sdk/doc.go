@@ -17,6 +17,6 @@
 //     and the client router's base agree.
 //   - CORS and ValidateOrigin (middleware.go, for go-web-sdk's middleware
 //     package): admits cross-origin browser requests from an exact list of
-//     origins, over github.com/rs/cors, with no credentials mode and no
-//     wildcard.
+//     origins, for the methods its caller's API serves, over
+//     github.com/rs/cors, with no credentials mode and no wildcard.
 package sdk

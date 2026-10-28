@@ -48,7 +48,8 @@ func corsHeaders(h http.Header) http.Header {
 // The cors block's origins reach the router-wide middleware: a preflight
 // from the allowed origin is admitted for a path no route serves, the
 // upload-with-progress preflight's method and headers allowed, and leaves a
-// request record; a disallowed origin's preflight is answered bare.
+// request record; a preflight for a method the API does not serve, and a
+// disallowed origin's, are answered bare.
 func TestRun_CORSPreflight(t *testing.T) {
 	cfg := configtest.Config(t)
 	cfg.CORS.AllowedOrigins = []string{allowedOrigin}
@@ -82,6 +83,19 @@ func TestRun_CORSPreflight(t *testing.T) {
 	}
 	if !strings.Contains(r.log.String(), record) {
 		t.Errorf("log has no request record of the preflight; log: %q", r.log.String())
+	}
+
+	// A method the API does not serve is refused, though the origin is
+	// allowed: the preflight carries no CORS header.
+	for _, method := range []string{http.MethodPut, http.MethodPatch, http.MethodDelete} {
+		refused := map[string]string{
+			"Origin":                         allowedOrigin,
+			"Access-Control-Request-Method":  method,
+			"Access-Control-Request-Headers": "authorization,content-type",
+		}
+		if _, h := send(t, addr, http.MethodOptions, path, refused); len(corsHeaders(h)) != 0 {
+			t.Errorf("%s preflight CORS headers = %v, want none", method, corsHeaders(h))
+		}
 	}
 
 	preflight["Origin"] = "https://evil.example"
