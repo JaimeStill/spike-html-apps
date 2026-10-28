@@ -17,7 +17,11 @@ const Token = "configtest-token"
 // client and WebSocket listeners on 127.0.0.1 ports reserved here (the
 // block takes no 0, since the broker's URL names the port before the server
 // binds it), the token [Token], and debug logging so requests leave
-// records. The empty prefix disables environment overrides.
+// records. The empty prefix disables environment overrides. The unit tier
+// never binds the reserved NATS ports: an app it runs replaces the broker
+// with the in-memory one, or ends before startup, so no test here can lose
+// a reserved port to another process; internal/natsserver's tests, which
+// do bind theirs, start again on fresh ports when they lose one.
 func Config(t *testing.T) *config.Config {
 	t.Helper()
 	cfg := &config.Config{}

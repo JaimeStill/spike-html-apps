@@ -213,7 +213,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // notices, debug, and traces at debug, warnings at warn, and errors at
 // error. A fatal, which nats-server's own logger would exit the process on,
 // is logged at error and offered to the Server's fatal channel, where Start
-// or the lifecycle Coordinator receives it.
+// or the lifecycle Coordinator receives it, as a [fatalError] that keeps
+// nats-server's own errors in its chain: a listener that cannot bind fails
+// Start with an error errors.Is matches to syscall.EADDRINUSE.
 type logAdapter struct {
 	logger *slog.Logger
 	fatal  chan<- error
@@ -228,7 +230,7 @@ func (l *logAdapter) Tracef(format string, v ...any)  { l.log(slog.LevelDebug, f
 func (l *logAdapter) Fatalf(format string, v ...any) {
 	l.log(slog.LevelError, format, v)
 	select {
-	case l.fatal <- fmt.Errorf(format, v...):
+	case l.fatal <- newFatalError(format, v):
 	default:
 	}
 }
@@ -236,3 +238,25 @@ func (l *logAdapter) Fatalf(format string, v ...any) {
 func (l *logAdapter) log(level slog.Level, format string, v []any) {
 	l.logger.Log(context.Background(), level, fmt.Sprintf(format, v...), "component", "nats-server")
 }
+
+// fatalError is a nats-server fatal: its message as nats-server formats it,
+// and the errors among its arguments as its chain. nats-server formats the
+// listener's error with %q, which fmt.Errorf's %w would not unwrap.
+type fatalError struct {
+	msg  string
+	errs []error
+}
+
+// newFatalError formats the fatal and collects the errors among v.
+func newFatalError(format string, v []any) *fatalError {
+	f := &fatalError{msg: fmt.Sprintf(format, v...)}
+	for _, a := range v {
+		if err, ok := a.(error); ok {
+			f.errs = append(f.errs, err)
+		}
+	}
+	return f
+}
+
+func (f *fatalError) Error() string   { return f.msg }
+func (f *fatalError) Unwrap() []error { return f.errs }

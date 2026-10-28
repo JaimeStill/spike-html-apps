@@ -14,6 +14,8 @@
 //   - [Options] holds the EMULATOR_* overrides one service process adds.
 //   - [Start] runs the service on a reserved port and returns once it is
 //     live; [Launch] returns without waiting, and [Service.Ready] waits.
+//     [Service.Boot], under Ready, relaunches on freshly reserved ports a
+//     process that lost one of its reserved ports before binding it.
 //   - [Service] is one running process: [Service.Addr], [Service.URL], and
 //     [Service.Client] reach it; [Service.NATSURL], [Service.WebSocketAddr],
 //     and [Service.WebSocketURL] reach its embedded NATS server, which

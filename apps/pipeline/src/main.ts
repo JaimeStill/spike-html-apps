@@ -14,7 +14,7 @@ const config = readConfig();
 
 /** The config's token, which never changes, so there is nothing to refresh to. */
 const token: TokenProvider = {
-  token: async () => config.nats.token || undefined,
+  token: async () => config.nats.token,
   refresh: async () => undefined,
 };
 

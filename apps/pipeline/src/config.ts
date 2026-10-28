@@ -4,8 +4,8 @@
 /** The id of the `<script type="application/json">` element the shell writes the config into. */
 export const configId = "app-config";
 
-/** The config the shell writes. Every member is present; a token of "" means the NATS server
- * takes none. */
+/** The config the shell writes. Every member is present, and the token is never empty: the
+ * emulator's NATS server requires one, and the shell always writes it. */
 export interface AppConfig {
   /** The emulator's API, a URL or a path; the app resolves it against the document's base. */
   apiBase: string;
@@ -14,13 +14,13 @@ export interface AppConfig {
     url: string;
     /** The JetStream stream that holds the emulator's events. */
     stream: string;
-    /** The static token the NATS server takes, or "" for none. */
+    /** The static token the NATS server requires; never empty. */
     token: string;
   };
 }
 
 /** The shell's config, parsed from its element; throws, naming the element, when it is missing or
- * isn't an AppConfig. */
+ * isn't an AppConfig, an empty token included. */
 export function readConfig(doc: Document = document): AppConfig {
   const element = doc.getElementById(configId);
   if (!element || element.getAttribute("type") !== "application/json") {
@@ -38,6 +38,7 @@ function isConfig(value: unknown): value is AppConfig {
     typeof config?.apiBase === "string" &&
     typeof nats?.url === "string" &&
     typeof nats.stream === "string" &&
-    typeof nats.token === "string"
+    typeof nats.token === "string" &&
+    nats.token !== ""
   );
 }

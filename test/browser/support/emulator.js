@@ -22,8 +22,14 @@ export const stageNames = ["upload", "metadata", "extraction", "chunks", "embedd
 /** How long a boot, a drain, or a run may take before the tier gives up on it. */
 const failsafe = 15_000;
 
+/** How many times start launches the emulator before it gives up on a boot that lost a port. */
+export const bootAttempts = 5;
+
+/** The bind's report of a port another socket holds, as the emulator's output names it. */
+const addressInUse = /address already in use/;
+
 /** A free loopback port: one the system hands out, released for the emulator to take. */
-async function freePort() {
+export async function freePort() {
   const server = createServer();
   await new Promise((resolve, reject) => {
     server.once("error", reject);
@@ -54,11 +60,34 @@ async function until(what, check, failed = () => undefined) {
  * is served; `env` adds or overrides variables last. No overlay applies (EMULATOR_ENV is empty),
  * and the stages pass every 100 ms. Its TMPDIR, where the embedded NATS server keeps its store,
  * is a directory of its own, which stop() requires empty and removes.
+ *
+ * A reserved port is released before the emulator binds it, and the check's tiers reserve and bind
+ * loopback ports concurrently, so another process can take one in between: an emulator that exits
+ * naming the bind's "address already in use" is launched again on freshly reserved ports, up to
+ * bootAttempts launches in all; any other failure rejects at once. `reserve` reserves each port in
+ * place of freePort, three per launch, the HTTP server's, the NATS client listener's, then the
+ * WebSocket listener's; a test of the retry hands it a port another socket holds. The emulator
+ * resolved to records its launches.
  */
-export async function start({ mount = "/app", origins, env = {} } = {}) {
+export async function start({ mount = "/app", origins, env = {}, reserve = freePort } = {}) {
   const binary = process.env.EMULATOR_BINARY;
   if (!binary) throw new Error("EMULATOR_BINARY names no binary: run mise run test:browser");
-  const [port, natsPort, wsPort] = [await freePort(), await freePort(), await freePort()];
+  for (let launches = 1; ; launches++) {
+    try {
+      return await launch(binary, { mount, origins, env, reserve, launches });
+    } catch (error) {
+      if (!(error instanceof PortTaken) || launches === bootAttempts) throw error;
+    }
+  }
+}
+
+/** A launch whose emulator exited, before its readiness, naming a port another socket holds. */
+class PortTaken extends Error {}
+
+/** One launch of start's: the emulator on ports `reserve` hands out, resolving once it is ready,
+ * and rejecting with PortTaken when it exits having lost one of them. */
+async function launch(binary, { mount, origins, env, reserve, launches }) {
+  const [port, natsPort, wsPort] = [await reserve(), await reserve(), await reserve()];
   const origin = `http://127.0.0.1:${port}`;
   const temp = mkdtempSync(join(tmpdir(), "browser-emulator."));
   const child = spawn(binary, [], {
@@ -120,16 +149,21 @@ export async function start({ mount = "/app", origins, env = {} } = {}) {
   try {
     await until(
       `the emulator at ${origin}`,
-      async () => (await fetch(`${origin}/readyz`)).ok,
+      // Each probe gives up after a second, so a port another socket holds and never answers on
+      // fails this poll rather than hanging the boot.
+      async () => (await fetch(`${origin}/readyz`, { signal: AbortSignal.timeout(1000) })).ok,
       () => exit !== undefined && `exited ${exit}:\n${output}`,
     );
   } catch (error) {
     await stop().catch(() => {});
+    if (exit !== undefined && addressInUse.test(output)) throw new PortTaken(error.message);
     throw error;
   }
 
   return {
     origin,
+    /** How many times start launched the emulator: one, and one more for each lost port. */
+    launches,
     /** The app's base under the mount, a path ending in a slash. */
     base: mount === "/" ? "/" : `${mount}/`,
     natsPort,

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -157,20 +158,33 @@ func RunBinary(t testing.TB, binary string, opts Options) (int, string) {
 type Options struct {
 	// Env appends further KEY=VALUE overrides, applied last.
 	Env []string
+	// Reserve, when set, reserves each loopback address a launch binds,
+	// host:port, in place of the harness's own reservation: three per
+	// launch, the HTTP server's, then the NATS client listener's, then the
+	// WebSocket listener's. A test of the boot's retry hands it a port
+	// another socket holds.
+	Reserve func(testing.TB) string
 }
+
+// BootAttempts bounds the launches one [Service.Boot] makes.
+const BootAttempts = 5
 
 // Token is the nats token every service process the harness runs is
 // configured with; Options.Env can override it.
 const Token = "integration-token"
 
 // Service is one running service process: its address, its embedded NATS
-// server's listeners, its captured output, and its exit.
+// server's listeners, its captured output, and its exit. A boot that loses
+// a reserved port relaunches it, so the process, its addresses, and its
+// client are those of the latest launch.
 type Service struct {
 	*processtest.Process
-	addr   string
-	nats   string
-	ws     string
-	client *webtest.Client
+	opts     Options
+	launches int
+	addr     string
+	nats     string
+	ws       string
+	client   *webtest.Client
 }
 
 // Start runs the service with opts and returns once it is live: Launch
@@ -186,10 +200,23 @@ func Start(t testing.TB, opts Options) *Service {
 // several processes at once; Ready waits for one.
 func Launch(t testing.TB, opts Options) *Service {
 	t.Helper()
-	addr := loopback(t)
-	s := &Service{addr: addr, nats: loopback(t), ws: loopback(t), client: webtest.NewClient("http://" + addr)}
-	s.Process = processtest.Launch(t, s.environment(opts)...)
+	s := &Service{opts: opts}
+	s.launch(t)
 	return s
+}
+
+// launch reserves the service's three addresses anew and runs the process
+// on them.
+func (s *Service) launch(t testing.TB) {
+	t.Helper()
+	reserve := s.opts.Reserve
+	if reserve == nil {
+		reserve = loopback
+	}
+	s.addr, s.nats, s.ws = reserve(t), reserve(t), reserve(t)
+	s.client = webtest.NewClient("http://" + s.addr)
+	s.launches++
+	s.Process = processtest.Launch(t, s.environment(s.opts)...)
 }
 
 // loopback reserves a loopback port and returns its address.
@@ -197,15 +224,44 @@ func loopback(t testing.TB) string {
 	return net.JoinHostPort("127.0.0.1", strconv.Itoa(processtest.FreePort(t)))
 }
 
-// Ready waits until the service's liveness probe answers, failing the test
-// with the captured output if the process exits or the failsafe elapses
-// first. The server is alone in the top layer of the service's graph, so a
-// live probe means every node beneath it started.
+// Ready is Boot, failing the test with Boot's error.
 func (s *Service) Ready(t testing.TB) *Service {
 	t.Helper()
-	s.Await(t, "liveness", func() bool { return webtest.Live(s.URL()) })
+	if err := s.Boot(t); err != nil {
+		t.Fatal(err)
+	}
 	return s
 }
+
+// Boot waits until the service's liveness probe answers, and fails the
+// test if processtest.Failsafe elapses first. The server is alone in the
+// top layer of the service's graph, so a live probe means every node
+// beneath it started.
+//
+// A reserved port is released before the process binds it, and the check's
+// tiers reserve and bind loopback ports concurrently, so another process
+// can take one in between. A process that exits naming the bind's
+// "address already in use" is relaunched on freshly reserved ports, up to
+// BootAttempts launches in all. Boot returns any other exit, or the last
+// such one, as an error holding the exit code and the captured output.
+func (s *Service) Boot(t testing.TB) error {
+	t.Helper()
+	for {
+		processtest.WaitFor(t, "liveness", func() bool { return s.Exited() || webtest.Live(s.URL()) })
+		if !s.Exited() {
+			return nil
+		}
+		out := s.Output()
+		if !strings.Contains(out, syscall.EADDRINUSE.Error()) || s.launches == BootAttempts {
+			return fmt.Errorf("process exited with %d before liveness, after %d launches:\n%s", s.Wait(t), s.launches, out)
+		}
+		s.launch(t)
+	}
+}
+
+// Launches is the number of times the service has been launched: one, and
+// one more for each boot that lost a reserved port.
+func (s *Service) Launches() int { return s.launches }
 
 // environment composes the service's own variables for the run. EMULATOR_ENV is
 // cleared so no overlay applies: the base file and these variables are the

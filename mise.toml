@@ -105,7 +105,7 @@ dir = "{{config_root}}"
 # the pipeline app's build, and runs it as a subprocess on reserved loopback ports; the emulator
 # has no backing service, so no compose stack wraps it.
 [tasks."test:integration"]
-description = "Run the integration tier after build:app: build cmd/server, embedding the pipeline app's build, and boot it on reserved loopback ports, through boot, both probes, the app at each mount, and the drain, and a binary built without the app refusing to start; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+description = "Run the integration tier after build:app: build cmd/server, embedding the pipeline app's build, and boot it on reserved loopback ports, through boot, both probes, the app at each mount, and the drain, a binary built without the app refusing to start, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 # The binary refuses to start without the app's build, so the tier builds the app first.
 depends = ["build:app"]
 run = "go test -race -count=1 -tags integration ./integration/"
@@ -116,7 +116,7 @@ dir = "{{config_root}}"
 # and each file boots it on reserved loopback ports, under its own TMPDIR, as test/browser/support/
 # emulator.js does.
 [tasks."test:browser"]
-description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the NATS adapter's live reads, and two instances side by side; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the NATS adapter's live reads, two instances side by side, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["preflight browser", "build:app"]
 run = '''
 set -eu

@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -22,6 +24,10 @@ import (
 // These tests start the embedded server on reserved loopback ports, which
 // is local and reads no network. Each points TMPDIR at its own directory,
 // so the store the server creates there, and its removal, are observable.
+// A reserved port is released before the server binds it, and the check's
+// other tiers reserve and bind loopback ports concurrently, so each start
+// goes through boot, which starts again on fresh ports when the bind loses
+// that race.
 
 const token = "test-token"
 
@@ -46,17 +52,41 @@ func tmp(t *testing.T) string {
 	return dir
 }
 
-// start starts a server on opts and shuts it down at cleanup.
-func start(t *testing.T, opts natsserver.Options) *natsserver.Server {
+// bootAttempts bounds boot's starts.
+const bootAttempts = 5
+
+// boot starts the server fresh returns, each Start bounded at 5s. A Start
+// that fails because a listener's port is taken, which errors.Is matches to
+// syscall.EADDRINUSE, starts the next server fresh returns, on ports it
+// reserves anew, up to bootAttempts in all; any other failure returns at
+// once. It returns the last server, the number of starts, and the last
+// Start's error.
+func boot(fresh func() *natsserver.Server) (*natsserver.Server, int, error) {
+	for attempt := 1; ; attempt++ {
+		s := fresh()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := s.Start(ctx)
+		cancel()
+		if err == nil || !errors.Is(err, syscall.EADDRINUSE) || attempt == bootAttempts {
+			return s, attempt, err
+		}
+	}
+}
+
+// start boots a server on freshly reserved options with origins, shuts it
+// down at cleanup, and returns it with the options it started on.
+func start(t *testing.T, origins ...string) (*natsserver.Server, natsserver.Options) {
 	t.Helper()
-	s := natsserver.New(opts, slog.New(slog.DiscardHandler))
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := s.Start(ctx); err != nil {
+	var opts natsserver.Options
+	s, _, err := boot(func() *natsserver.Server {
+		opts = options(t, origins...)
+		return natsserver.New(opts, slog.New(slog.DiscardHandler))
+	})
+	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 	t.Cleanup(func() { _ = s.Shutdown(context.Background()) })
-	return s
+	return s, opts
 }
 
 // connect dials url with the nats.go client, presenting tok when it is set,
@@ -116,8 +146,7 @@ func wsAddr(opts natsserver.Options) string {
 // alike.
 func TestServer_TokenRequiredOnBothListeners(t *testing.T) {
 	tmp(t)
-	opts := options(t)
-	start(t, opts)
+	_, opts := start(t)
 
 	urls := map[string]string{
 		"client":    fmt.Sprintf("nats://127.0.0.1:%d", opts.Port),
@@ -140,8 +169,7 @@ func TestServer_TokenRequiredOnBothListeners(t *testing.T) {
 // of the machine's other addresses.
 func TestServer_ClientListenerLoopbackOnly(t *testing.T) {
 	tmp(t)
-	opts := options(t)
-	start(t, opts)
+	_, opts := start(t)
 
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -169,8 +197,7 @@ func TestServer_ClientListenerLoopbackOnly(t *testing.T) {
 // rather than a browser, is accepted.
 func TestServer_WebSocketAllowedOrigins(t *testing.T) {
 	tmp(t)
-	opts := options(t, "http://localhost:5173")
-	start(t, opts)
+	_, opts := start(t, "http://localhost:5173")
 	addr := wsAddr(opts)
 
 	for origin, want := range map[string]int{
@@ -190,8 +217,7 @@ func TestServer_WebSocketAllowedOrigins(t *testing.T) {
 // with no Origin is still accepted.
 func TestServer_WebSocketNoOriginsRefusesCrossOrigin(t *testing.T) {
 	tmp(t)
-	opts := options(t)
-	start(t, opts)
+	_, opts := start(t)
 	addr := wsAddr(opts)
 
 	for origin, want := range map[string]int{
@@ -209,11 +235,14 @@ func TestServer_WebSocketNoOriginsRefusesCrossOrigin(t *testing.T) {
 // Shutdown stops it and removes the store, leaving TMPDIR as it was.
 func TestServer_StoreLifecycle(t *testing.T) {
 	dir := tmp(t)
-	s := natsserver.New(options(t), slog.New(slog.DiscardHandler))
-	if s.Ready() || s.Store() != "" {
-		t.Errorf("before Start: Ready = %v, Store = %q, want false and none", s.Ready(), s.Store())
-	}
-	if err := s.Start(context.Background()); err != nil {
+	s, _, err := boot(func() *natsserver.Server {
+		s := natsserver.New(options(t), slog.New(slog.DiscardHandler))
+		if s.Ready() || s.Store() != "" {
+			t.Errorf("before Start: Ready = %v, Store = %q, want false and none", s.Ready(), s.Store())
+		}
+		return s
+	})
+	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 	if !s.Ready() {
@@ -240,11 +269,14 @@ func TestServer_StoreLifecycle(t *testing.T) {
 // A server starts once; a Shutdown before Start does nothing.
 func TestServer_StartsOnce(t *testing.T) {
 	tmp(t)
-	s := natsserver.New(options(t), slog.New(slog.DiscardHandler))
-	if err := s.Shutdown(context.Background()); err != nil {
-		t.Errorf("Shutdown before Start: %v", err)
-	}
-	if err := s.Start(context.Background()); err != nil {
+	s, _, err := boot(func() *natsserver.Server {
+		s := natsserver.New(options(t), slog.New(slog.DiscardHandler))
+		if err := s.Shutdown(context.Background()); err != nil {
+			t.Errorf("Shutdown before Start: %v", err)
+		}
+		return s
+	})
+	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
 	defer func() { _ = s.Shutdown(context.Background()) }()
@@ -254,8 +286,9 @@ func TestServer_StartsOnce(t *testing.T) {
 }
 
 // A listener port another socket holds fails Start promptly with
-// nats-server's report, not after the wait's bound, and the failed Start
-// leaves no store behind.
+// nats-server's report, an error errors.Is matches to syscall.EADDRINUSE,
+// which is how boot tells a taken port from any other failure, not after
+// the wait's bound, and the failed Start leaves no store behind.
 func TestServer_TakenPortFailsStart(t *testing.T) {
 	for _, listener := range []string{"client", "websocket"} {
 		t.Run(listener, func(t *testing.T) {
@@ -280,6 +313,9 @@ func TestServer_TakenPortFailsStart(t *testing.T) {
 				_ = s.Shutdown(context.Background())
 				t.Fatal("Start succeeded on a held port")
 			}
+			if !errors.Is(err, syscall.EADDRINUSE) {
+				t.Errorf("Start = %v, want an error matching syscall.EADDRINUSE", err)
+			}
 			if elapsed := time.Since(began); elapsed > 3*time.Second {
 				t.Errorf("Start failed after %s, want promptly", elapsed)
 			}
@@ -290,5 +326,64 @@ func TestServer_TakenPortFailsStart(t *testing.T) {
 				t.Errorf("TMPDIR holds %d entries after a failed Start, want none", len(entries))
 			}
 		})
+	}
+}
+
+// boot starts again, on freshly reserved ports, when a Start fails because
+// a reserved port was taken before the server bound it: with the first
+// start's listener port held, the second start succeeds on another.
+func TestBoot_RetriesTakenPort(t *testing.T) {
+	for _, listener := range []string{"client", "websocket"} {
+		t.Run(listener, func(t *testing.T) {
+			tmp(t)
+			held, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatalf("hold a port: %v", err)
+			}
+			defer func() { _ = held.Close() }()
+			port := held.Addr().(*net.TCPAddr).Port
+
+			// The first start's options name the held port, as though
+			// another process bound it after options reserved it.
+			var opts natsserver.Options
+			first := true
+			s, attempts, err := boot(func() *natsserver.Server {
+				opts = options(t)
+				switch {
+				case first && listener == "client":
+					opts.Port = port
+				case first:
+					opts.WebSocketPort = port
+				}
+				first = false
+				return natsserver.New(opts, slog.New(slog.DiscardHandler))
+			})
+			if err != nil {
+				t.Fatalf("boot = %v after %d starts, want a start on fresh ports", err, attempts)
+			}
+			t.Cleanup(func() { _ = s.Shutdown(context.Background()) })
+			if attempts != 2 {
+				t.Errorf("boot started %d times, want 2: the held port, then fresh ones", attempts)
+			}
+			if err := connect(fmt.Sprintf("nats://127.0.0.1:%d", opts.Port), token); err != nil {
+				t.Errorf("connect to the booted server: %v", err)
+			}
+		})
+	}
+}
+
+// boot starts once when Start fails for any reason but a taken port: with
+// TMPDIR missing, the store cannot be created, and boot returns that
+// failure from its first start.
+func TestBoot_OtherFailureNotRetried(t *testing.T) {
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "missing"))
+	_, attempts, err := boot(func() *natsserver.Server {
+		return natsserver.New(options(t), slog.New(slog.DiscardHandler))
+	})
+	if err == nil {
+		t.Fatal("boot succeeded with no TMPDIR, want the store's failure")
+	}
+	if attempts != 1 {
+		t.Errorf("boot started %d times on %v, want 1", attempts, err)
 	}
 }
