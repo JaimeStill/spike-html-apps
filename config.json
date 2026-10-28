@@ -16,5 +16,8 @@
     "default_size": 20,
     "max_size": 100
   },
+  "cors": {
+    "allowed_origins": []
+  },
   "shutdown_timeout": "10s"
 }

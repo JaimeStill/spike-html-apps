@@ -10,4 +10,8 @@
 //   - NewClient (web.go, for go-web-sdk): serves an embedded Vite build at a
 //     prefix and at the server's root, with Vite's base, the shell's
 //     <base href>, and the router's base agreeing.
+//   - CORS and ValidateOrigin (middleware.go, for go-web-sdk's middleware
+//     package): admits cross-origin browser requests from an exact list of
+//     origins, over github.com/rs/cors, with no credentials mode and no
+//     wildcard.
 package sdk

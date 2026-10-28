@@ -15,16 +15,18 @@ import (
 const envPrefix = "emulator"
 
 // Config is the service's root configuration: the library capability blocks
-// plus the service-owned read policy. It embeds the lifecycle Coordinator's
-// configuration by value and untagged, so its shutdown_timeout is a
-// top-level key and ShutdownTimeout a promoted field; Config.Config is that
-// lifecycle block, the one the composition root hands the Coordinator.
+// plus the service-owned read and cross-origin policies. It embeds the
+// lifecycle Coordinator's configuration by value and untagged, so its
+// shutdown_timeout is a top-level key and ShutdownTimeout a promoted field;
+// Config.Config is that lifecycle block, the one the composition root hands
+// the Coordinator.
 type Config struct {
 	lifecycle.Config
 
 	Log    logging.Config `json:"log"`
 	Server web.Config     `json:"server"`
 	Reads  ReadsConfig    `json:"reads"`
+	CORS   CORSConfig     `json:"cors"`
 }
 
 // Merge overlays src's set fields onto the receiver, delegating each block
@@ -37,6 +39,7 @@ func (c *Config) Merge(src *Config) {
 	c.Log.Merge(&src.Log)
 	c.Server.Merge(&src.Server)
 	c.Reads.Merge(&src.Reads)
+	c.CORS.Merge(&src.CORS)
 }
 
 // Finalize finalizes each block under the same prefix, the lifecycle block
@@ -59,6 +62,9 @@ func (c *Config) Finalize(envPrefix string) error {
 	}
 	if err := c.Reads.Finalize(envPrefix); err != nil {
 		return fmt.Errorf("reads: %w", err)
+	}
+	if err := c.CORS.Finalize(envPrefix); err != nil {
+		return fmt.Errorf("cors: %w", err)
 	}
 	return nil
 }
