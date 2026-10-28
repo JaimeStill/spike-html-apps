@@ -12,6 +12,17 @@ pnpm = "12.16.1"
 shellcheck = "0.11.0"
 "github:microsoft/typescript-go" = { version = "7.0.2", version_prefix = "typescript/v", bin_path = "package/lib" }
 
+# The browser tier's browser. Chrome for Testing publishes no checksums: take the sha256 and size
+# from the download by hand at each bump; currency reads the version_list_url through mise outdated.
+# From spike-html-apps-sdk (be6341d): mise.toml, its chrome-headless-shell pin.
+[tools."http:chrome-headless-shell"]
+version = "156.0.8078.73"
+version_list_url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json"
+version_json_path = ".channels.Stable.version"
+
+[tools."http:chrome-headless-shell".platforms]
+linux-x64 = { url = "https://storage.googleapis.com/chrome-for-testing-public/{{ version }}/linux64/chrome-headless-shell-linux64.zip", checksum = "sha256:77eb8d52798efc7a857ab61abcc62a456d8ea9635b02341d06dffee2761768c8", size = "126938225" }
+
 [env]
 # The root module alone, outside any go.work; and the pinned Go, never a toolchain go.mod asks
 # for, so no Go step downloads one.
@@ -23,7 +34,7 @@ EMULATOR_ENV = "local"
 GO_MODULES = "."
 
 [tasks.preflight]
-description = "Fail naming mise run install when the node_modules tooling is missing; reads node_modules/.bin, writes nothing"
+description = "Fail naming mise run install when the node_modules tooling is missing, and with the browser argument the pinned chrome-headless-shell; reads node_modules/.bin, writes nothing"
 hide = true
 run = "scripts/preflight.sh"
 dir = "{{config_root}}"
@@ -100,6 +111,23 @@ depends = ["build:app"]
 run = "go test -race -count=1 -tags integration ./integration/"
 dir = "{{config_root}}"
 
+# Adapted from spike-html-apps-sdk (be6341d): mise.toml, its test:browser task. The tier builds
+# cmd/server once, embedding the pipeline app's build, into a temporary directory the task removes,
+# and each file boots it on reserved loopback ports, under its own TMPDIR, as test/browser/support/
+# emulator.js does.
+[tasks."test:browser"]
+description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the NATS adapter's live reads, and two instances side by side; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+depends = ["preflight browser", "build:app"]
+run = '''
+set -eu
+bin=$(mktemp -d)
+trap 'rm -rf "$bin"' EXIT
+go build -o "$bin/server" ./cmd/server
+EMULATOR_BINARY="$bin/server" BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
+  node --test 'test/browser/*.test.js'
+'''
+dir = "{{config_root}}"
+
 [tasks.serve]
 description = "Build the pipeline app, then run the emulator locally under the local overlay, on localhost:8080, the app at /app; Ctrl-C drains it"
 # The binary refuses to start without the app's build.
@@ -116,8 +144,8 @@ run = ["pnpm exec vite build", "touch apps/pipeline/dist/.gitkeep"]
 dir = "{{config_root}}"
 
 [tasks.check]
-description = "Run every check: lint, types, test:unit, the Go steps, and test:integration, which builds the pipeline app first; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
-depends = ["lint", "types", "test:unit", "go", "test:integration"]
+description = "Run every check: lint, types, test:unit, the Go steps, test:integration, and test:browser, the last two after the pipeline app's build; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+depends = ["lint", "types", "test:unit", "go", "test:integration", "test:browser"]
 
 [tasks.install]
 description = "Install every mise.toml pin, node_modules from pnpm-lock.yaml, and the root module's requirements into Go's module cache; reads the network, writes node_modules/ and Go's caches"

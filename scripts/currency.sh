@@ -25,6 +25,8 @@ report() {
   stale=1
 }
 
+# mise outdated reads each tool's latest, http:chrome-headless-shell's from its version_list_url, as
+# spike-html-apps-sdk (be6341d): scripts/currency.sh reads it.
 # Errors only: mise warns on every run that npm's GitHub release has no assets as it falls back to
 # another source for npm's latest, which would break the silence of a current tree. JSON is read
 # with node, a mise pin, not jq.
