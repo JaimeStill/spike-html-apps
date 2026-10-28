@@ -23,11 +23,17 @@ type Options struct {
 	Env []string
 }
 
-// Service is one running service process: its address, its captured
-// output, and its exit.
+// Token is the nats token every service process the harness runs is
+// configured with; Options.Env can override it.
+const Token = "integration-token"
+
+// Service is one running service process: its address, its embedded NATS
+// server's listeners, its captured output, and its exit.
 type Service struct {
 	*processtest.Process
 	addr   string
+	nats   string
+	ws     string
 	client *webtest.Client
 }
 
@@ -38,15 +44,21 @@ func Start(t testing.TB, opts Options) *Service {
 	return Launch(t, opts).Ready(t)
 }
 
-// Launch runs the service with opts on a reserved loopback port and returns
-// without waiting, so a test can start several processes at once; Ready
-// waits for one.
+// Launch runs the service with opts on reserved loopback ports, one for the
+// HTTP server and one each for the embedded NATS server's client and
+// WebSocket listeners, and returns without waiting, so a test can start
+// several processes at once; Ready waits for one.
 func Launch(t testing.TB, opts Options) *Service {
 	t.Helper()
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(processtest.FreePort(t)))
-	s := &Service{addr: addr, client: webtest.NewClient("http://" + addr)}
-	s.Process = processtest.Launch(t, environment(opts, addr)...)
+	addr := loopback(t)
+	s := &Service{addr: addr, nats: loopback(t), ws: loopback(t), client: webtest.NewClient("http://" + addr)}
+	s.Process = processtest.Launch(t, s.environment(opts)...)
 	return s
+}
+
+// loopback reserves a loopback port and returns its address.
+func loopback(t testing.TB) string {
+	return net.JoinHostPort("127.0.0.1", strconv.Itoa(processtest.FreePort(t)))
 }
 
 // Ready waits until the service's liveness probe answers, failing the test
@@ -61,15 +73,22 @@ func (s *Service) Ready(t testing.TB) *Service {
 
 // environment composes the service's own variables for the run. EMULATOR_ENV is
 // cleared so no overlay applies: the base file and these variables are the
-// whole configuration. The port is the one Launch reserved.
-func environment(opts Options, addr string) []string {
-	host, port, _ := net.SplitHostPort(addr)
+// whole configuration. The ports are the ones Launch reserved, and the nats
+// token, which the base file leaves to the environment, is [Token].
+func (s *Service) environment(opts Options) []string {
+	host, port, _ := net.SplitHostPort(s.addr)
+	_, natsPort, _ := net.SplitHostPort(s.nats)
+	wsHost, wsPort, _ := net.SplitHostPort(s.ws)
 	env := []string{
 		"EMULATOR_ENV=",
 		"EMULATOR_LOG_LEVEL=debug",
 		"EMULATOR_LOG_FORMAT=text",
 		"EMULATOR_SERVER_HOST=" + host,
 		"EMULATOR_SERVER_PORT=" + port,
+		"EMULATOR_NATS_TOKEN=" + Token,
+		"EMULATOR_NATS_PORT=" + natsPort,
+		"EMULATOR_NATS_WEBSOCKET_HOST=" + wsHost,
+		"EMULATOR_NATS_WEBSOCKET_PORT=" + wsPort,
 	}
 	return append(env, opts.Env...)
 }
@@ -79,6 +98,17 @@ func (s *Service) Addr() string { return s.addr }
 
 // URL is the service's base URL.
 func (s *Service) URL() string { return "http://" + s.addr }
+
+// NATSURL is the embedded NATS server's client listener, as a nats:// URL
+// with no credential.
+func (s *Service) NATSURL() string { return "nats://" + s.nats }
+
+// WebSocketAddr is the embedded NATS server's WebSocket listener,
+// host:port.
+func (s *Service) WebSocketAddr() string { return s.ws }
+
+// WebSocketURL is the WebSocket listener as a ws:// URL with no credential.
+func (s *Service) WebSocketURL() string { return "ws://" + s.ws }
 
 // Client returns the client bound to the service, one per process so its
 // connection is reused across calls.

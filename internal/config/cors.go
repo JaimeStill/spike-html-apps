@@ -12,9 +12,9 @@ import (
 // CORSConfig is the service's cross-origin policy: the browser origins,
 // other than the service's own, allowed to call it. It is one setting for
 // every surface a browser reaches the service through, the HTTP router's
-// CORS middleware and, as the pipeline grows, the NATS WebSocket listener's
-// allowed origins, so one list admits a client everywhere. An empty list,
-// the default, admits no cross-origin client.
+// CORS middleware and the embedded NATS server's WebSocket listener, so one
+// list admits a client everywhere. An empty list, the default, admits no
+// cross-origin client on either.
 type CORSConfig struct {
 	// AllowedOrigins lists each origin exactly, as scheme://host[:port]. A
 	// nil slice is unset, so an overlay's empty list replaces the base's and

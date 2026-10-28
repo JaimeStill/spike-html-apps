@@ -10,8 +10,10 @@
 //   - [Start] runs the service on a reserved port and returns once it is
 //     live; [Launch] returns without waiting, and [Service.Ready] waits.
 //   - [Service] is one running process: [Service.Addr], [Service.URL], and
-//     [Service.Client] reach it, and the embedded processtest.Process
-//     stops it and reads its output and exit code.
+//     [Service.Client] reach it; [Service.NATSURL], [Service.WebSocketAddr],
+//     and [Service.WebSocketURL] reach its embedded NATS server, which
+//     requires [Token]; and the embedded processtest.Process stops it and
+//     reads its output and exit code.
 //
 // The harness is untagged, so the unit tier type-checks it on every pull
 // request; the suite files carry the integration tag.

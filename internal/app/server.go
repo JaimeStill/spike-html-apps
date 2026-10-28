@@ -42,11 +42,13 @@ func newRouter(n *Nodes) func(*graph.Scope) (*web.Router, error) {
 // server block. Its value is a lifecycle.Subsystem and a
 // lifecycle.Monitored, so the Coordinator starts it, drains it, and watches
 // its Err channel with no registration here. It orders itself after every
-// reactor, so it is the top layer: it starts after everything else and
+// reactor and after the broker, the other roots Run builds that no route
+// need reach, so it is the top layer: it starts after everything else and
 // drains first, and in-flight requests complete before what they run on
 // closes.
 func newServer(n *Nodes) func(*graph.Scope) (*web.Server, error) {
 	return func(s *graph.Scope) (*web.Server, error) {
+		s.After(n.Broker)
 		for _, r := range n.Reactors {
 			s.After(r)
 		}

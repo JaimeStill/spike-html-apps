@@ -4,5 +4,11 @@
   },
   "server": {
     "host": "127.0.0.1"
+  },
+  "nats": {
+    "token": "emulator-local-token",
+    "websocket": {
+      "host": "127.0.0.1"
+    }
   }
 }

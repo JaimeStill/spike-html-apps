@@ -12,6 +12,14 @@ import (
 	"github.com/JaimeStill/spike-html-apps/internal/config"
 )
 
+// withToken returns an unfinalized Config with the one field Finalize
+// requires and has no default for, the nats token, set.
+func withToken() *config.Config {
+	cfg := &config.Config{}
+	cfg.NATS.Token = "test-token"
+	return cfg
+}
+
 func TestConfig_MergeOverlaysSetFields(t *testing.T) {
 	base := &config.Config{ShutdownTimeout: libconfig.Duration(10 * time.Second)}
 	base.Log.Level = logging.LevelInfo
@@ -36,7 +44,7 @@ func TestConfig_MergeOverlaysSetFields(t *testing.T) {
 }
 
 func TestConfig_FinalizeDefaults(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize(""); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -63,7 +71,7 @@ func TestConfig_FinalizeReadsEnvUnderPrefix(t *testing.T) {
 	t.Setenv("EMULATOR_LOG_LEVEL", "error")
 	t.Setenv("EMULATOR_SERVER_PORT", "7070")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize("svc"); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -81,7 +89,7 @@ func TestConfig_FinalizeEnvOverrides(t *testing.T) {
 	t.Setenv("EMULATOR_LOG_LEVEL", "debug")
 	t.Setenv("EMULATOR_SERVER_PORT", "9090")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize("emulator"); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -102,7 +110,7 @@ func TestConfig_FinalizeRejectsNonPositiveShutdownTimeout(t *testing.T) {
 		t.Run(v, func(t *testing.T) {
 			t.Setenv("EMULATOR_SHUTDOWN_TIMEOUT", v)
 
-			cfg := &config.Config{}
+			cfg := withToken()
 			err := cfg.Finalize("emulator")
 			if err == nil {
 				t.Fatalf("Finalize accepted shutdown_timeout %s", v)
@@ -126,7 +134,7 @@ func TestConfig_FinalizeRejectsNonPositiveFileShutdownTimeout(t *testing.T) {
 func TestConfig_FinalizeRejectsUnparsableShutdownTimeout(t *testing.T) {
 	t.Setenv("EMULATOR_SHUTDOWN_TIMEOUT", "soon")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	err := cfg.Finalize("emulator")
 	if err == nil {
 		t.Fatal("Finalize accepted an unparsable EMULATOR_SHUTDOWN_TIMEOUT")
@@ -142,7 +150,8 @@ func TestConfig_FinalizeEmptyPrefixReadsNoShutdownOverride(t *testing.T) {
 	t.Setenv("EMULATOR_SHUTDOWN_TIMEOUT", "30s")
 	t.Setenv("SHUTDOWN_TIMEOUT", "30s")
 
-	cfg := &config.Config{ShutdownTimeout: libconfig.Duration(3 * time.Second)}
+	cfg := withToken()
+	cfg.ShutdownTimeout = libconfig.Duration(3 * time.Second)
 	if err := cfg.Finalize(""); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -163,7 +172,7 @@ func TestConfig_MergeOverlayShutdownTimeoutReplacesBase(t *testing.T) {
 func TestConfig_FinalizeWrapsChildErrors(t *testing.T) {
 	t.Setenv("EMULATOR_LOG_LEVEL", "verbose")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	err := cfg.Finalize("emulator")
 	if err == nil {
 		t.Fatal("Finalize accepted an invalid log level")
@@ -174,7 +183,7 @@ func TestConfig_FinalizeWrapsChildErrors(t *testing.T) {
 }
 
 func TestReads_FinalizeDefaults(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize(""); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -211,7 +220,7 @@ func TestReads_FinalizeEnvOverrides(t *testing.T) {
 	t.Setenv("EMULATOR_READS_DEFAULT_SIZE", "25")
 	t.Setenv("EMULATOR_READS_MAX_SIZE", "250")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize("emulator"); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -240,7 +249,7 @@ func TestReads_FinalizeRejectsInvalidPolicy(t *testing.T) {
 			t.Setenv("EMULATOR_READS_DEFAULT_SIZE", tc.defaultSize)
 			t.Setenv("EMULATOR_READS_MAX_SIZE", tc.maxSize)
 
-			cfg := &config.Config{}
+			cfg := withToken()
 			err := cfg.Finalize("emulator")
 			if err == nil {
 				t.Fatal("Finalize accepted an invalid reads policy")

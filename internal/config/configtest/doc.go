@@ -6,5 +6,6 @@
 // The package exports:
 //
 //   - [Config], which returns a finalized root configuration whose
-//     composition performs no I/O
+//     composition reaches only loopback, and [Token], the nats token it
+//     sets
 package configtest

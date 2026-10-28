@@ -15,7 +15,8 @@ import (
 const envPrefix = "emulator"
 
 // Config is the service's root configuration: the library capability blocks
-// plus the service-owned read and cross-origin policies. It embeds the
+// plus the service-owned read and cross-origin policies and the embedded
+// NATS server's block. It embeds the
 // lifecycle Coordinator's configuration by value and untagged, so its
 // shutdown_timeout is a top-level key and ShutdownTimeout a promoted field;
 // Config.Config is that lifecycle block, the one the composition root hands
@@ -27,6 +28,7 @@ type Config struct {
 	Server web.Config     `json:"server"`
 	Reads  ReadsConfig    `json:"reads"`
 	CORS   CORSConfig     `json:"cors"`
+	NATS   NATSConfig     `json:"nats"`
 }
 
 // Merge overlays src's set fields onto the receiver, delegating each block
@@ -40,6 +42,7 @@ func (c *Config) Merge(src *Config) {
 	c.Server.Merge(&src.Server)
 	c.Reads.Merge(&src.Reads)
 	c.CORS.Merge(&src.CORS)
+	c.NATS.Merge(&src.NATS)
 }
 
 // Finalize finalizes each block under the same prefix, the lifecycle block
@@ -65,6 +68,9 @@ func (c *Config) Finalize(envPrefix string) error {
 	}
 	if err := c.CORS.Finalize(envPrefix); err != nil {
 		return fmt.Errorf("cors: %w", err)
+	}
+	if err := c.NATS.Finalize(envPrefix); err != nil {
+		return fmt.Errorf("nats: %w", err)
 	}
 	return nil
 }

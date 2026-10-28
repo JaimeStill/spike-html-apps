@@ -10,6 +10,13 @@
 //     Finalize; its Limits method hands the policy to a handler as
 //     web.Limits. [ReadsEnv] records the environment-variable names its
 //     Finalize read.
+//   - [CORSConfig] is the cross-origin policy, the one list of browser
+//     origins the HTTP router and the NATS WebSocket listener admit.
+//   - [NATSConfig] configures the embedded NATS server (the token both its
+//     listeners require, the loopback client port, and the WebSocket
+//     listener's address) and the stream its owning broker provisions;
+//     [NATSConfig.Broker] derives that broker's go-messaging configuration.
+//     [NATSEnv] records the environment-variable names its Finalize read.
 //   - [Load] reads the layered files, decoding each strictly, and finalizes
 //     the result under the service's env prefix.
 //

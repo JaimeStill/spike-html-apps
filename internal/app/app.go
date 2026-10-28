@@ -8,9 +8,11 @@ import (
 	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-core/lifecycle"
 	"github.com/standards-lab/go-core/logging"
+	"github.com/standards-lab/go-messaging/nats"
 	"github.com/standards-lab/go-web-sdk"
 
 	"github.com/JaimeStill/spike-html-apps/internal/config"
+	"github.com/JaimeStill/spike-html-apps/internal/natsserver"
 )
 
 // App is the application layer: the dependency graph that describes the
@@ -32,6 +34,8 @@ type App struct {
 type Nodes struct {
 	Config    *graph.Node[*config.Config]       // "config"
 	Logger    *graph.Node[*slog.Logger]         // "logger"
+	NATS      *graph.Node[*natsserver.Server]   // "nats"
+	Broker    *graph.Node[*nats.Broker]         // "broker"
 	Readiness *graph.Node[*lifecycle.Readiness] // "readiness"
 	Router    *graph.Node[*web.Router]          // "router"
 	Server    *graph.Node[*web.Server]          // "server"
@@ -68,7 +72,8 @@ func (a *App) Nodes() Nodes { return a.nodes }
 // Run builds the graph, hands the System to a lifecycle Coordinator with
 // the config node's lifecycle block, and runs it until ctx ends, returning
 // the process exit code. The Build's roots are every node Run reads (the
-// config, the logger, the server) and the reactors. Once the server has
+// config, the logger, the server), the broker, which owns the event stream
+// whether or not another node Uses it, and the reactors. Once the server has
 // bound, the ready record names its address. Run logs "server stopped" and
 // returns 0 after a clean drain, or logs "service failed" with the error
 // and returns 1 on a Build, startup, or shutdown failure. An App runs once:
@@ -80,7 +85,7 @@ func (a *App) Run(ctx context.Context) int {
 	a.ran = true
 
 	n := a.nodes
-	roots := append([]graph.Ref{n.Config, n.Logger, n.Server}, n.Reactors...)
+	roots := append([]graph.Ref{n.Config, n.Logger, n.Broker, n.Server}, n.Reactors...)
 	sys, err := a.graph.Build(roots...)
 	if err != nil {
 		// The logger node may be what failed, so the Build failure is

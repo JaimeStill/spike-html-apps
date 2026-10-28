@@ -19,5 +19,15 @@
   "cors": {
     "allowed_origins": []
   },
+  "nats": {
+    "token": "",
+    "port": 4222,
+    "websocket": {
+      "host": "0.0.0.0",
+      "port": 4223
+    },
+    "stream": "EMULATOR",
+    "prefix": "emulator"
+  },
   "shutdown_timeout": "10s"
 }

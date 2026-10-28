@@ -9,7 +9,7 @@ import (
 )
 
 func TestCORS_FinalizeDefaultsToNoOrigins(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := withToken()
 	if err := cfg.Finalize(""); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestCORS_FinalizeDefaultsToNoOrigins(t *testing.T) {
 func TestCORS_FinalizeEnvListReplacesConfigured(t *testing.T) {
 	t.Setenv("EMULATOR_CORS_ALLOWED_ORIGINS", " http://localhost:5173, ,https://app.example:8443,")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	cfg.CORS.AllowedOrigins = []string{"https://configured.example"}
 	if err := cfg.Finalize("emulator"); err != nil {
 		t.Fatalf("Finalize: %v", err)
@@ -45,7 +45,7 @@ func TestCORS_FinalizeEnvListReplacesConfigured(t *testing.T) {
 func TestCORS_FinalizeEnvSeparatorsClearList(t *testing.T) {
 	t.Setenv("EMULATOR_CORS_ALLOWED_ORIGINS", " , ")
 
-	cfg := &config.Config{}
+	cfg := withToken()
 	cfg.CORS.AllowedOrigins = []string{"https://configured.example"}
 	if err := cfg.Finalize("emulator"); err != nil {
 		t.Fatalf("Finalize: %v", err)
@@ -70,7 +70,7 @@ func TestCORS_FinalizeRejectsInvalidOrigin(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv("EMULATOR_CORS_ALLOWED_ORIGINS", tc.env)
 
-			cfg := &config.Config{}
+			cfg := withToken()
 			cfg.CORS.AllowedOrigins = tc.configured
 			err := cfg.Finalize("emulator")
 			if err == nil {

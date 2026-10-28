@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -184,8 +185,9 @@ func TestRun_HealthzContract(t *testing.T) {
 }
 
 // The readiness probe's whole contract: 200, status "ready", and exactly
-// one check, the lifecycle coordinator's, reporting ready. A second check
-// appearing, or the one being renamed, fails here.
+// three checks, all ready: the lifecycle coordinator's, the embedded NATS
+// server's, and the broker's, in that order. A check appearing, going
+// missing, or being renamed fails here.
 func TestRun_ReadyzContract(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -212,8 +214,8 @@ func TestRun_ReadyzContract(t *testing.T) {
 	if got.Status != "ready" {
 		t.Errorf("readiness status = %q, want ready", got.Status)
 	}
-	want := []check{{Name: "lifecycle", Ready: true}}
-	if len(got.Checks) != len(want) || got.Checks[0] != want[0] {
+	want := []check{{Name: "lifecycle", Ready: true}, {Name: "nats", Ready: true}, {Name: "broker", Ready: true}}
+	if !slices.Equal(got.Checks, want) {
 		t.Errorf("readiness checks = %+v, want exactly %+v", got.Checks, want)
 	}
 }

@@ -30,12 +30,12 @@ import (
 // does the Build-failure case, which substitutes a failing constructor.
 
 // buildAsRun builds a's graph from the roots Run builds from, the config,
-// the logger, the server, and the reactors, plus extra. TestGraph_
+// the logger, the broker, the server, and the reactors, plus extra. TestGraph_
 // ServerAloneInTopLayer holds these roots to Run's by observing a real Run.
 func buildAsRun(t *testing.T, a *app.App, extra ...graph.Ref) *graph.System {
 	t.Helper()
 	n := a.Nodes()
-	roots := append([]graph.Ref{n.Config, n.Logger, n.Server}, n.Reactors...)
+	roots := append([]graph.Ref{n.Config, n.Logger, n.Broker, n.Server}, n.Reactors...)
 	sys, err := a.Graph().Build(append(roots, extra...)...)
 	if err != nil {
 		t.Fatalf("Build: %v", err)

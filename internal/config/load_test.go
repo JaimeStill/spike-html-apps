@@ -16,7 +16,8 @@ import (
 
 // inDir writes files into a fresh working directory, enters it, and clears
 // the variables that would select an overlay or override the timeout, so
-// the files alone configure the load.
+// the files alone configure the load, but for the nats token, which every
+// load requires and which these files leave out.
 func inDir(t *testing.T, files map[string]string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -28,6 +29,7 @@ func inDir(t *testing.T, files map[string]string) {
 	t.Chdir(dir)
 	t.Setenv("EMULATOR_ENV", "")
 	t.Setenv("EMULATOR_SHUTDOWN_TIMEOUT", "")
+	t.Setenv("EMULATOR_NATS_TOKEN", "test-token")
 }
 
 // shutdown_timeout is a top-level key of config.json.

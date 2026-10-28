@@ -4,8 +4,9 @@
 // the layer files are the architecture's layer list:
 //
 //   - infrastructure.go: defineInfrastructure, the configuration and the
-//     services the application is composed on (the logger, in the
-//     template baseline);
+//     services the application is composed on: the logger, and the event
+//     transport, the embedded nats-server and the broker that owns its
+//     stream;
 //   - admin.go: defineAdmin, the administrative services, and their /admin
 //     mount;
 //   - domain.go: defineDomain, the domain services, and their /api mount;
@@ -25,8 +26,8 @@
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
 // handles, so a caller can Observe or Replace a node before Run. [App.Run]
 // is the hot start plus shutdown: it builds the graph from the config, the
-// logger, the server, and each reactor as roots, hands the System to go-core's
-// lifecycle Coordinator, and returns the process exit code. A constructor's
+// logger, the broker, the server, and each reactor as roots, hands the System
+// to go-core's lifecycle Coordinator, and returns the process exit code. A constructor's
 // error is reported there as the service failing; a wiring mistake panics
 // during Build.
 //
