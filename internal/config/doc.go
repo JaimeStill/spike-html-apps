@@ -17,6 +17,11 @@
 //     listener's address) and the stream its owning broker provisions;
 //     [NATSConfig.Broker] derives that broker's go-messaging configuration.
 //     [NATSEnv] records the environment-variable names its Finalize read.
+//   - [DocumentsConfig] is the document store's upload limit, with
+//     [DocumentsEnv].
+//   - [RunsConfig] is the emulated pipeline's stage interval and the
+//     instance name its stage events are sourced from
+//     ([RunsConfig.Source]), with [RunsEnv].
 //   - [Load] reads the layered files, decoding each strictly, and finalizes
 //     the result under the service's env prefix.
 //

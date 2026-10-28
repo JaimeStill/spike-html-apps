@@ -15,8 +15,8 @@ import (
 const envPrefix = "emulator"
 
 // Config is the service's root configuration: the library capability blocks
-// plus the service-owned read and cross-origin policies and the embedded
-// NATS server's block. It embeds the
+// plus the service-owned read and cross-origin policies, the embedded NATS
+// server's block, and the emulated pipeline's documents and runs blocks. It embeds the
 // lifecycle Coordinator's configuration by value and untagged, so its
 // shutdown_timeout is a top-level key and ShutdownTimeout a promoted field;
 // Config.Config is that lifecycle block, the one the composition root hands
@@ -24,11 +24,13 @@ const envPrefix = "emulator"
 type Config struct {
 	lifecycle.Config
 
-	Log    logging.Config `json:"log"`
-	Server web.Config     `json:"server"`
-	Reads  ReadsConfig    `json:"reads"`
-	CORS   CORSConfig     `json:"cors"`
-	NATS   NATSConfig     `json:"nats"`
+	Log       logging.Config  `json:"log"`
+	Server    web.Config      `json:"server"`
+	Reads     ReadsConfig     `json:"reads"`
+	CORS      CORSConfig      `json:"cors"`
+	NATS      NATSConfig      `json:"nats"`
+	Documents DocumentsConfig `json:"documents"`
+	Runs      RunsConfig      `json:"runs"`
 }
 
 // Merge overlays src's set fields onto the receiver, delegating each block
@@ -43,6 +45,8 @@ func (c *Config) Merge(src *Config) {
 	c.Reads.Merge(&src.Reads)
 	c.CORS.Merge(&src.CORS)
 	c.NATS.Merge(&src.NATS)
+	c.Documents.Merge(&src.Documents)
+	c.Runs.Merge(&src.Runs)
 }
 
 // Finalize finalizes each block under the same prefix, the lifecycle block
@@ -71,6 +75,12 @@ func (c *Config) Finalize(envPrefix string) error {
 	}
 	if err := c.NATS.Finalize(envPrefix); err != nil {
 		return fmt.Errorf("nats: %w", err)
+	}
+	if err := c.Documents.Finalize(envPrefix); err != nil {
+		return fmt.Errorf("documents: %w", err)
+	}
+	if err := c.Runs.Finalize(envPrefix); err != nil {
+		return fmt.Errorf("runs: %w", err)
 	}
 	return nil
 }

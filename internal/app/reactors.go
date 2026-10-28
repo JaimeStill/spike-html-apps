@@ -1,7 +1,10 @@
 package app
 
 import (
+	"time"
+
 	"github.com/standards-lab/go-core/graph"
+	"github.com/standards-lab/go-core/reactor"
 )
 
 // defineReactors defines the reactors on g into n: the entry points that
@@ -21,6 +24,25 @@ import (
 // the readiness probe under its node's name, and ends the run on its
 // failure, with no registration here. No node Uses a reactor, so each is
 // appended to n.Reactors, which Run builds as roots and the server orders
-// itself after. The template defines none; which reactors it runs, and what
-// drives them, is the application author's decision.
-func defineReactors(g *graph.Graph, n *Nodes) {}
+// itself after.
+//
+// The emulator runs one: runner, which advances every run whose next stage
+// is due.
+func defineReactors(g *graph.Graph, n *Nodes) {
+	n.Runner = g.Define("runner", newRunner(n))
+	n.Reactors = append(n.Reactors, n.Runner)
+}
+
+// newRunner constructs the reactor that advances the runs: the runs node's
+// Advance over its Ticks, an interval the run layer's Start nudges. It Uses
+// the runs node, which Uses the broker node, so it sits above the broker:
+// it drains first, its last pass finishing before the broker stops, and
+// nothing publishes after it. A pass still running at half the shutdown
+// timeout is cancelled.
+func newRunner(n *Nodes) func(*graph.Scope) (*reactor.Reactor[time.Time], error) {
+	return func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
+		runs := s.Use(n.Runs)
+		return reactor.New(runs.Ticks(), runs.Advance,
+			reactor.CancelWithin(s.Use(n.Config).ShutdownTimeout.Duration())), nil
+	}
+}

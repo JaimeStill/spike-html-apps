@@ -3,6 +3,9 @@ package app
 import (
 	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-web-sdk"
+
+	"github.com/JaimeStill/spike-html-apps/domain/document"
+	"github.com/JaimeStill/spike-html-apps/domain/run"
 )
 
 // defineDomain defines the domain services on g into n, one node per
@@ -13,16 +16,44 @@ import (
 // so none is a lifecycle participant. A package that does own a resource
 // and run belongs in infrastructure.go, if it is built once at startup, or
 // reactors.go, if it reacts to an external occurrence for the life of the
-// process. The template defines none; which services it composes is the
-// application author's decision.
-func defineDomain(g *graph.Graph, n *Nodes) {}
+// process.
+//
+// The emulator's two layers are runs, the emulated pipeline runs, which
+// publish their stage events through the broker node, and documents, the
+// uploaded files, each of whose uploads starts a run through the runs
+// node. It constructs nothing.
+func defineDomain(g *graph.Graph, n *Nodes) {
+	n.Runs = g.Define("runs", newRuns(n))
+	n.Documents = g.Define("documents", func(s *graph.Scope) (*document.Service, error) {
+		return document.New(s.Use(n.Runs)), nil
+	})
+}
+
+// newRuns constructs the run layer from the config node's runs block, its
+// interval and its instance's event source, under the nats block's prefix,
+// the namespace of every type the broker publishes, publishing through the
+// broker node and logging a failed publish through the logger node.
+func newRuns(n *Nodes) func(*graph.Scope) (*run.Service, error) {
+	return func(s *graph.Scope) (*run.Service, error) {
+		cfg := s.Use(n.Config)
+		return run.New(run.Config{
+			Interval: cfg.Runs.StageInterval.Duration(),
+			Source:   cfg.Runs.Source(),
+			Prefix:   cfg.NATS.Prefix,
+		}, s.Use(n.Broker), s.Use(n.Logger))
+	}
+}
 
 // mountAPI builds the API mount, /api, with each domain layer's route group
-// mounted into it. Each handler is handed, at the construction site, its
-// service and its policy from the config node (cfg.Reads.Limits() for a
-// collection read) and the logger for its error writer
-// (web.NewErrorWriter(logger, ...)), each read with s.Use from n. The
-// template ships the group initialized and empty.
+// mounted into it, each handed its service, the paging policy from the
+// config node, and the logger node for its error writer; the documents
+// group is also handed the transfer its uploads and downloads take, sized
+// from the documents block's limit and the server block's rate.
 func mountAPI(s *graph.Scope, n *Nodes) *web.Group {
-	return web.NewGroup("/api")
+	cfg, logger := s.Use(n.Config), s.Use(n.Logger)
+	api := web.NewGroup("/api")
+	reads := cfg.Reads.Limits()
+	api.Mount(document.Routes(s.Use(n.Documents), reads, cfg.Server.Transfer(*cfg.Documents.MaxSize), logger))
+	api.Mount(run.Routes(s.Use(n.Runs), reads, logger))
+	return api
 }

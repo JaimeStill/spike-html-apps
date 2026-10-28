@@ -29,5 +29,12 @@
     "stream": "EMULATOR",
     "prefix": "emulator"
   },
+  "documents": {
+    "max_size": 33554432
+  },
+  "runs": {
+    "stage_interval": "750ms",
+    "instance": ""
+  },
   "shutdown_timeout": "10s"
 }

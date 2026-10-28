@@ -17,6 +17,9 @@ import (
 	"time"
 
 	libconfig "github.com/standards-lab/go-core/config"
+	"github.com/standards-lab/go-core/graph"
+	"github.com/standards-lab/go-messaging"
+	"github.com/standards-lab/go-messaging/memory"
 	"github.com/standards-lab/go-web-sdk"
 	mw "github.com/standards-lab/go-web-sdk/middleware"
 
@@ -28,7 +31,12 @@ import (
 // These tests drive the composition root from outside: New builds it, Run
 // serves it, the log's ready record is the ready signal, and HTTP is the
 // only probe. They name no node and no layer, so they hold the process's
-// behavior across a change to how New describes it.
+// behavior across a change to how New describes it, but for the one seam
+// the unit tier composes through: start replaces the broker node's
+// constructor with go-messaging's in-memory broker, so no test here starts
+// the embedded NATS server or reaches the network beyond loopback HTTP. The
+// binary, and the integration tier that runs it, compose the embedded
+// server and its JetStream broker.
 
 // failsafe bounds every wait for an event that should occur, so a broken
 // composition fails the test instead of hanging it.
@@ -72,25 +80,40 @@ func waitForReady(t *testing.T, buf *syncBuffer) string {
 	return ""
 }
 
-// running is one App under Run: its log, the cancel that drains it, and the
-// channel Run's exit code arrives on.
+// running is one App under Run: its log, the in-memory broker it publishes
+// through, the cancel that drains it, and the channel Run's exit code
+// arrives on.
 type running struct {
 	log    *syncBuffer
+	broker *memory.Broker
 	cancel context.CancelFunc
 	done   chan int
 }
 
-// start builds an App from cfg and runs it in the background. The cleanup
-// cancels it, so a test that fails early leaves no server behind.
+// start builds an App from cfg over the in-memory broker and runs it in the
+// background. The cleanup cancels it, so a test that fails early leaves no
+// server behind.
 func start(t *testing.T, cfg *config.Config) *running {
 	t.Helper()
 	buf := &syncBuffer{}
 	a := app.New(cfg, buf)
+	broker := withMemoryBroker(a)
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &running{log: buf, cancel: cancel, done: make(chan int, 1)}
+	r := &running{log: buf, broker: broker, cancel: cancel, done: make(chan int, 1)}
 	go func() { r.done <- a.Run(ctx) }()
 	t.Cleanup(cancel)
 	return r
+}
+
+// withMemoryBroker replaces a's broker node with a fresh in-memory broker,
+// before Run, and returns it. The replacement Uses no node, so the graph
+// holds no embedded NATS server.
+func withMemoryBroker(a *app.App) *memory.Broker {
+	b := memory.New()
+	a.Graph().Replace(a.Nodes().Broker, func(*graph.Scope) (messaging.Broker, error) {
+		return b, nil
+	})
+	return b
 }
 
 // exit waits for Run to return and gives its exit code.
@@ -185,9 +208,11 @@ func TestRun_HealthzContract(t *testing.T) {
 }
 
 // The readiness probe's whole contract: 200, status "ready", and exactly
-// three checks, all ready: the lifecycle coordinator's, the embedded NATS
-// server's, and the broker's, in that order. A check appearing, going
-// missing, or being renamed fails here.
+// the checks of the unit tier's composition, all ready: the lifecycle
+// coordinator's and the runner reactor's, in that order. The in-memory
+// broker has no Ready and the composition no embedded server, so neither
+// joins; the binary's nats and broker checks are the integration tier's. A
+// check appearing, going missing, or being renamed fails here.
 func TestRun_ReadyzContract(t *testing.T) {
 	r := start(t, configtest.Config(t))
 	addr := waitForReady(t, r.log)
@@ -214,7 +239,7 @@ func TestRun_ReadyzContract(t *testing.T) {
 	if got.Status != "ready" {
 		t.Errorf("readiness status = %q, want ready", got.Status)
 	}
-	want := []check{{Name: "lifecycle", Ready: true}, {Name: "nats", Ready: true}, {Name: "broker", Ready: true}}
+	want := []check{{Name: "lifecycle", Ready: true}, {Name: "runner", Ready: true}}
 	if !slices.Equal(got.Checks, want) {
 		t.Errorf("readiness checks = %+v, want exactly %+v", got.Checks, want)
 	}
@@ -318,6 +343,7 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 func TestRun_TwicePanics(t *testing.T) {
 	buf := &syncBuffer{}
 	a := app.New(configtest.Config(t), buf)
+	withMemoryBroker(a)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

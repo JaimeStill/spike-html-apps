@@ -9,10 +9,11 @@
 //     stream;
 //   - admin.go: defineAdmin, the administrative services, and their /admin
 //     mount;
-//   - domain.go: defineDomain, the domain services, and their /api mount;
+//   - domain.go: defineDomain, the domain services, runs and documents, and
+//     their /api mount;
 //   - reactors.go: defineReactors, the process-lifetime entry points an
 //     occurrence drives, each a node whose value is a go-core
-//     reactor.Reactor;
+//     reactor.Reactor: runner, which advances the runs;
 //   - server.go: defineServer, the request edge: the readiness the probes
 //     report, the router, and the server;
 //   - routes.go: the list of mounts;
@@ -24,7 +25,11 @@
 // with Use. [App] is the described process. [New] is the cold start: it
 // describes the graph, layer by layer, lowest first, constructs nothing,
 // and cannot fail. [App.Graph] and [App.Nodes] publish the graph and its
-// handles, so a caller can Observe or Replace a node before Run. [App.Run]
+// handles, so a caller can Observe or Replace a node before Run. The unit
+// tier Replaces the broker node, whose type is go-messaging's Broker
+// interface, with the in-memory broker, which Uses no node, so its graph
+// holds no embedded server; the binary composes the embedded server and its
+// JetStream broker. [App.Run]
 // is the hot start plus shutdown: it builds the graph from the config, the
 // logger, the broker, the server, and each reactor as roots, hands the System
 // to go-core's lifecycle Coordinator, and returns the process exit code. A constructor's

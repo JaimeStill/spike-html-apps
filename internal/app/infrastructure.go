@@ -6,6 +6,7 @@ import (
 
 	"github.com/standards-lab/go-core/graph"
 	"github.com/standards-lab/go-core/logging"
+	"github.com/standards-lab/go-messaging"
 	"github.com/standards-lab/go-messaging/nats"
 
 	"github.com/JaimeStill/spike-html-apps/internal/config"
@@ -27,6 +28,14 @@ import (
 // the Coordinator starts the server first and drains the broker first, and
 // both join the readiness probe: the service is not ready until the server
 // accepts connections and the broker is connected.
+//
+// The broker node's type is go-messaging's Broker interface, the seam the
+// unit tier composes through: it replaces the node's constructor with one
+// returning go-messaging's memory.Broker, which Uses no node, so the graph
+// it builds holds no embedded server and starts nothing over the network.
+// The lifecycle reads a node's participation from its value's methods, so
+// the NATS broker still starts, drains, and reports readiness through the
+// interface.
 func defineInfrastructure(g *graph.Graph, n *Nodes, cfg *config.Config, w io.Writer) {
 	n.Config = g.Define("config", func(*graph.Scope) (*config.Config, error) {
 		return cfg, nil
@@ -68,9 +77,13 @@ func newNATS(n *Nodes) func(*graph.Scope) (*natsserver.Server, error) {
 // the server must be built, and must accept connections before the broker's
 // Start connects and provisions the stream, and After alone would build
 // neither.
-func newBroker(n *Nodes) func(*graph.Scope) (*nats.Broker, error) {
-	return func(s *graph.Scope) (*nats.Broker, error) {
+func newBroker(n *Nodes) func(*graph.Scope) (messaging.Broker, error) {
+	return func(s *graph.Scope) (messaging.Broker, error) {
 		_ = s.Use(n.NATS)
-		return nats.New(s.Use(n.Config).NATS.Broker())
+		b, err := nats.New(s.Use(n.Config).NATS.Broker())
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
 	}
 }
