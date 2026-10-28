@@ -1,4 +1,4 @@
-# From go-web-sdk-template (b6ad574): template/.golangci.yml.
+# From go-web-sdk-template template/v0.13.0 (b6ad574): template/.golangci.yml.
 # golangci-lint v2 configuration, run per module by `mise run check`.
 version: "2"
 

@@ -2,3 +2,18 @@
 .claude/plans/
 .claude/briefs/
 node_modules
+
+# From go-web-sdk-template template/v0.13.0 (b6ad574): template/.gitignore.
+# Secrets are layered configuration and never committed.
+secrets*.json
+
+# Build and coverage artifacts.
+bin/
+*.test
+coverage.out
+coverage.html
+
+# Local workspace files.
+go.work
+go.work.sum
+tmp/
