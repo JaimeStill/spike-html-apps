@@ -23,12 +23,14 @@ when they compose the capstone's UI primitives, live over a backend?
 
 1. The SDK runtime: the router (URLPattern and the Navigation API; base, deep link, reload, back
    and forward), the API client (a Result that fails as an RFC 9457 problem, the title filled
-   when go-web-sdk omits it), the anonymous token provider, and the domain service, against sdk
-   v0.1.0's declarations.
+   when go-web-sdk omits it; upload with progress; streamed responses), the anonymous token
+   provider, and the domain service, whose declarations match sdk v0.1.0's except for the
+   additions and breaks sdk v0.2.0's CHANGELOG lists.
 2. The foundation's Intl formatters, against foundation v0.1.0's `format.d.ts`.
 3. An event-sequence interface in the SDK: an ordered stream of CloudEvents, resumable by an
    opaque cursor (the JetStream stream sequence), with a NATS-over-WebSocket adapter reading an
-   ordered consumer.
+   ordered consumer, tested against a pinned nats-server in the sdk and live against the
+   emulator in the root.
 4. The Go serving half, `NewClient`, serving the app at `/app` and at the server's root, with
    Vite's `base`, the shell's `<base href>`, and the router's base agreeing; in the spike's own
    `sdk` package, shaped as go-web-service's `sdk/` stages it.
@@ -69,7 +71,8 @@ outbox, or containers: the spike proves the client, not the capstone's backend.
   menu; and the conformance check for color, space, and type profiles.
 - **Extension:** spike-html-apps-noctis, a color profile that extends the foundation from outside,
   installs it by tag, and passes its conformance check.
-- **SDK runtime:** the router, the API client, the token provider, and the domain service.
+- **SDK runtime:** the router, the API client with upload progress and streamed responses, the
+  token provider, and the domain service.
 - **Event sync:** the event-sequence interface and its NATS-over-WebSocket adapter.
 - **Emulator:** the in-memory pipeline service with embedded NATS.
 - **Serving half:** `NewClient` at a prefix and at the root.

@@ -34,7 +34,9 @@ API client
    problem titled with its status text, or "HTTP <status>" when that is empty.
 3. Client-made problems have status 0 and fixed titles: urn:standards-lab:problem:network
    ("Network error"), :abort ("Request aborted"), :timeout ("Request timed out"); a 2xx body that
-   doesn't decode as its type claims is :decode ("Response not decodable"), carrying the status.
+   doesn't decode as its type claims is :decode ("Response not decodable"), carrying the status; a
+   body that can't be encoded as JSON is :encode ("Request not encodable"), with nothing sent
+   (escalation 1).
 4. A path joins under the base with or without a leading "/" (base "/api" + "documents/5" or
    "/documents/5" → /api/documents/5). The base defaults to "/api" and may be an absolute URL on
    another origin. Request options take query parameters and headers.
@@ -58,8 +60,9 @@ Router
 9. The base is the option, else the pathname of the `<base>` element's href, else "/". Patterns and
    navigate() paths are relative to it.
 10. Once started, the router intercepts every same-origin navigation under the base that the
-    Navigation API allows (link clicks, back and forward, navigate()), leaving downloads,
-    fragment-only changes, form posts, and anything outside the base to the browser. The first
+    Navigation API allows (link clicks, back and forward, navigate()), leaving reloads, downloads,
+    fragment-only changes, form posts, and anything outside the base to the browser (reloads
+    amended by escalation 1). The first
     matching pattern in table order wins; its element replaces the outlet's content with each path
     param as an attribute; current reports pattern, tag, params, and query.
 11. A path no pattern matches mounts notFound; with no notFound, the outlet empties and current is
@@ -106,7 +109,8 @@ Package
 22. Emitted declarations equal v0.1.0's handwritten ones (kept as fixtures) except an expected
     list of differences: problem extension members; the :decode type; query and headers options;
     upload and stream; the router's error option and "change" event; start() and query()
-    returning promises; the base's `<base href>` fallback; the new subpaths. A sample domain service
+    returning promises; the base's `<base href>` fallback; the new subpaths; and (escalation 1) the
+    :encode type and `.ts` relative specifiers in place of `.js`. A sample domain service
     holding get, list, upload, and stream endpoints satisfies Service unchanged.
 23. Every subpath is a .js module with types and default conditions; the pack is the build plus
     package.json, README, and LICENSE.
@@ -135,7 +139,7 @@ nats-server; the browser tier runs the router and upload in pinned chrome-headle
    WebSocket (no TLS, loopback), JetStream on a temp store, and a token; a JS publisher writing
    go-messaging's binary mode, citing its source. Demo: read, stop, resume from the cursor.
 9. Service proof (22's sample); README, STANDARDS.md, context/README no longer "types only",
-   optional peers named; version 0.2.0; CHANGELOG [0.2.0] with Changed naming the two breaks.
+   optional peers named; version 0.2.0; CHANGELOG [0.2.0] with Changed naming the three breaks.
 
 **Out of scope.** The root's currency (emulator task). The adapter's live cases against the
 emulator and go-messaging's encoding end to end (emulator task). Structured content mode.
@@ -150,7 +154,7 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
 
 ## Progress
 
-slices 0/9 committed · standards — · spec — · editor —
+slices 9/9 committed (1: 1155eaa; 2: 0cc832d; 3: 86063c3; 4: cc608c8; 5: 651e8e5; 6: afe4746; 7: 0f223a1; 8: cc39e0f; 9: e2d6ca4) · standards b56425a, 6530f46; escalation 1 settled · spec: gap behavior 18 closed 3a60dac; escalation 1 fixes afa7b8b; spec round 2: no gaps · editor: sdk docs 2 commits; record and notes edited
 
 ## Decisions
 
@@ -404,34 +408,95 @@ slices 0/9 committed · standards — · spec — · editor —
 - foundation: shipped. foundation v0.2.0 (PR #2, release commit d7efb8e), noctis v0.1.0 (PR #1,
   release commit 2fdc0cd), components v0.2.0 (PR #2, release commit d31b110), each cut by its
   release workflow on merge to main with CI green.
-- sdk: runtime is TS sources checked against v0.1.0's declarations as fixtures. Rejected: handwritten .js.
-- sdk: v0.2.0 takes additions plus two breaks (start()/query() return promises; base falls back to
-  `<base href>`), since nothing installs v0.1.0; fixtures compare against an expected diff list.
-  Rejected: frozen; additions only.
-- sdk: router tested in a browser tier adapted from the foundation's. Rejected: a Navigation API fake in Node.
-- sdk: unshowable route split by initiator: no match → notFound; failed load → error element at
-  the committed URL for user/other-script navigations and start(), with navigateerror; navigate()
-  loads first and rejects unchanged. Rejected: notFound for failed loads; error element everywhere;
-  keep previous element. Precommit handlers aren't Baseline.
-- sdk: missing problem title → "HTTP <status>"; non-problem failure → status text or "HTTP
-  <status>". Rejected: Go's "status code N" phrase.
-- sdk: CloudEvent is the sdk's own type-only declaration. Rejected: cloudevents 10.0.0 (ajv, uuid,
-  json-bigint, polyfills).
-- sdk: event sequence is an async iterable of deliveries. Rejected: subscribe(callback).
-- sdk: no cursor reads from the oldest kept event. Rejected: from new events.
-- sdk: adapter tested against nats-server pinned in mise; revises the setup decision ("the sdk
-  tests the interface with a fake"); live emulator cases stay in the root. Rejected: a nats.js
-  fake; a container (Docker, image pull, network in the check); deferring to the emulator.
+
+- sdk: the runtime is TypeScript sources whose emitted declarations are checked against v0.1.0's
+  handwritten ones, kept as test fixtures. Rejected: handwritten .js.
+- sdk: v0.2.0 takes additions and three breaks, since nothing installs v0.1.0: start() and query()
+  return promises, the base falls back to `<base href>`, and Client gains the required stream and
+  upload (escalation 1). The fixture comparison expects a listed set of differences. Rejected:
+  freezing the declarations, and additions only.
+- sdk: the router is tested in a browser tier adapted from the foundation's. Rejected: a
+  Navigation API fake in Node.
+- sdk: a route that can't be shown is handled by its cause and its navigation's initiator. A path
+  nothing matches mounts notFound. A failed load on a user's or another script's navigation, or on
+  start(), mounts the error element at the committed URL, and the navigation reports
+  navigateerror; navigate() loads first and on failure rejects with nothing changed. Rejected:
+  notFound for failed loads, the error element everywhere, and keeping the previous element.
+  Precommit handlers aren't Baseline.
+- sdk: a problem document with no title gets "HTTP <status>", and any other failing response
+  becomes a problem titled with its status text, or "HTTP <status>" when that is empty. Rejected:
+  Go's "status code N" phrase.
+- sdk: CloudEvent is the sdk's own type-only declaration. Rejected: the cloudevents 10.0.0
+  package, which brings ajv, uuid, json-bigint, and polyfills.
+- sdk: an event sequence is read as an async iterable of deliveries. Rejected: subscribe(callback).
+- sdk: a read with no cursor starts at the oldest kept event. Rejected: starting at new events.
+- sdk: the adapter is tested against nats-server pinned in mise, revising the setup decision that
+  the sdk tests the interface with a fake; its live cases against the emulator stay in the root.
+  Rejected: a nats.js fake; a container, which brings Docker, an image pull, and the network into
+  the check; and deferring the tests to the emulator task.
 - sdk: the in-memory sequence is test-only. Rejected: a public subpath.
-- sdk: upload with progress (XHR) in v0.2.0. Rejected: a later sdk release.
-- sdk: streamed response in v0.2.0. Rejected: a later release; the app calling fetch itself.
-- sdk: Service needs no type change; upload and stream fit Endpoint (planner's correction to D1).
-- sdk: own SSE parser. Rejected: eventsource-parser 4.1.3 (a runtime dependency).
-- sdk: test publisher is JS in go-messaging nats/v0.2.0's binary mode. Rejected: go-messaging via Go.
-- sdk: data decoded by datacontenttype; unparseable data ends the read naming the id. Rejected: raw bytes.
-- sdk: no-alternative items: base option → `<base href>` → "/"; no error option empties the outlet;
-  binary content mode only; currency covers the nats-server pin; boundaries 7.4.0 installed only
-  after its release age clears.
+- sdk: upload with progress, over XMLHttpRequest, ships in v0.2.0. Rejected: a later sdk release.
+- sdk: the streamed response ships in v0.2.0. Rejected: a later release, and the app calling fetch
+  itself.
+- sdk: Service needs no type change, since upload and stream fit Endpoint (the planner's
+  correction to D1).
+- sdk: the sdk parses event streams with its own parser. Rejected: eventsource-parser 4.1.3, a
+  runtime dependency.
+- sdk: the tests' publisher is JavaScript writing go-messaging nats/v0.2.0's binary content mode.
+  Rejected: publishing through go-messaging from Go.
+- sdk: the adapter decodes an event's data by its datacontenttype, and data that doesn't decode
+  ends the read with an error naming the event's id. Rejected: delivering the raw bytes.
+- sdk: some choices had no alternative: the base is the option, else `<base href>`, else "/"; a
+  failed route with no error option empties the outlet; the adapter reads binary content mode
+  only; currency covers the nats-server pin; and boundaries 7.4.0 is installed only once its
+  release age clears.
+- sdk: a request body that JSON can't encode is a fifth client-made problem,
+  urn:standards-lab:problem:encode, with status 0 and nothing sent. Rejected: widening :network's
+  doc, and letting the call reject (escalation 1, standards review).
+- sdk: Client's new required stream and upload are a third break, listed in the CHANGELOG.
+  Rejected: optional members, which every app would have to check (escalation 1).
+- sdk: the router leaves reloads to the browser, which picks up a new build and clears bad state.
+  Rejected: intercepting a reload and remounting in place (escalation 1, spec review).
+- sdk: the emitted declarations keep `.ts` relative specifiers, as the foundation's do and
+  STANDARDS.md states, and a consumer typecheck proves they resolve. Rejected: `.js` specifiers in
+  the sources (escalation 1, spec review).
+- sdk: a NATS cursor past the stream's last sequence fails the read. Only a read with a cursor
+  requests the stream info that checks it (spec review, 3a60dac).
+- sdk: upload takes a `progress(sent, total)` option, called with 0 as each send starts, a retry's
+  included, and with the total once the whole body is sent, and a `method`, POST by default or
+  PUT (implementer, slice 6).
+- sdk: the router treats a navigation to the mounted pathname as a query-only change, keeping the
+  element, focus, and scroll. Each mount commits only while it is the latest, so a slow load never
+  replaces a later navigation's element. navigate() and query() reject before start(), since
+  nothing would intercept them and the browser would load the page (implementer, slice 5).
+- sdk: the NATS adapter's reads share one connection, opened by the first read and reopened by a
+  read after it is lost. A read's types are its consumer's filter subjects, and the adapter also
+  matches each event's type against them exactly, so a type holding a NATS wildcard can't widen
+  the read. Across a server restart the connection reconnects within nats-core's defaults (10
+  attempts, 2 s apart) and each read resumes with no gap or duplicate; the path where the
+  connection is lost for good, failing every read, is untested. A message that isn't a CloudEvent
+  in binary content mode ends the read with an error (implementer, slice 8).
+- sdk: Cursor is a branded string, so it serializes as a string and tsc refuses any string a
+  sequence didn't give out. CloudEvent holds its extension attributes in their own `extensions`
+  member, so none can shadow a context attribute and tsc still refuses a misspelled one
+  (implementer, slice 7).
+- sdk: package.json's exports list the six public subpaths by name, in place of the `./*.js`
+  pattern, so the internal event-stream parser isn't importable (implementer, slice 9).
+- sdk: a body that can't be encoded is the encode problem even when the call's signal has
+  aborted, since the encoding fails before anything is sent (implementer, afa7b8b).
+- sdk: pnpm writes a minimumReleaseAgeExclude entry on its own for a dependency younger than the
+  release age, unless minimumReleaseAgeStrict is set. Upgrading to eslint-plugin-boundaries 7.4.0
+  pulled in @boundaries/elements 3.3.0, published 96 s after the plugin, and pnpm wrote an
+  exclusion for it; the entry was removed and the install rerun once the age cleared. The other
+  repositories' boundaries upgrades check for the same entry (implementer, slice 1).
+- sdk: the root still pins eslint-plugin-boundaries 7.3.0 and holds the typescript-eslint 8.72.1
+  age exclusions. The emulator task's upgrade slice takes 7.4.0, checking for pnpm's own
+  @boundaries/elements entry, and removes the exclusions.
+- sdk: the emulator embeds nats-server as the Go module nats-server/v2, which the root's currency
+  keeps current, separately from the sdk's mise pin of nats-server 2.15.2.
+- sdk: a cross-origin upload with progress sends a CORS preflight, because the progress listener
+  on xhr.upload forces one, so the external client's uploads (pipeline task) need the emulator's
+  CORS to answer it.
 
 ## Pending edits
 
@@ -450,14 +515,14 @@ slices 0/9 committed · standards — · spec — · editor —
   conformance for color, space, and type, and the releases: foundation v0.2.0, components v0.2.0
   on the foundation's formatters and peering `^0.2.0`, and the extension repository
   spike-html-apps-noctis at v0.1.0.
-- standards-lab `context/roadmap.toml`, the `sdk` task's summary: in place of "Releases sdk
-  v0.1.0", it names upload with progress and the streamed response on the client, the router's
-  change event and failure handling, the adapter tested against a pinned nats-server, and the
-  release of sdk v0.2.0 (layers released v0.1.0).
+- standards-lab `context/roadmap.toml`, the `sdk` task's summary: "tested against a fake" becomes
+  "tested against a pinned nats-server", and in place of "Releases sdk v0.1.0" it names upload
+  with progress and the streamed response on the client, the router's change event and failure
+  handling, and the release of sdk v0.2.0 (layers released v0.1.0).
 - standards-lab `context/roadmap.toml`: the primitives task sets each layer's brotli budget
   (evidence 7).
-- standards-lab `context/roadmap.toml`, the experiment's summary and the `sdk` task: "tested
-  against a fake" becomes "tested against a pinned nats-server".
+- standards-lab `context/roadmap.toml`, the `emulator` task's `repos`: add spike-html-apps-sdk,
+  so a defect the adapter's live cases find is fixed in that task.
 - standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", the live-transport
   bullet: the sdk proves the adapter against a pinned nats-server, and the emulator proves it end
   to end.
