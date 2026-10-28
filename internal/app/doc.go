@@ -33,12 +33,11 @@
 // tier Replaces the broker node, whose type is go-messaging's Broker
 // interface, with the in-memory broker, which Uses no node, so its graph
 // holds no embedded server; the binary composes the embedded server and its
-// JetStream broker. [App.Run]
-// is the hot start plus shutdown: it builds the graph from the config, the
-// logger, the broker, the server, and each reactor as roots, hands the System
-// to go-core's lifecycle Coordinator, and returns the process exit code. A constructor's
-// error is reported there as the service failing; a wiring mistake panics
-// during Build.
+// JetStream broker. [App.Run] is the hot start plus shutdown: it builds the
+// graph from the config, the logger, the broker, the server, and each
+// reactor as roots, hands the System to go-core's lifecycle Coordinator, and
+// returns the process exit code. A constructor's error is reported there as
+// the service failing; a wiring mistake panics during Build.
 //
 // What a node takes part in is inferred from its value's methods: a
 // lifecycle.Starter or Stopper is started or stopped, a Subsystem is both, a

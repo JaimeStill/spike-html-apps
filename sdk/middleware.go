@@ -45,10 +45,10 @@ var corsHeaders = []string{"Authorization", "Content-Type"}
 // A request with no Origin, a same-origin or non-browser one, reaches the
 // handler with no Access-Control-* header (an OPTIONS carrying
 // Access-Control-Request-Method is the exception: rs/cors reads it as a
-// preflight and answers it 204 bare whatever its Origin). Every response that passes
-// through, allowed or not, carries Vary: Origin, since whether it carries
-// Access-Control-Allow-Origin depends on that header; a preflight carries
-// Vary on its request headers as well.
+// preflight and answers it 204 bare whatever its Origin). Every response
+// that passes through, allowed or not, carries Vary: Origin, since whether
+// it carries Access-Control-Allow-Origin depends on that header; a preflight
+// carries Vary on its request headers as well.
 //
 // The middleware admits no credentials mode and no wildcard: it never sends
 // Access-Control-Allow-Credentials, and every origin is matched exactly. An

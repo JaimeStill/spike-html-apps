@@ -17,10 +17,10 @@ func defineServer(g *graph.Graph, n *Nodes) {
 }
 
 // newRouter assembles the router: the middleware stack, the mounts, the
-// pipeline app, and the probes. The probes register on the router's native mux, outside every
-// module's middleware, and report the readiness node's value: lifecycle.New
-// binds it to the Coordinator after the Build, and the probes read it live
-// on every request.
+// pipeline app, and the probes. The probes register on the router's native
+// mux, outside every module's middleware, and report the readiness node's
+// value: lifecycle.New binds it to the Coordinator after the Build, and the
+// probes read it live on every request.
 func newRouter(n *Nodes) func(*graph.Scope) (*web.Router, error) {
 	return func(s *graph.Scope) (*web.Router, error) {
 		router := web.NewRouter()
@@ -32,8 +32,8 @@ func newRouter(n *Nodes) func(*graph.Scope) (*web.Router, error) {
 
 		// The zero Problem keeps the SDK's readiness defaults: type
 		// about:blank, status 503 with its status text as the title, the
-		// generic detail, and the checks extension member. A generated
-		// service names its own not-ready problem type here once it has one.
+		// generic detail, and the checks extension member. The emulator
+		// names no not-ready problem type of its own.
 		web.RegisterHealth(router, s.Use(n.Readiness), web.Problem{})
 		return router, nil
 	}

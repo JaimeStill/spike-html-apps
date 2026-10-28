@@ -75,7 +75,7 @@ depends = ["preflight"]
 run = "node --test 'test/unit/*.test.js'"
 dir = "{{config_root}}"
 
-# From go-web-sdk-template template/v0.13.0 (b6ad574): template/mise.toml, its check task as the
+# Adapted from go-web-sdk-template (b6ad574): template/mise.toml, its check task as the
 # go task, every module's seven steps; vet, fix, and lint take the integration tag so the
 # integration suite compiles and lints too, and the go task runs only the unit tier.
 [tasks.go]
@@ -100,7 +100,7 @@ done
 '''
 dir = "{{config_root}}"
 
-# From go-web-sdk-template template/v0.13.0 (b6ad574): template/mise.toml, its integration task.
+# Adapted from go-web-sdk-template (b6ad574): template/mise.toml, its integration task.
 # The suite builds cmd/server once with the race detector, into a temporary directory, embedding
 # the pipeline app's build, and runs it as a subprocess on reserved loopback ports; the emulator
 # has no backing service, so no compose stack wraps it.

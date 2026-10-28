@@ -162,8 +162,8 @@ type due struct {
 
 // Advance completes, for every run, the next stage when it is due: the
 // first at once, and the kth k-1 stage intervals after the run started. It
-// publishes each stage's event, then records the stage
-// complete at the event's time. A failed publish is logged and leaves the
+// publishes each stage's event, then records the stage complete at the
+// event's time. A failed publish is logged and leaves the
 // stage pending for the next pass, so Advance itself never fails; it stops
 // between stages once the reactor's drain begins.
 func (s *Service) Advance(ctx context.Context, now time.Time) error {

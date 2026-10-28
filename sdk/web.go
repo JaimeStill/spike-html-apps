@@ -195,7 +195,7 @@ func (m manifest) entry(key string) (file string, preload, css []string, err err
 // shellTemplate is the client's HTML shell. html/template escapes the base
 // and title as an attribute and as text, and the asset paths as URLs; the
 // config arrives as template.JS, already JSON that json.Marshal has escaped
-// for HTML (<, >, and & as <, >, and &), so its text can
+// for HTML (<, >, and & as \u003c, \u003e, and \u0026), so its text can
 // never close the script element, and is written as it is. The asset paths
 // are relative, resolved against <base href>. The body is empty: the client
 // appends its own content.

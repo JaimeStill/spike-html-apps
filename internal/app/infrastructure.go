@@ -15,9 +15,8 @@ import (
 
 // defineInfrastructure defines the infrastructure nodes on g into n: the
 // configuration cfg, and the services the application is composed on,
-// built from it — the logger, written to w, in the template baseline; a
-// database pool, storage, or auth client as a service grows, each its own
-// node. It constructs nothing. A service whose value implements
+// built from it, each its own node: the logger, written to w, and the event
+// transport below. It constructs nothing. A service whose value implements
 // lifecycle.Subsystem takes part in startup and shutdown through its own
 // methods, and its constructor opens nothing: connectivity belongs to its
 // Start, so a failed Build leaks no connections.

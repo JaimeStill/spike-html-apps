@@ -28,6 +28,6 @@
 //   - [Load] reads the layered files, decoding each strictly, and finalizes
 //     the result under the service's env prefix.
 //
-// The unexported envPrefix const is the single place a seeded service
-// renames its environment namespace.
+// The unexported envPrefix const, "emulator", is the single place the
+// environment namespace is named.
 package config

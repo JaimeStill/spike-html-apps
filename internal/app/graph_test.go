@@ -104,12 +104,12 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 
 // A reactor is reached by no Use, so Run builds it as a root, and the
 // server orders itself after each reactor, so the server stays alone in the
-// top layer above it. The template defines no reactor, so the fixture is
-// added through the test-only AppendReactor hook. It orders itself after the
-// router, which puts it in the server's layer unless the server orders
-// itself after it; a fixture lower in the graph would sit below the server
-// regardless, and the test could not fail. Its interval is an hour, so it
-// never ticks while the test runs.
+// top layer above it. The emulator's own reactor, runner, Uses the runs
+// node, low in the graph, so it would sit below the server regardless, and
+// the test could not fail; the fixture, added through the test-only
+// AppendReactor hook, orders itself after the router instead, which puts it
+// in the server's layer unless the server orders itself after it. Its
+// interval is an hour, so it never ticks while the test runs.
 func TestGraph_ServerAboveReactor(t *testing.T) {
 	a := newApp(t, configtest.Config(t), io.Discard)
 	n := a.Nodes()

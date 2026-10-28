@@ -12,9 +12,9 @@
 # below the pin, has an unreleased pin rather than a trailing one. A pin in any other form is
 # reported as one this script can't compare, so none is skipped silently.
 # Adapted from spike-html-apps-foundation (12f4d53): scripts/currency.sh, its package.json scan;
-# and from go-web-sdk-template template/v0.13.0 (b6ad574): template/scripts/currency.sh, its
-# go.mod scans, with JSON read by node; and from spike-html-conventions (a88828a):
-# scripts/currency.sh, its github: tag scan.
+# and from go-web-sdk-template (b6ad574): template/scripts/currency.sh, its go.mod scans, with
+# JSON read by node; and from spike-html-conventions (a88828a): scripts/currency.sh, its github:
+# tag scan.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -93,9 +93,8 @@ done <<<"$pins"
 
 # Each scan captures its output before reading it, so under set -e a scan that fails (a go list
 # missing a go.sum entry) fails currency instead of reporting nothing.
-# From go-web-sdk-template template/v0.13.0 (b6ad574): template/scripts/currency.sh, its go.mod
-# scans over every module in mise.toml's GO_MODULES, with the go directive read by node, not jq;
-# without its GitHub Actions scan, since the root runs no CI.
+# The template's go.mod scans, over every module in mise.toml's GO_MODULES, with the go directive
+# read by node, not jq; without its GitHub Actions scan, since the root runs no CI.
 go_minor=$(MISE_LOG_LEVEL=error mise latest go | cut -d. -f1,2)
 
 for mod in $GO_MODULES; do

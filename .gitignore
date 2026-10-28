@@ -3,7 +3,7 @@
 .claude/briefs/
 node_modules
 
-# From go-web-sdk-template template/v0.13.0 (b6ad574): template/.gitignore.
+# From go-web-sdk-template (b6ad574): template/.gitignore.
 # Secrets are layered configuration and never committed.
 secrets*.json
 

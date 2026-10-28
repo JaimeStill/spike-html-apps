@@ -17,10 +17,9 @@ import (
 // RequestID runs ahead of RequestLogger, so the log record carries the
 // request id. Recoverer turns a handler's panic into a logged 500, which
 // RequestLogger records with its status; it works on either side of
-// RequestLogger, and the template places it inside. A
-// BodyLimit, when a service adds one, goes ahead of RequestLogger and
-// Recoverer; the chain order in go-web-sdk's middleware package
-// documentation states why.
+// RequestLogger, and sits inside it here. A BodyLimit, if one is added,
+// goes ahead of RequestLogger and Recoverer; the chain order in
+// go-web-sdk's middleware package documentation states why.
 //
 // CORS runs inside RequestLogger, so a preflight it answers, which never
 // reaches a route, still leaves a record with its request id, and ahead of

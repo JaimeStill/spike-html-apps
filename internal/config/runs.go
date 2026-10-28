@@ -51,9 +51,9 @@ func (c *RunsConfig) Merge(src *RunsConfig) {
 }
 
 // Finalize applies the default interval, reads <PREFIX>_RUNS_STAGE_INTERVAL
-// and <PREFIX>_RUNS_INSTANCE, names an unset instance, and validates: the interval is positive, and the
-// instance is a single URI path segment, with no '/', whitespace, or
-// control character. An empty prefix composes empty names, which disable
+// and <PREFIX>_RUNS_INSTANCE, names an unset instance, and validates: the
+// interval is positive, and the instance is a single URI path segment, with
+// no '/', whitespace, or control character. An empty prefix composes empty names, which disable
 // the overrides.
 func (c *RunsConfig) Finalize(envPrefix string) error {
 	c.Env = RunsEnv{
