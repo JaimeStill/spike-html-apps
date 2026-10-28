@@ -22,6 +22,8 @@
 //   - [RunsConfig] is the emulated pipeline's stage interval and the
 //     instance name its stage events are sourced from
 //     ([RunsConfig.Source]), with [RunsEnv].
+//   - [ConversationsConfig] is the pace of the scripted replies' text
+//     deltas, with [ConversationsEnv].
 //   - [AppConfig] is where the pipeline app is served, a prefix or the
 //     root, with [AppEnv]; [NATSWebSocketConfig.PublicURL] is the WebSocket
 //     URL the app's shell hands the browser.

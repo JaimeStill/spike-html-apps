@@ -53,14 +53,28 @@ when they compose the capstone's UI primitives, live over a backend?
 
 ## The emulator
 
-One Go binary generated from go-web-sdk-template template/v0.13.0, with all state in memory. Four
-domains: documents (an upload and its metadata), runs (scripted stages on timers, upload →
-metadata → extraction → chunks → embeddings, one CloudEvent each), conversations (a scripted Open
-Responses stream over HTTP), and search (a text match over uploaded content). It embeds
-nats-server with WebSocket and JetStream and publishes through go-messaging's nats provider,
-which creates its stream with file storage, so the server takes a temporary store directory. One
-static token reaches the browser through the SDK's token provider. No Postgres, blob storage,
-outbox, or containers: the spike proves the client, not the capstone's backend.
+One Go binary generated from go-web-sdk-template template/v0.13.0, with all state in memory.
+`cmd/server` starts it and `internal/app` composes it. It reads `config.json`, overlaid by
+`config.<EMULATOR_ENV>.json`, and environment variables under the `EMULATOR_` prefix. Each of its
+four domains is a package under `domain/`, served under `/api`:
+
+- `document` (`/api/documents`): a raw-body upload, its metadata, and its content, served as an
+  attachment.
+- `run` (`/api/runs`): the stages each upload starts, upload → metadata → extraction → chunks →
+  embeddings, one per interval. Each completed stage publishes one `emulator.run.stage`
+  CloudEvent.
+- `conversation` (`/api/conversations`, and the stateless `/api/responses`): a scripted Open
+  Responses stream. A user message whose text is exactly `/fail` takes the failure path.
+- `search` (`/api/search`): a text match over document names and text-like content.
+
+It embeds nats-server with JetStream, on a temporary store directory because go-messaging's nats
+provider creates its stream with file storage. The core client listener binds 127.0.0.1, where
+the go-messaging broker that owns the `EMULATOR` stream connects. Browsers reach the WebSocket
+listener, which admits only the CORS allowed origins. Both listeners require one static token.
+The `sdk` package's `NewClient` serves the embedded pipeline app at `/app`, or at `/` as the
+router's not-found handler, and its shell hands the browser the API base, the WebSocket URL, the
+stream, and the token. No Postgres, blob storage, outbox, or containers: the spike proves the
+client, not the capstone's backend.
 
 ## Capabilities
 
@@ -73,9 +87,12 @@ outbox, or containers: the spike proves the client, not the capstone's backend.
   installs it by tag, and passes its conformance check.
 - **SDK runtime:** the router, the API client with upload progress and streamed responses, the
   token provider, and the domain service.
-- **Event sync:** the event-sequence interface and its NATS-over-WebSocket adapter.
-- **Emulator:** the in-memory pipeline service with embedded NATS.
-- **Serving half:** `NewClient` at a prefix and at the root.
+- **Event sync:** the event-sequence interface and its NATS-over-WebSocket adapter, which the
+  root's browser tier reads live from the emulator.
+- **Emulator:** the in-memory pipeline service with embedded NATS, booted as a binary by the
+  integration and browser tiers.
+- **Serving half:** `NewClient` in the root's `sdk` package, serving one build at a prefix and at
+  the root.
 - **Primitives:** the capstone's UI components, finished in every state and profile.
 - **Pipeline app:** the primitives composed live over the emulator, with its shortcuts.
 - **External client:** an app hosted apart over two services.

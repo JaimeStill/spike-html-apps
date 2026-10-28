@@ -26,14 +26,14 @@ var corsHeaders = []string{"Authorization", "Content-Type"}
 //
 // A preflight from an allowed origin, asking for one of allowedMethods and
 // no request headers beyond Authorization and Content-Type, is answered 204
-// with
-// Access-Control-Allow-Origin naming the origin and the asked-for method and
-// headers allowed; it never reaches the wrapped handler. A preflight asking
-// for any other method is refused like a disallowed origin's. Any other request
-// from an allowed origin reaches the handler with Access-Control-Allow-Origin
-// naming the origin. A disallowed origin gets no Access-Control-* header: its
-// preflight is answered 204 bare, which the browser reads as a refusal, and
-// its other requests reach the handler as they would without the middleware.
+// with Access-Control-Allow-Origin naming the origin and the asked-for method
+// and headers allowed; it never reaches the wrapped handler. A preflight
+// asking for any other method is refused like a disallowed origin's. Any other
+// request from an allowed origin reaches the handler with
+// Access-Control-Allow-Origin naming the origin. A disallowed origin gets no
+// Access-Control-* header: its preflight is answered 204 bare, which the
+// browser reads as a refusal, and its other requests reach the handler as
+// they would without the middleware.
 // A request with no Origin, a same-origin or non-browser one, reaches the
 // handler with no Access-Control-* header (an OPTIONS carrying
 // Access-Control-Request-Method is the exception: rs/cors reads it as a

@@ -44,3 +44,9 @@ design to a finished product's bar at every layer.
 - A copied file names its source repository and commit in a provenance line, which reads
   `From|Adapted from <repo> (<commit>): <path>`. It names the immediate source alone; that source
   keeps the earlier lines.
+- A file a template generates is the template's output and carries no provenance line; a file
+  copied by hand carries one.
+- Each file in the root's `sdk` package is named for the library its contents move to, as
+  `sdk/doc.go` lists them.
+- A test harness relaunches a boot only when it failed on a taken reserved port (address in use);
+  any other failure fails the test at once.
