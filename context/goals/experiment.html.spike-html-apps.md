@@ -1,14 +1,14 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** sdk
-- **Branch:** sdk
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] layers
 2. [x] foundation
-3. [ ] sdk
+3. [x] sdk
 4. [ ] emulator
 5. [ ] primitives
 6. [ ] pipeline
@@ -151,10 +151,6 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
 
 **Release**
 - spike-html-apps-sdk `v0.2.0` (cut by release.yml on merge)
-
-## Progress
-
-slices 9/9 committed (1: 1155eaa; 2: 0cc832d; 3: 86063c3; 4: cc608c8; 5: 651e8e5; 6: afe4746; 7: 0f223a1; 8: cc39e0f; 9: e2d6ca4) · standards b56425a, 6530f46; escalation 1 settled · spec: gap behavior 18 closed 3a60dac; escalation 1 fixes afa7b8b; spec round 2: no gaps · editor: sdk docs 2 commits; record and notes edited
 
 ## Decisions
 
@@ -497,6 +493,8 @@ slices 9/9 committed (1: 1155eaa; 2: 0cc832d; 3: 86063c3; 4: cc608c8; 5: 651e8e5
 - sdk: a cross-origin upload with progress sends a CORS preflight, because the progress listener
   on xhr.upload forces one, so the external client's uploads (pipeline task) need the emulator's
   CORS to answer it.
+- sdk: shipped. sdk v0.2.0 (PR #2, merge 6c06200, release commit 6d5fb1c), cut by its release
+  workflow on merge to main with CI green.
 
 ## Pending edits
 
