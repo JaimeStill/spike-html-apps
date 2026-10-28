@@ -19,5 +19,7 @@ go.work.sum
 tmp/
 
 # The apps' builds (mise run build:app); each dist/ directory's contents, not the directory, so a
-# committed file in it can be let back in.
+# committed file in it can be let back in: the .gitkeep a Go embed of the directory needs to
+# compile with no build.
 apps/*/dist/*
+!apps/*/dist/.gitkeep

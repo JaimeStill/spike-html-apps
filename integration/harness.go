@@ -1,19 +1,155 @@
 package integration
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
 	"net"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/standards-lab/go-core/process/processtest"
 	"github.com/standards-lab/go-web-sdk/webtest"
 )
 
+// Dist is the pipeline app's build directory, relative to the module root;
+// the binary embeds what it holds when it is compiled.
+const Dist = "apps/pipeline/dist"
+
+// manifest is the build's manifest, in Dist.
+const manifest = ".vite/manifest.json"
+
 // Main is the suite's TestMain: it builds cmd/server once, with the race
 // detector so the service runs under it too, runs the tests, and removes
-// the build.
+// the build. The binary embeds the pipeline app's build, without which it
+// refuses to start, so Main first fails the suite, naming the task that
+// writes the build, when there is none: test:integration depends on
+// build:app, and a bare go test needs it run first.
 func Main(m *testing.M) {
+	root, err := moduleRoot()
+	if err == nil {
+		_, err = os.Stat(filepath.Join(root, Dist, manifest))
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "integration: no pipeline app build (run mise run build:app): %v\n", err)
+		os.Exit(1)
+	}
 	processtest.Main(m, "./cmd/server")
+}
+
+// moduleRoot is the directory of the module's go.mod.
+func moduleRoot() (string, error) {
+	out, err := exec.Command("go", "env", "GOMOD").Output()
+	if err != nil {
+		return "", fmt.Errorf("locate module root: %w", err)
+	}
+	return filepath.Dir(strings.TrimSpace(string(out))), nil
+}
+
+// Manifest returns the pipeline app build's manifest, decoded, as the
+// binary embedded it: each entry's source path to its output file.
+func Manifest(t testing.TB) map[string]struct {
+	File string `json:"file"`
+} {
+	t.Helper()
+	root, err := moduleRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, Dist, manifest))
+	if err != nil {
+		t.Fatalf("read the build's manifest: %v", err)
+	}
+	var m map[string]struct {
+		File string `json:"file"`
+	}
+	if err := json.Unmarshal(data, &m); err != nil {
+		t.Fatalf("decode the build's manifest: %v", err)
+	}
+	return m
+}
+
+// BuildWithoutApp compiles cmd/server as a checkout with no web build would,
+// into a directory the test removes, and returns its path. A go build
+// overlay deletes every file in Dist but its committed .gitkeep, so the
+// embed sees only the placeholder; the build directory itself is never
+// touched, and the suite's other processes, compiled by Main, keep the
+// build.
+func BuildWithoutApp(t testing.TB) string {
+	t.Helper()
+	root, err := moduleRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dist := filepath.Join(root, Dist)
+	replace := map[string]string{}
+	err = filepath.WalkDir(dist, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || d.Name() == ".gitkeep" {
+			return err
+		}
+		replace[path] = ""
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("list the build: %v", err)
+	}
+	dir := t.TempDir()
+	overlay, err := json.Marshal(map[string]any{"Replace": replace})
+	if err != nil {
+		t.Fatal(err)
+	}
+	overlayPath := filepath.Join(dir, "overlay.json")
+	if err := os.WriteFile(overlayPath, overlay, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(dir, "server")
+	build := exec.Command("go", "build", "-overlay", overlayPath, "-o", binary, "./cmd/server")
+	build.Dir = root
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build cmd/server without the app: %v\n%s", err, out)
+	}
+	return binary
+}
+
+// RunBinary runs binary, one BuildWithoutApp returned, to its exit with
+// opts on reserved loopback ports, in the module root as Main's processes
+// run, and returns its exit code and its combined output. It fails the test
+// if the binary is still running after processtest.Failsafe.
+func RunBinary(t testing.TB, binary string, opts Options) (int, string) {
+	t.Helper()
+	root, err := moduleRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &Service{addr: loopback(t), nats: loopback(t), ws: loopback(t)}
+	cmd := exec.Command(binary)
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), s.environment(opts)...)
+	var out bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &out
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start %s: %v", binary, err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case err = <-done:
+	case <-time.After(processtest.Failsafe):
+		_ = cmd.Process.Kill()
+		t.Fatalf("%s still running after %s, killed (%v):\n%s", binary, processtest.Failsafe, <-done, out.String())
+	}
+	var exit *exec.ExitError
+	if err != nil && !errors.As(err, &exit) {
+		t.Fatalf("run %s: %v", binary, err)
+	}
+	return cmd.ProcessState.ExitCode(), out.String()
 }
 
 // Options shapes one service process. The zero value runs the service on

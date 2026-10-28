@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	libconfig "github.com/standards-lab/go-core/config"
@@ -90,13 +92,35 @@ type running struct {
 	done   chan int
 }
 
+// fixtureBuild is a minimal Vite build of the pipeline app, as NewClient
+// reads it: the manifest naming the app's entry, and the entry's script.
+// The unit tier serves it in place of the embedded build, which holds only
+// its placeholder until mise run build:app writes one.
+func fixtureBuild() fstest.MapFS {
+	return fstest.MapFS{
+		".vite/manifest.json": {Data: []byte(`{"src/main.ts": {"file": "assets/main-test.js", "isEntry": true}}`)},
+		"assets/main-test.js": {Data: []byte("export {}")},
+	}
+}
+
+// newApp is app.New with the dist node replaced by [fixtureBuild], so the
+// pipeline app's handler builds whether or not the app has been built.
+func newApp(t *testing.T, cfg *config.Config, w io.Writer) *app.App {
+	t.Helper()
+	a := app.New(cfg, w)
+	a.Graph().Replace(a.Nodes().Dist, func(*graph.Scope) (fs.FS, error) {
+		return fixtureBuild(), nil
+	})
+	return a
+}
+
 // start builds an App from cfg over the in-memory broker and runs it in the
 // background. The cleanup cancels it, so a test that fails early leaves no
 // server behind.
 func start(t *testing.T, cfg *config.Config) *running {
 	t.Helper()
 	buf := &syncBuffer{}
-	a := app.New(cfg, buf)
+	a := newApp(t, cfg, buf)
 	broker := withMemoryBroker(a)
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &running{log: buf, broker: broker, cancel: cancel, done: make(chan int, 1)}
@@ -342,7 +366,7 @@ func TestRun_ShutdownBoundedByTimeout(t *testing.T) {
 // code, but a second Run is a programming error and panics.
 func TestRun_TwicePanics(t *testing.T) {
 	buf := &syncBuffer{}
-	a := app.New(configtest.Config(t), buf)
+	a := newApp(t, configtest.Config(t), buf)
 	withMemoryBroker(a)
 
 	ctx, cancel := context.WithCancel(context.Background())

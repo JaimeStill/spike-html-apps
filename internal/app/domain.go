@@ -67,6 +67,10 @@ func newRuns(n *Nodes) func(*graph.Scope) (*run.Service, error) {
 	}
 }
 
+// apiMount is the API's mount, which the pipeline app's shell config also
+// names as the app's API base.
+const apiMount = "/api"
+
 // mountAPI builds the API mount, /api, with each domain layer's route group
 // mounted into it, each handed its service, the paging policy from the
 // config node, and the logger node for its error writer (the conversation
@@ -76,7 +80,7 @@ func newRuns(n *Nodes) func(*graph.Scope) (*run.Service, error) {
 // from the documents block's limit and the server block's rate.
 func mountAPI(s *graph.Scope, n *Nodes) *web.Group {
 	cfg, logger := s.Use(n.Config), s.Use(n.Logger)
-	api := web.NewGroup("/api")
+	api := web.NewGroup(apiMount)
 	reads := cfg.Reads.Limits()
 	api.Mount(document.Routes(s.Use(n.Documents), reads, cfg.Server.Transfer(*cfg.Documents.MaxSize), logger))
 	api.Mount(run.Routes(s.Use(n.Runs), reads, logger))

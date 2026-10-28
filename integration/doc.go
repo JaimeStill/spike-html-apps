@@ -5,7 +5,12 @@
 // the SDKs' test toolkits, go-core's processtest and go-web-sdk's webtest;
 // nothing in the runtime exists for the tests' sake.
 //
-//   - [Main] is the suite's TestMain: it builds cmd/server once per run.
+//   - [Main] is the suite's TestMain: it builds cmd/server once per run,
+//     embedding the pipeline app's build in [Dist], and fails naming
+//     mise run build:app when there is none; [Manifest] reads that build's
+//     manifest.
+//   - [BuildWithoutApp] compiles cmd/server as with no web build, and
+//     [RunBinary] runs such a binary to its exit.
 //   - [Options] holds the EMULATOR_* overrides one service process adds.
 //   - [Start] runs the service on a reserved port and returns once it is
 //     live; [Launch] returns without waiting, and [Service.Ready] waits.

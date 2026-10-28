@@ -14,6 +14,10 @@
 //   - reactors.go: defineReactors, the process-lifetime entry points an
 //     occurrence drives, each a node whose value is a go-core
 //     reactor.Reactor: runner, which advances the runs;
+//   - client.go: defineClient, the pipeline app: its embedded build (the
+//     dist node, which the unit tier Replaces with a fixture build) and the
+//     handler that serves it, and its mount, a prefix or the router's
+//     not-found handler at the root;
 //   - server.go: defineServer, the request edge: the readiness the probes
 //     report, the router, and the server;
 //   - routes.go: the list of mounts;

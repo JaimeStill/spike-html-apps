@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"io"
+	"io/fs"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/standards-lab/go-core/graph"
@@ -47,6 +49,8 @@ type Nodes struct {
 	Search        *graph.Node[*search.Service]             // "search"
 	Conversations *graph.Node[*conversation.Service]       // "conversations"
 	Runner        *graph.Node[*reactor.Reactor[time.Time]] // "runner"
+	Dist          *graph.Node[fs.FS]                       // "dist"
+	Client        *graph.Node[http.Handler]                // "client"
 	Readiness     *graph.Node[*lifecycle.Readiness]        // "readiness"
 	Router        *graph.Node[*web.Router]                 // "router"
 	Server        *graph.Node[*web.Server]                 // "server"
@@ -66,6 +70,7 @@ func New(cfg *config.Config, w io.Writer) *App {
 	defineAdmin(a.graph, &a.nodes)
 	defineDomain(a.graph, &a.nodes)
 	defineReactors(a.graph, &a.nodes)
+	defineClient(a.graph, &a.nodes)
 	defineServer(a.graph, &a.nodes)
 	return a
 }

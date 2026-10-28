@@ -63,7 +63,7 @@ func serverAloneOnTop(sys *graph.System, n app.Nodes) ([]graph.Dependency, bool)
 // catches one.
 func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 	t.Run("as defined", func(t *testing.T) {
-		a := app.New(configtest.Config(t), io.Discard)
+		a := newApp(t, configtest.Config(t), io.Discard)
 
 		// Run's own Build, observed, so the Build below inspects the nodes
 		// Run reaches rather than a set this test chose.
@@ -90,7 +90,7 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 	})
 
 	t.Run("a node above the server", func(t *testing.T) {
-		a := app.New(configtest.Config(t), io.Discard)
+		a := newApp(t, configtest.Config(t), io.Discard)
 		n := a.Nodes()
 		above := a.Graph().Define("above", func(s *graph.Scope) (*web.Server, error) {
 			return s.Use(n.Server), nil
@@ -111,7 +111,7 @@ func TestGraph_ServerAloneInTopLayer(t *testing.T) {
 // regardless, and the test could not fail. Its interval is an hour, so it
 // never ticks while the test runs.
 func TestGraph_ServerAboveReactor(t *testing.T) {
-	a := app.New(configtest.Config(t), io.Discard)
+	a := newApp(t, configtest.Config(t), io.Discard)
 	n := a.Nodes()
 	fixture := a.Graph().Define("fixture", func(s *graph.Scope) (*reactor.Reactor[time.Time], error) {
 		s.After(n.Router)
@@ -171,7 +171,7 @@ func names(layer []graph.Dependency) []string {
 // ready.
 func TestRun_BuildFailureExitsOne(t *testing.T) {
 	var log syncBuffer
-	a := app.New(configtest.Config(t), &log)
+	a := newApp(t, configtest.Config(t), &log)
 	a.Graph().Replace(a.Nodes().Logger, func(*graph.Scope) (*slog.Logger, error) {
 		return nil, errors.New("logger unavailable")
 	})

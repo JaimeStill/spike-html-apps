@@ -5,11 +5,16 @@
 // go-web-sdk. The package is flat by design, a staging area meant to empty
 // out, and each file is named for the library its contents are bound for.
 //
-// The package's API, once the emulator task adds it:
+// The package's API:
 //
-//   - NewClient (web.go, for go-web-sdk): serves an embedded Vite build at a
-//     prefix and at the server's root, with Vite's base, the shell's
-//     <base href>, and the router's base agreeing.
+//   - NewClient and ClientOptions (web.go, for go-web-sdk): serve a Vite
+//     build, read once through its manifest, at a prefix (as a
+//     NewHandlerModule) or at the server's root (as the router's not-found
+//     handler): the hashed assets cached as immutable, a missing asset a 404
+//     problem, and every other path the HTML shell, which writes the base
+//     as <base href>, the config as JSON in #app-config, and the entry's
+//     module script and CSS. Vite's relative base, the shell's <base href>,
+//     and the client router's base agree.
 //   - CORS and ValidateOrigin (middleware.go, for go-web-sdk's middleware
 //     package): admits cross-origin browser requests from an exact list of
 //     origins, over github.com/rs/cors, with no credentials mode and no

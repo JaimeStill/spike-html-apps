@@ -53,11 +53,19 @@ type NATSConfig struct {
 	Env NATSEnv `json:"-"`
 }
 
-// NATSWebSocketConfig is the WebSocket listener's address. It serves
-// without TLS: the emulator is a local development and test fixture.
+// NATSWebSocketConfig is the WebSocket listener's address, and the URL a
+// browser reaches it by. It serves without TLS: the emulator is a local
+// development and test fixture.
 type NATSWebSocketConfig struct {
 	Host string `json:"host"`
 	Port *int   `json:"port"`
+	// PublicURL is the listener's URL as a browser dials it, which the
+	// pipeline app's shell hands the app: ws:// or wss://, a host, and an
+	// optional port and path. The listener's own address can't serve when
+	// it binds every interface, 0.0.0.0 or ::, which no browser can dial,
+	// or sits behind a proxy. Default: ws://localhost:<port> when Host
+	// binds every interface, else ws://<host>:<port>.
+	PublicURL string `json:"public_url"`
 }
 
 // NATSEnv holds the environment-variable names of the nats block.
@@ -66,6 +74,7 @@ type NATSEnv struct {
 	Port          string
 	WebSocketHost string
 	WebSocketPort string
+	PublicURL     string
 	Stream        string
 	Prefix        string
 }
@@ -78,6 +87,7 @@ func (c *NATSConfig) Merge(src *NATSConfig) {
 	}
 	mergeString(&c.Token, src.Token)
 	mergeString(&c.WebSocket.Host, src.WebSocket.Host)
+	mergeString(&c.WebSocket.PublicURL, src.WebSocket.PublicURL)
 	mergeString(&c.Stream, src.Stream)
 	mergeString(&c.Prefix, src.Prefix)
 	if src.Port != nil {
@@ -97,8 +107,10 @@ func mergeString(dst *string, src string) {
 
 // Finalize applies the defaults, reads the block's environment overrides
 // (<PREFIX>_NATS_TOKEN, …_PORT, …_WEBSOCKET_HOST, …_WEBSOCKET_PORT,
-// …_STREAM, and …_PREFIX), and validates: the token is set, both ports are
-// in 1–65535, the WebSocket host is set, and the stream name and prefix pass
+// …_WEBSOCKET_PUBLIC_URL, …_STREAM, and …_PREFIX), derives the public URL's
+// default from the final host and port, and validates: the token is set,
+// both ports are in 1–65535, the WebSocket host is set, the public URL is a
+// ws:// or wss:// URL with a host, and the stream name and prefix pass
 // go-messaging's own checks, the ones its broker applies, so a bad one fails
 // here as configuration rather than at Build. An empty prefix composes
 // empty names, which disable the overrides.
@@ -124,14 +136,16 @@ func (c *NATSConfig) Finalize(envPrefix string) error {
 		Port:          libconfig.EnvName(envPrefix, "nats", "port"),
 		WebSocketHost: libconfig.EnvName(envPrefix, "nats", "websocket", "host"),
 		WebSocketPort: libconfig.EnvName(envPrefix, "nats", "websocket", "port"),
+		PublicURL:     libconfig.EnvName(envPrefix, "nats", "websocket", "public_url"),
 		Stream:        libconfig.EnvName(envPrefix, "nats", "stream"),
 		Prefix:        libconfig.EnvName(envPrefix, "nats", "prefix"),
 	}
 	for dst, name := range map[*string]string{
-		&c.Token:          c.Env.Token,
-		&c.WebSocket.Host: c.Env.WebSocketHost,
-		&c.Stream:         c.Env.Stream,
-		&c.Prefix:         c.Env.Prefix,
+		&c.Token:               c.Env.Token,
+		&c.WebSocket.Host:      c.Env.WebSocketHost,
+		&c.WebSocket.PublicURL: c.Env.PublicURL,
+		&c.Stream:              c.Env.Stream,
+		&c.Prefix:              c.Env.Prefix,
 	} {
 		if err := setStringFromEnv(dst, name); err != nil {
 			return err
@@ -142,6 +156,9 @@ func (c *NATSConfig) Finalize(envPrefix string) error {
 	}
 	if err := libconfig.SetFromEnv(&c.WebSocket.Port, c.Env.WebSocketPort, strconv.Atoi); err != nil {
 		return err
+	}
+	if c.WebSocket.PublicURL == "" {
+		c.WebSocket.PublicURL = c.defaultPublicURL()
 	}
 	return c.validate()
 }
@@ -174,6 +191,9 @@ func (c *NATSConfig) validate() error {
 	if err := checkPort(*c.WebSocket.Port); err != nil {
 		errs = append(errs, fmt.Errorf("websocket.port: %w", err))
 	}
+	if err := checkWebSocketURL(c.WebSocket.PublicURL); err != nil {
+		errs = append(errs, fmt.Errorf("websocket.public_url: %w", err))
+	}
 	if err := messaging.CheckName(c.Stream); err != nil {
 		errs = append(errs, fmt.Errorf("stream: %w", err))
 	}
@@ -189,6 +209,33 @@ func checkPort(p int) error {
 		return fmt.Errorf("must be in 1-65535, got %d", p)
 	}
 	return nil
+}
+
+// checkWebSocketURL fails on a URL a browser's WebSocket can't dial: one
+// that doesn't parse, or has a scheme other than ws or wss, or no host.
+func checkWebSocketURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return err
+	}
+	if u.Scheme != "ws" && u.Scheme != "wss" {
+		return fmt.Errorf("%q: want a ws:// or wss:// URL", raw)
+	}
+	if u.Hostname() == "" {
+		return fmt.Errorf("%q: no host", raw)
+	}
+	return nil
+}
+
+// defaultPublicURL is the WebSocket listener's URL from its own address,
+// with localhost in place of a host that binds every interface.
+func (c NATSConfig) defaultPublicURL() string {
+	host := c.WebSocket.Host
+	if ip := net.ParseIP(host); ip != nil && ip.IsUnspecified() {
+		host = "localhost"
+	}
+	u := url.URL{Scheme: "ws", Host: net.JoinHostPort(host, strconv.Itoa(*c.WebSocket.Port))}
+	return u.String()
 }
 
 // Addr is the core client listener's address, on loopback.

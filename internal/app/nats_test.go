@@ -20,7 +20,7 @@ import (
 // starts the server before the broker connects, and drains the broker
 // before the server stops.
 func TestGraph_BrokerAboveNATS(t *testing.T) {
-	a := app.New(configtest.Config(t), io.Discard)
+	a := newApp(t, configtest.Config(t), io.Discard)
 	n := a.Nodes()
 	sys := buildAsRun(t, a)
 	if b, s := layerOf(sys, n.Broker.Name()), layerOf(sys, n.NATS.Name()); s < 0 || b <= s {
@@ -32,7 +32,7 @@ func TestGraph_BrokerAboveNATS(t *testing.T) {
 // its last pass finishes before the broker stops, and nothing publishes
 // after it.
 func TestGraph_RunnerAboveBroker(t *testing.T) {
-	a := app.New(configtest.Config(t), io.Discard)
+	a := newApp(t, configtest.Config(t), io.Discard)
 	n := a.Nodes()
 	sys := buildAsRun(t, a)
 	if r, b := layerOf(sys, n.Runner.Name()), layerOf(sys, n.Broker.Name()); b < 0 || r <= b {
@@ -55,12 +55,12 @@ func TestGraph_MemoryBrokerDropsEmbeddedServer(t *testing.T) {
 		return ran
 	}
 
-	described := app.New(configtest.Config(t), io.Discard)
+	described := newApp(t, configtest.Config(t), io.Discard)
 	if ran := built(described); !ran[described.Nodes().NATS.Name()] {
 		t.Fatalf("Run as described built %v, want the nats node among them", slices.Sorted(maps.Keys(ran)))
 	}
 
-	composed := app.New(configtest.Config(t), io.Discard)
+	composed := newApp(t, configtest.Config(t), io.Discard)
 	withMemoryBroker(composed)
 	if ran := built(composed); ran[composed.Nodes().NATS.Name()] {
 		t.Errorf("Run over the memory broker built %v, want no nats node", slices.Sorted(maps.Keys(ran)))

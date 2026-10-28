@@ -58,6 +58,7 @@ func TestNATS_FinalizeEnvOverrides(t *testing.T) {
 		Port:          "EMULATOR_NATS_PORT",
 		WebSocketHost: "EMULATOR_NATS_WEBSOCKET_HOST",
 		WebSocketPort: "EMULATOR_NATS_WEBSOCKET_PORT",
+		PublicURL:     "EMULATOR_NATS_WEBSOCKET_PUBLIC_URL",
 		Stream:        "EMULATOR_NATS_STREAM",
 		Prefix:        "EMULATOR_NATS_PREFIX",
 	}
@@ -163,5 +164,54 @@ func TestLoad_NATSKeys(t *testing.T) {
 	if n.Token != "from-file" || n.Addr() != "127.0.0.1:14222" || n.WebSocketAddr() != "127.0.0.1:14223" ||
 		n.Stream != "EVENTS" || n.Prefix != "pipeline" {
 		t.Errorf("NATS = %+v, want the file's block", n)
+	}
+}
+
+// The public URL defaults to the listener's own address, with localhost in
+// place of a host that binds every interface, which no browser can dial; it
+// follows the host and port the environment set, and an explicit one wins.
+func TestNATS_PublicURL(t *testing.T) {
+	cases := map[string]struct {
+		host, set string
+		env       map[string]string
+		want      string
+	}{
+		"default every interface": {want: "ws://localhost:4223"},
+		"IPv6 every interface":    {host: "::", want: "ws://localhost:4223"},
+		"loopback":                {host: "127.0.0.1", want: "ws://127.0.0.1:4223"},
+		"IPv6 loopback":           {host: "::1", want: "ws://[::1]:4223"},
+		"env host and port": {
+			env:  map[string]string{"EMULATOR_NATS_WEBSOCKET_HOST": "127.0.0.2", "EMULATOR_NATS_WEBSOCKET_PORT": "14223"},
+			want: "ws://127.0.0.2:14223",
+		},
+		"explicit":     {set: "wss://events.example/nats", want: "wss://events.example/nats"},
+		"env explicit": {env: map[string]string{"EMULATOR_NATS_WEBSOCKET_PUBLIC_URL": "ws://box:9"}, want: "ws://box:9"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			for k, v := range tc.env {
+				t.Setenv(k, v)
+			}
+			cfg := withToken()
+			cfg.NATS.WebSocket.Host = tc.host
+			cfg.NATS.WebSocket.PublicURL = tc.set
+			if err := cfg.Finalize("emulator"); err != nil {
+				t.Fatalf("Finalize: %v", err)
+			}
+			if got := cfg.NATS.WebSocket.PublicURL; got != tc.want {
+				t.Errorf("NATS.WebSocket.PublicURL = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNATS_PublicURLRejected(t *testing.T) {
+	for _, raw := range []string{"http://localhost:4223", "localhost:4223", "ws://", "ws://%zz"} {
+		cfg := withToken()
+		cfg.NATS.WebSocket.PublicURL = raw
+		err := cfg.Finalize("")
+		if err == nil || !strings.Contains(err.Error(), "nats: websocket.public_url:") {
+			t.Errorf("Finalize with public_url %q = %v, want the nats block's websocket.public_url error", raw, err)
+		}
 	}
 }

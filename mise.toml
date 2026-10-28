@@ -68,7 +68,10 @@ dir = "{{config_root}}"
 # go task, every module's seven steps; vet, fix, and lint take the integration tag so the
 # integration suite compiles and lints too, and the go task runs only the unit tier.
 [tasks.go]
-description = "Build, vet, format-check, fix-check, tidy-check, test (-race), and lint (golangci-lint with .golangci.yml) every Go module; reads no network, writes nothing outside Go's caches"
+description = "Build, vet, format-check, fix-check, tidy-check, test (-race), and lint (golangci-lint with .golangci.yml) every Go module, with or without the pipeline app's build; reads no network, writes nothing outside Go's caches"
+# Each step compiles the embed of apps/pipeline/dist/, which build:app empties and rewrites; when
+# the check runs both, the Go steps wait for the build to finish rather than read it mid-write.
+wait_for = ["build:app"]
 run = '''
 set -eu
 for mod in $GO_MODULES; do
@@ -87,27 +90,33 @@ done
 dir = "{{config_root}}"
 
 # From go-web-sdk-template template/v0.13.0 (b6ad574): template/mise.toml, its integration task.
-# The suite builds cmd/server once with the race detector, into a temporary directory, and runs it
-# as a subprocess on reserved loopback ports; the emulator has no backing service, so no compose
-# stack wraps it.
+# The suite builds cmd/server once with the race detector, into a temporary directory, embedding
+# the pipeline app's build, and runs it as a subprocess on reserved loopback ports; the emulator
+# has no backing service, so no compose stack wraps it.
 [tasks."test:integration"]
-description = "Run the integration tier: build cmd/server and boot it on reserved loopback ports, through boot, both probes, and the drain; reads no network, writes nothing outside TMPDIR and Go's caches"
+description = "Run the integration tier after build:app: build cmd/server, embedding the pipeline app's build, and boot it on reserved loopback ports, through boot, both probes, the app at each mount, and the drain, and a binary built without the app refusing to start; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+# The binary refuses to start without the app's build, so the tier builds the app first.
+depends = ["build:app"]
 run = "go test -race -count=1 -tags integration ./integration/"
 dir = "{{config_root}}"
 
 [tasks.serve]
-description = "Run the emulator locally under the local overlay, on localhost:8080; Ctrl-C drains it"
+description = "Build the pipeline app, then run the emulator locally under the local overlay, on localhost:8080, the app at /app; Ctrl-C drains it"
+# The binary refuses to start without the app's build.
+depends = ["build:app"]
 run = "go run ./cmd/server"
 dir = "{{config_root}}"
 
 [tasks."build:app"]
-description = "Build the pipeline app with Vite (vite.config.ts): apps/pipeline/src/ into apps/pipeline/dist/, with its manifest in .vite/manifest.json; outside the check; reads no network, writes apps/pipeline/dist/"
+description = "Build the pipeline app with Vite (vite.config.ts): apps/pipeline/src/ into apps/pipeline/dist/, with its manifest in .vite/manifest.json, recreating the committed dist/.gitkeep Vite's emptied outDir drops; reads no network, writes apps/pipeline/dist/"
 depends = ["preflight"]
-run = "pnpm exec vite build"
+# Vite empties dist/ before it writes, the committed placeholder the Go embed of dist/ compiles
+# against with no build included; touch puts the same empty file back, so the tree stays clean.
+run = ["pnpm exec vite build", "touch apps/pipeline/dist/.gitkeep"]
 dir = "{{config_root}}"
 
 [tasks.check]
-description = "Run every check: lint, types, test:unit, the Go steps, and test:integration; reads no network, writes nothing outside TMPDIR and Go's caches"
+description = "Run every check: lint, types, test:unit, the Go steps, and test:integration, which builds the pipeline app first; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["lint", "types", "test:unit", "go", "test:integration"]
 
 [tasks.install]

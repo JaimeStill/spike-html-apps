@@ -24,7 +24,8 @@
     "port": 4222,
     "websocket": {
       "host": "0.0.0.0",
-      "port": 4223
+      "port": 4223,
+      "public_url": ""
     },
     "stream": "EMULATOR",
     "prefix": "emulator"
@@ -38,6 +39,9 @@
   },
   "conversations": {
     "delta_interval": "50ms"
+  },
+  "app": {
+    "mount": "/app"
   },
   "shutdown_timeout": "10s"
 }

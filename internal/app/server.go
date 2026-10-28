@@ -16,8 +16,8 @@ func defineServer(g *graph.Graph, n *Nodes) {
 	n.Server = g.Define("server", newServer(n))
 }
 
-// newRouter assembles the router: the middleware stack, the mounts, and the
-// probes. The probes register on the router's native mux, outside every
+// newRouter assembles the router: the middleware stack, the mounts, the
+// pipeline app, and the probes. The probes register on the router's native mux, outside every
 // module's middleware, and report the readiness node's value: lifecycle.New
 // binds it to the Coordinator after the Build, and the probes read it live
 // on every request.
@@ -28,6 +28,7 @@ func newRouter(n *Nodes) func(*graph.Scope) (*web.Router, error) {
 		for _, m := range routes(s, n) {
 			router.Mount(m)
 		}
+		mountClient(router, s, n)
 
 		// The zero Problem keeps the SDK's readiness defaults: type
 		// about:blank, status 503 with its status text as the title, the
