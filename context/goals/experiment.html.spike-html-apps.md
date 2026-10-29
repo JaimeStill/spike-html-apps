@@ -1,15 +1,15 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** emulator
-- **Branch:** emulator
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
 1. [x] layers
 2. [x] foundation
 3. [x] sdk
-4. [ ] emulator
+4. [x] emulator
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
@@ -229,10 +229,6 @@ escalation's answer then adds the fix and its exact release (`spike-html-apps-sd
 one-way door) to this brief.
 
 **Release.** None.
-
-## Progress
-
-slices 11/11 committed · standards ✓ · spec ✓ (2 rounds) · editor ✓
 
 ## Decisions
 
@@ -682,6 +678,7 @@ slices 11/11 committed · standards ✓ · spec ✓ (2 rounds) · editor ✓
 - emulator: the pipeline app's config requires a non-empty token.
 - emulator: go-messaging moved to v0.2.0 and nats.go to v1.55.0 during BUILD, keeping currency
   silent.
+- emulator: shipped. The emulator, NewClient, CORS, embedded NATS, the pipeline app's first build, and the root's browser tier merged (spike-html-apps PR, after spike-html-apps-sdk's pin bump merged with no tag); accepted by the architect after running it live.
 
 ## Pending edits
 
