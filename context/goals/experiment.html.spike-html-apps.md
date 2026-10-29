@@ -704,6 +704,12 @@ slices 15/15 committed · standards done · spec done (no gaps) · editor done
 - primitives: DocumentItem has the emulator's document fields (`content_type`, `created_at`) with
   a run status beside them, and the document list maps each onto the entry's file. Rejected: the
   entry's own item shape as the list's input (implementer, slice 13).
+- primitives: the architect's answers to the standards review's open questions, for a retro on
+  the components' STANDARDS.md: (1) keep event-log.css's inner container query, and narrow the
+  rule to "no container query or containment on the host, and none that sets the component's
+  width"; (2) allow a quiet loop that signals ongoing work and ends with it, all motion honouring
+  reduced motion; (3) the header bar becomes about 2–6 lines, matching spike-html-conventions at
+  a88828a, and document-list.ts's event note moves out of its header.
 
 ## Pending edits
 
