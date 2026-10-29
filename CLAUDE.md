@@ -8,7 +8,10 @@ workflow; start from `context/README.md`.
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
 - **Check:** `mise run check`, after `mise run install`: ESLint (with the app tier's direction
   table over apps/, and its violation tree under `node --test`), Prettier, shellcheck, tsc, and
-  go-web-sdk-template's seven Go steps over the root module. It reads no network.
+  go-web-sdk-template's seven Go steps over the root module. It then builds the pipeline app with
+  Vite (`build:app`) and boots the emulator binary on reserved loopback ports for the integration
+  tier and for the browser tier, which runs in the pinned chrome-headless-shell. It reads no
+  network.
 - **Currency:** `mise run currency`: every mise tool, package.json pin, and go.mod go directive
   and direct requirement behind its latest; silent when all are current.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,

@@ -1,0 +1,47 @@
+{
+  "log": {
+    "level": "info",
+    "format": "text"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "30s",
+    "read_header_timeout": "5s",
+    "write_timeout": "30s",
+    "idle_timeout": "2m",
+    "transfer_rate": 65536
+  },
+  "reads": {
+    "default_size": 20,
+    "max_size": 100
+  },
+  "cors": {
+    "allowed_origins": []
+  },
+  "nats": {
+    "token": "",
+    "port": 4222,
+    "websocket": {
+      "host": "0.0.0.0",
+      "port": 4223,
+      "public_url": ""
+    },
+    "stream": "EMULATOR",
+    "prefix": "emulator"
+  },
+  "documents": {
+    "max_size": 33554432
+  },
+  "runs": {
+    "stage_interval": "750ms",
+    "instance": ""
+  },
+  "conversations": {
+    "delta_interval": "50ms"
+  },
+  "app": {
+    "mount": "/app"
+  },
+  "shutdown_timeout": "10s"
+}

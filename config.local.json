@@ -1,0 +1,17 @@
+{
+  "log": {
+    "level": "debug"
+  },
+  "server": {
+    "host": "127.0.0.1"
+  },
+  "cors": {
+    "allowed_origins": ["http://localhost:8080", "http://127.0.0.1:8080"]
+  },
+  "nats": {
+    "token": "emulator-local-token",
+    "websocket": {
+      "host": "127.0.0.1"
+    }
+  }
+}

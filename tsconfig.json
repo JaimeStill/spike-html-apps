@@ -1,7 +1,8 @@
-// mise run types: tsc type-checks eslint.config.js as JSDoc-checked JavaScript, the root's one
-// module outside the suite, and the apps in apps/ once they exist. The suite isn't included: it
-// runs on node's APIs, whose types (@types/node) the root doesn't install. skipLibCheck: the
-// declarations the ESLint plugins ship name node's types and type-fest, which they don't install.
+// mise run types: tsc type-checks eslint.config.js as JSDoc-checked JavaScript, vite.config.ts,
+// and the apps in apps/, without their builds; the apps' types for the layers come from the
+// packages' declarations. The suite isn't included: it runs on node's APIs, whose types
+// (@types/node) the root doesn't install. skipLibCheck: the declarations the ESLint plugins ship
+// name node's types and type-fest, which they don't install.
 // Adapted from spike-html-apps-foundation (12f4d53): tsconfig.json, with no emit, the root's
 // inputs, and the library declarations skipped.
 {
@@ -20,5 +21,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["eslint.config.js", "apps"]
+  "include": ["eslint.config.js", "vite.config.ts", "apps"],
+  "exclude": ["apps/*/dist"]
 }

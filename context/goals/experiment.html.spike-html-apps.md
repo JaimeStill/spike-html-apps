@@ -9,148 +9,226 @@
 1. [x] layers
 2. [x] foundation
 3. [x] sdk
-4. [ ] emulator
+4. [x] emulator
 5. [ ] primitives
 6. [ ] pipeline
 7. [ ] answer
 
-## Task brief · experiment.html.spike-html-apps · sdk
+## Task brief · experiment.html.spike-html-apps · emulator
 
-**Problem.** The sdk is four handwritten declarations with no runtime: nothing routes, calls an
-API, or carries a token, and the SDK has no live transport. The emulator, the primitives, and the
-pipeline app build on a working client, router, and event sequence, and no later task touches the
-sdk. So this task builds them, closes the gaps an audit of v0.1.0's declarations found (uploads
-with progress, streamed responses, problem extensions, decoding, the router's change and failure
-handling), and releases them together (evidence 1 and 3).
+**Problem.** The client layers exist (sdk v0.2.0, components v0.2.0), but nothing live runs
+behind them. The NATS adapter has never read a stream the emulator publishes, NewClient is only a
+proposal, and the primitives and pipeline tasks have no backend to compose against. This task
+builds the pipeline emulator as one Go binary from go-web-sdk-template template/v0.13.0, all state
+in memory: four domains, embedded nats-server publishing through go-messaging, a scripted Open
+Responses stream that spike-ai-pipeline-client can consume, CORS for the external client, and the
+serving half with a minimal pipeline app. It then proves the adapter and NewClient live in a
+browser (evidence 3 and 4).
 
 **Behaviors**
 
-API client
-1. Each call resolves to a Result and never rejects. A success's data is decoded by content type:
-   JSON (application/json or any +json) parsed, text/* a string, any other type a Blob, and no
-   body (204, 205, or empty) undefined.
-2. A problem document (application/problem+json) keeps every member, extensions included; a
-   missing title becomes "HTTP <status>". Any other failing response becomes an "about:blank"
-   problem titled with its status text, or "HTTP <status>" when that is empty.
-3. Client-made problems have status 0 and fixed titles: urn:standards-lab:problem:network
-   ("Network error"), :abort ("Request aborted"), :timeout ("Request timed out"); a 2xx body that
-   doesn't decode as its type claims is :decode ("Response not decodable"), carrying the status; a
-   body that can't be encoded as JSON is :encode ("Request not encodable"), with nothing sent
-   (escalation 1).
-4. A path joins under the base with or without a leading "/" (base "/api" + "documents/5" or
-   "/documents/5" → /api/documents/5). The base defaults to "/api" and may be an absolute URL on
-   another origin. Request options take query parameters and headers.
-5. FormData, Blob, ArrayBuffer and views, and URLSearchParams bodies are sent as they are; every
-   other body as JSON with content-type application/json.
-6. Each call carries `Authorization: Bearer <token>` when the provider has one, and none
-   otherwise. On a 401 the client refreshes and retries once; with no new token it returns the
-   401's problem. Concurrent 401s share one pending refresh. `anonymous` gives no token and never
-   refreshes.
-7. upload(path, body, options) sends over XMLHttpRequest, reports progress (bytes sent, total),
-   aborts on the signal, and resolves to the same Result, problems, token, and 401 retry as every
-   call. A retry restarts the progress.
-8. stream(path, body?, options?) sends a POST with a body, else a GET, with Accept:
-   text/event-stream. It resolves to a Result before the first event, with any failure up to then
-   a problem (behaviors 2, 3, 6). On success the data is an async iterable of server-sent events
-   (type, default "message"; data; id when set), parsed by the sdk's own WHATWG event-stream
-   parser: BOM; CR, LF, CRLF; comments; multi-line data; a field with no value. The signal ends
-   the iteration quietly; a network failure mid-stream throws an error carrying a :network problem.
+Service
+1. The emulator is one binary composed on go-core's graph and lifecycle. It's configured through
+   the template's layered files and environment variables, under the emulator's own prefix. It
+   answers the template's liveness and readiness probes, and readiness includes the embedded
+   NATS server, the broker, and the stage reactor. An interrupt drains it and exits 0. All state
+   lives in memory and is gone on restart.
+2. The template's integration tier boots the built binary on reserved ports and passes as part
+   of the check. It covers boot, both probes, and the drain. Once the drain finishes, the
+   embedded server's store directory no longer exists.
 
-Router
-9. The base is the option, else the pathname of the `<base>` element's href, else "/". Patterns and
-   navigate() paths are relative to it.
-10. Once started, the router intercepts every same-origin navigation under the base that the
-    Navigation API allows (link clicks, back and forward, navigate()), leaving reloads, downloads,
-    fragment-only changes, form posts, and anything outside the base to the browser (reloads
-    amended by escalation 1). The first
-    matching pattern in table order wins; its element replaces the outlet's content with each path
-    param as an attribute; current reports pattern, tag, params, and query.
-11. A path no pattern matches mounts notFound; with no notFound, the outlet empties and current is
-    undefined.
-12. A rejecting loader, or a tag undefined once its loader resolves (the error names the tag),
-    fails the route. On a navigation the router didn't start (a user's click, back or forward,
-    another script's navigation) the URL is already committed: the router mounts the error
-    option's element, or empties the outlet, and the Navigation API reports navigateerror. On
-    start() it mounts the same way and start() rejects.
-13. navigate(path, options) loads the route first. On failure it rejects with the URL, outlet,
-    and current unchanged; otherwise it pushes an entry (or replaces with replace) and resolves
-    once the element is mounted.
-14. start() resolves once the current location's route is mounted. query(changes, options) sets
-    parameters (undefined deletes), keeps the rest, replaces the entry by default, and resolves
-    once current.query is updated, with the element still mounted. stop() stops intercepting.
-15. The router is an EventTarget that dispatches "change" after each mount and query change, with
-    current already updated.
+Embedded NATS
+3. The emulator starts nats-server in-process with JetStream, on a store directory it creates at
+   start and removes at shutdown. The core client listener binds loopback only. The WebSocket
+   listener runs without TLS on its configured host and port.
+4. Every listener requires the one static token from the emulator's configuration. A connection
+   with no token, or another token, is refused on either listener.
+5. The WebSocket listener accepts an upgrade only from an origin on the configured
+   allowed-origins list, the same list CORS uses. Any other origin is refused.
+6. go-messaging's nats broker owns the event stream and provisions it on the embedded server
+   with the token. The emulator isn't ready until the server accepts connections and the broker
+   is connected.
 
-Event sequence
-16. `./events.js` declares CloudEvent<T> (specversion "1.0", id, source, type; optional subject,
-    time, datacontenttype, dataschema, data; extensions in their own member), Cursor (an opaque
-    string), and EventSequence, whose read({ after?, types?, signal? }) is an async iterable of
-    deliveries (event and cursor), ended by the signal or a break.
-17. A read with no cursor starts at the oldest kept event; with a cursor, at the event after it.
-    types limits the read to those event types.
+Documents and runs
+7. An upload is a raw body: the file's bytes, its own Content-Type, a Content-Length, and its
+   name as a query parameter. It's accepted up to a configured size limit that is checked before
+   any byte is read. A body over the limit answers 413, one with no length 411, and a malformed
+   Content-Type 415, each as an RFC 9457 problem. A missing name is a 400 problem. A success
+   answers 201 with the document's id, name, content type, size, and creation time.
+8. Documents can be listed in go-web-sdk's page envelope and read by id, and their content reads
+   back with the content type they were uploaded with. An unknown id is a 404 problem.
+9. Each accepted upload starts a run for its document. The run passes through upload, metadata,
+   extraction, chunks, and embeddings, one stage per configured interval. Runs can be listed and
+   read by id, with each stage's state and completion time.
+10. Each completed stage publishes one CloudEvent through the broker. All stage events share one
+    type under the configured prefix. The subject is the run's id, the source names the emulator
+    instance, and the JSON data names the stage, its position, the stage count, and the
+    document's id. One go-core reactor, nudged when a run starts, advances every run whose next
+    stage is due. It drains at shutdown, and nothing publishes after the broker stops.
 
-NATS adapter
-18. `./events/nats.js` connects over WebSocket to the given servers and stream with the token
-    provider's token. On an authorization failure it refreshes once and reconnects; with no token,
-    the read fails. It reads a JetStream ordered consumer: deliver-all without a cursor, start
-    sequence cursor+1 with one. The cursor is the stream sequence as a decimal string; a cursor
-    the adapter didn't write fails the read. close() ends every read and the connection.
-19. It decodes binary content mode as go-messaging nats/v0.2.0 publishes it: ce-* headers as
-    attributes, other ce-* headers as extensions, content-type as datacontenttype. data decodes by
-    datacontenttype (JSON parsed, text/* a string, otherwise a Uint8Array); data that doesn't
-    parse ends the read with an error naming the event's id.
-20. Against the pinned nats-server: the WebSocket transport, a refused token, order and resume
-    from a cursor without gap or duplicate across reads, the type filter, decoding, and a server
-    restart mid-read resuming after the last delivered event.
-21. @nats-io/nats-core and @nats-io/jetstream are optional peers at ^3.4.0. Only `./events/nats.js`
-    imports them; every other subpath loads without them.
+Search
+11. A search with a query matches it case-insensitively against document names and the content
+    of text-like documents (text/*, JSON, and any +json type). It answers a page of matches,
+    each with the document's id, its name, and a snippet around the first match. A missing or
+    empty query is a 400 problem.
 
-Package
-22. Emitted declarations equal v0.1.0's handwritten ones (kept as fixtures) except an expected
-    list of differences: problem extension members; the :decode type; query and headers options;
-    upload and stream; the router's error option and "change" event; start() and query()
-    returning promises; the base's `<base href>` fallback; the new subpaths; and (escalation 1) the
-    :encode type and `.ts` relative specifiers in place of `.js`. A sample domain service
-    holding get, list, upload, and stream endpoints satisfies Service unchanged.
-23. Every subpath is a .js module with types and default conditions; the pack is the build plus
-    package.json, README, and LICENSE.
+Conversations and the chat stream
+12. Conversations can be created, listed, and read by id with their history, an ordered list of
+    Open Responses message items (user input, assistant output). Posting a user message answers
+    the scripted reply as a stream and adds the user's message to the history. Once the reply
+    completes, the assistant's message is added too.
+13. The reply stream is text/event-stream. Each event's event field equals its body's type,
+    sequence_number rises from 0, and no event carries an id. The sequence is:
+    - response.created (in_progress, no output)
+    - output_item.added for one assistant message
+    - content_part.added
+    - output_text deltas, paced on a timer
+    - output_text.done
+    - content_part.done
+    - output_item.done, carrying the whole item
+    - response.completed, carrying the full response: completed status, an output that is
+      exactly that item, and usage
 
-**Test seams.** The built package, loaded as a consumer loads it. The Node unit tier runs the
-client, parser, event sequence, and adapter against a loopback HTTP server and the pinned
-nats-server; the browser tier runs the router and upload in pinned chrome-headless-shell.
+    Item ids stay the same throughout, and no [DONE] follows.
+14. A client that aborts mid-reply ends the stream on the server. The cut-off reply is never
+    added to the history.
+15. The failure path is deliberate. A user message whose text is exactly the documented trigger
+    string streams part of a reply. The stream then ends with Open Responses' error event and
+    response.failed, whose response holds the partial output. The history keeps the user's
+    message and no assistant message. Only that exact input causes the failure. No run, stage,
+    timer, or other scripted reply produces it, and the normal walkthrough never hits it.
+16. A stateless POST to the API's responses route takes an Open Responses create-response body
+    with stream true. It answers the same scripted reply, from the same stream writer, and keeps
+    no state. If the last user input is the trigger string, it takes the deliberate failure path.
+    A body without stream true, or one that doesn't parse, is a 400 problem.
+17. spike-ai-pipeline-client v0.4.0's GenerateStream, using format/responses pointed at the
+    emulator, yields its events with no error. Folded by its Accumulator, they give a completed
+    response whose one message text is the script's. With the trigger input, the stream ends with
+    the error event and response.failed.
+
+CORS
+18. The spike's sdk package provides a CORS middleware over rs/cors: a web.Middleware configured
+    with the allowed-origins list and mounted router-wide.
+    - A preflight from an allowed origin is answered with the API's methods and the
+      Authorization and Content-Type request headers. That includes the preflight a cross-origin
+      upload with progress sends.
+    - A request from an allowed origin gets Access-Control-Allow-Origin with Vary: Origin.
+    - A disallowed origin gets no CORS headers.
+    - Same-origin requests are unchanged.
+
+Serving half
+19. NewClient takes an app's build (an fs.FS) and options: base path, title, manifest entry, and
+    a config value. It reads Vite's manifest once and fails, naming the problem, when the manifest
+    or the entry is missing.
+20. Every GET or HEAD path that isn't an asset answers the shell. The shell writes
+    `<base href>` at the base path, the title, the config value as JSON in a
+    `<script type="application/json">`, and the manifest's entry as a module script with its
+    CSS. An asset answers its embedded bytes with
+    `Cache-Control: public, max-age=31536000, immutable`. A missing asset is a 404 problem,
+    never the shell. Any other method is a 405 problem.
+21. The app's mount is configuration. Under a prefix such as /app, NewClient mounts as a handler
+    module. At the root, it's the router's not-found handler. Either way, the API, the admin
+    mount, and the probes answer as before.
+22. The shell's config value carries the API base, the NATS WebSocket URL, the stream name, and
+    the static token.
+23. The Go steps compile with no web build. A binary built without the app's build output refuses
+    to start, logging the missing manifest and exiting 1.
+
+The pipeline app and live cases
+24. The pipeline app is minimal: two routes, built by Vite with a relative base and embedded in
+    the binary. It reads the shell's config, and its token provider hands the static token to sdk
+    v0.2.0's NATS adapter, which it installs by tag. It shows each run's stage events as text as
+    they arrive.
+25. One build serves at /app and at the root. Under each mount, Vite's base, the shell's
+    `<base href>`, and the router's base agree: assets load, a deep link and a reload reach the
+    router, and back and forward move between routes.
+26. The adapter's live cases run in the browser against the binary:
+    - A read with no cursor yields an upload's stage events in order. They're decoded from
+      go-messaging's binary content mode, with the data parsed as JSON.
+    - A read resumed from the last cursor after a reload continues with no gap and no duplicate.
+    - A type filter limits the read.
+    - A wrong token fails the read.
+    - A page from a disallowed origin can't connect.
+27. Two emulator instances run side by side on distinct ports, each with its own NATS listeners
+    and store. Neither instance's events reach the other's stream.
+
+Repository
+28. The root's currency reads its github: tag dependencies and its Go requirements, alongside its
+    mise and package pins. go.mod names go 1.27.3, the version the pipeline client's module
+    requires. The README pins spike-ai-pipeline-client at v0.4.0.
+
+**Test seams.** The emulator's HTTP API and its NATS WebSocket listener, reached as a client
+reaches them:
+- The Go unit tier drives the composed router hermetically, with go-messaging's memory broker in
+  place of NATS.
+- The integration tier boots the built binary.
+- The browser tier loads the embedded pipeline app from the built binary in pinned
+  chrome-headless-shell, and reads live through the sdk's NATS adapter.
 
 **Slices**
+1. **Upgrade spike-html-apps-sdk:** node 26.12.1 → 26.13.0, pnpm 12.15.0 → 12.16.1.
+   - Done when the sdk's currency exits 0 and its check passes.
+   - It merges with no version change, so no tag.
+2. **Upgrade the root:** node 26.13.0, pnpm 12.16.1, and eslint-plugin-boundaries
+   7.3.0 → 7.4.0. Then remove the 11 typescript-eslint 8.72.1 age exclusions.
+   - Drop any @boundaries/elements age exclusion pnpm writes.
+   - If 7.4.0's dot-file fix changes them, adapt the .well-known and ..x tree cases.
+   - Done when the root's currency exits 0 and its check passes.
+3. **The service (1, 2):** the template generated with gonew and moved into the root.
+   - It replaces the stand-in go.mod, the go task, .golangci.yml, and currency's go.mod scans.
+   - It keeps the root's Go and golangci-lint pins and its Node half.
+   - The template's CI is dropped, the environment prefix is renamed, and the integration tier
+     joins the check.
+   - Demo: serve, both probes answer, an interrupt drains, and the check passes with the
+     integration tier.
+4. **CORS (18):** the sdk package's rs/cors middleware and the allowed-origins setting.
+   - Demo: curl preflights from an allowed origin and a disallowed one.
+5. **Embedded NATS (3–6, and 2's store case):** the server, the token on both listeners,
+   WebSocket origins from the same list, and the owning broker.
+   - Demo: readyz lists the server and the broker.
+   - Demo: a WebSocket connect succeeds with the token and fails without it.
+   - Demo: the store is gone after the drain.
+6. **Documents and runs (7–10):** upload, list, read, and content; runs and their stages; the
+   reactor; stage events published.
+   - The unit tier runs on the memory broker, the integration tier on NATS.
+   - Demo: curl an upload, then read the run's stages and the stream's events.
+7. **Search (11).**
+   - Demo: upload two files and search for a word in one of them.
+8. **Conversations and the stream (12–17):** the conversation resource and its history, the one
+   stream writer, abort, the deliberate trigger, the stateless responses route, and the
+   pipeline client's test import (go directive 1.27.3, README pin v0.4.0).
+   - The first go get of v0.4.0 needs the network, since the proxy may not list the tag yet.
+     The install step says so.
+   - Demo: curl -N on a conversation message and on the trigger.
+   - Demo: go test shows GenerateStream folding both.
+9. **The app build (24's build, 28's currency):** Vite in the root with a relative base, the
+   minimal pipeline app, sdk v0.2.0 by tag with its @nats-io peers, currency reading github:
+   tags, and the ESLint app tier and Prettier ignores following the layout.
+   - Demo: the build's manifest and output; lint and types pass over the app.
+10. **The serving half (19–23):** NewClient in the sdk package, the committed build placeholder
+    under an all: embed, mounting at a prefix or the root, and the shell config.
+    - Demo: the built app served at /app and then at the root, each loaded in a browser.
+    - Demo: a binary without a build refuses to start.
+11. **The browser tier and live cases (25–27):** chrome-headless-shell pinned in mise and
+    currency, the browser tier adapted from the sdk's and run in the check, base agreement at
+    both mounts, the adapter's live cases, and two instances.
+    - Demo: the tier's run, with live reads printed.
 
-1. Upgrade: eslint-plugin-boundaries 7.3.0 → 7.4.0; remove the 11 typescript-eslint 8.72.1 age
-   exclusions. Done when install, currency, and check pass (after 2026-10-28T15:27:58Z). Adapt the
-   layers test's `.well-known` / `..x` cases if 7.4.0's dot-file fix changes them.
-2. Runtime build and `anonymous` (behaviors 6's default, 22, 23): TS sources emitting .js and .d.ts,
-   v0.1.0 declarations as fixtures, exports with types and default; the "spike-html-apps
-   implements it" headers rewritten. Demo: `anonymous` imported from the pack.
-3. API client (1–6) and the sample service's get and list. Demo: a script against a loopback
-   server printing a success, an untitled problem, and a timeout.
-4. Streamed response and parser (8). Demo: a loopback event stream printed event by event.
-5. Browser tier adapted from the foundation's v0.2.0 (chrome-headless-shell at its current
-   version), and the router (9–15). Demo: links, a deep link, back and forward, a failing loader,
-   notFound.
-6. Upload with progress (7). Demo: a browser page uploading to a loopback endpoint, progress logged.
-7. Event-sequence declarations (16, 17), with a test-only in-memory sequence.
-8. NATS adapter (18–21): nats-server v2.15.2 pinned in mise, started by the unit tier with
-   WebSocket (no TLS, loopback), JetStream on a temp store, and a token; a JS publisher writing
-   go-messaging's binary mode, citing its source. Demo: read, stop, resume from the cursor.
-9. Service proof (22's sample); README, STANDARDS.md, context/README no longer "types only",
-   optional peers named; version 0.2.0; CHANGELOG [0.2.0] with Changed naming the three breaks.
+**Out of scope.** These belong to other tasks or goals:
+- The external client and its cross-origin calls (pipeline task).
+- The primitives, any Lit component in the app, and the brotli budget (primitives task).
+- Screenshots and design review: the minimal app isn't a UI task.
+- Real auth, persistence, real inference, Firefox, and WebKit (evidence 9).
+- Structured content mode, reasoning and function-call items, and non-streamed responses.
+- CORS in go-web-sdk (v1.middleware), and NewClient's move to go-web-service and go-web-sdk
+  (v1.client).
 
-**Out of scope.** The root's currency (emulator task). The adapter's live cases against the
-emulator and go-messaging's encoding end to end (emulator task). Structured content mode.
-Performance figures. Real auth and OIDC (v1.auth). View Transitions. Firefox and WebKit
-(evidence 9). Screenshots (no UI). The brotli budget (primitives task).
+**Door.** Two-way. The root releases nothing, and the sdk's upgrade slice merges without a tag.
+If the live cases find a defect in the sdk, BUILD escalates instead of fixing it in place. The
+escalation's answer then adds the fix and its exact release (`spike-html-apps-sdk` v0.2.1, a
+one-way door) to this brief.
 
-**Door.** One-way for the v0.2.0 tag: the subpath names (`./events.js`, `./events/nats.js`), the
-declarations, and the cursor format ship frozen with it. Two-way for the rest.
-
-**Release**
-- spike-html-apps-sdk `v0.2.0` (cut by release.yml on merge)
+**Release.** None.
 
 ## Decisions
 
@@ -174,7 +252,8 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
 - setup: the backend is a minimal emulator, one Go binary from go-web-sdk-template
   template/v0.13.0 with all state in memory and four domains (documents, runs, conversations,
   search); no Postgres, Azurite, compose, outbox, JWT, or integration tier. Rejected: the
-  capstone's compose stack, as premature engineering for a client spike.
+  capstone's compose stack, as premature engineering for a client spike. Revised by emulator: the
+  template's integration tier stays and runs in check, with no compose stack.
 - setup: live sync over NATS over WebSocket, with nats-server embedded in the emulator
   (JetStream, a temporary store directory for go-messaging's file-storage stream) and published
   through go-messaging's nats provider. SSE stays the fallback if embedding proves costly.
@@ -226,6 +305,7 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
   `.golangci.yml`.
 - layers: the root uses pnpm alone; other package managers are the answer task's evidence 9.
 - layers: the root's browser tier waits for its first real subject, the emulator's live cases.
+  Done by emulator.
 - layers: the brotli budget is set in the primitives task, from a baseline where all three layers
   hold real content.
 - layers: each copied file carries one provenance line, which names the immediate source; that
@@ -237,9 +317,11 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
   three layer packages, so Lit isn't in the ESLint table; the pipeline task adds it if an app
   imports Lit directly.
 - layers: the root's go.mod names the minor, `go 1.27`, as the template writes it, and mise pins
-  Go 1.27.3. The root sets `GOWORK=off` and `GOTOOLCHAIN=local`.
+  Go 1.27.3. The root sets `GOWORK=off` and `GOTOOLCHAIN=local`. Revised by emulator: go.mod names
+  `go 1.27.3`, the version spike-ai-pipeline-client v0.4.0 requires.
 - layers: the root's Go steps keep the template's `-tags integration`, though the root has no
-  integration tier yet, so an integration suite compiles and lints when one comes.
+  integration tier yet, so an integration suite compiles and lints when one comes. Done by
+  emulator, whose integration suite carries the tag.
 - layers: the root's STANDARDS.md doesn't adopt the layers' "one script or command per mise task"
   rule or their 2–4-line header bar; the `go` task keeps the template's form.
 - layers: every repository excludes typescript-eslint 8.72.1 from pnpm's minimum release age until
@@ -250,9 +332,9 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
   foundation, escalation 4; the 4ch stands.
 - layers: the root's package currency scan doesn't read `github:` tag dependencies. The first task
   that makes the root depend on a layer by tag teaches it to, as spike-html-conventions'
-  `scripts/currency.sh` does.
+  `scripts/currency.sh` does. Done by emulator.
 - layers: the emulator task checks whether the github.com/standards-lab Go modules need
-  GOPRIVATE.
+  GOPRIVATE. Done by emulator: they don't.
 - layers: some declaration headers in the foundation and sdk still say "spike-html-apps implements
   it"; the foundation and sdk tasks rewrite them. Done for the foundation by the foundation task.
 
@@ -487,7 +569,7 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
   repositories' boundaries upgrades check for the same entry (implementer, slice 1).
 - sdk: the root still pins eslint-plugin-boundaries 7.3.0 and holds the typescript-eslint 8.72.1
   age exclusions. The emulator task's upgrade slice takes 7.4.0, checking for pnpm's own
-  @boundaries/elements entry, and removes the exclusions.
+  @boundaries/elements entry, and removes the exclusions. Done by emulator.
 - sdk: the emulator embeds nats-server as the Go module nats-server/v2, which the root's currency
   keeps current, separately from the sdk's mise pin of nats-server 2.15.2.
 - sdk: a cross-origin upload with progress sends a CORS preflight, because the progress listener
@@ -495,6 +577,108 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
   CORS to answer it.
 - sdk: shipped. sdk v0.2.0 (PR #2, merge 6c06200, release commit 6d5fb1c), cut by its release
   workflow on merge to main with CI green.
+- emulator: spike-html-apps-sdk joins the task, so an sdk defect the adapter's live cases find is
+  fixed in this task. Any sdk release is added by escalation, never planned. Rejected: keeping the
+  task to the root.
+- emulator: one static token on every embedded NATS listener. The broker passes it in its URL,
+  since go-messaging's nats.Config has no credentials field. Rejected: a token on the WebSocket
+  listener only.
+- emulator: the NATS WebSocket listener accepts only the CORS allowed-origins list, one setting
+  for both. Rejected: any origin.
+- emulator: the browser gets the NATS WebSocket URL, stream, and token from the config value
+  NewClient writes into the shell. Rejected: an emulator endpoint.
+- emulator: an embedded app builds with a relative Vite base, so one build serves under any
+  mount, with `<base href>` as the single source. Rejected: an absolute base per prefix.
+- emulator: an app at the server's root mounts as Router.SetNotFound. Rejected:
+  Router.Handle("/") on the native mux.
+- emulator: this task starts apps/pipeline/ as a minimal app for the pipeline task to grow.
+  Rejected: a test-only fixture app.
+- emulator: an app's build directory holds a committed placeholder under an all: embed, so the Go
+  steps compile without a web build, and a binary without a build refuses to start. Rejected:
+  running the Vite build in check before the Go steps.
+- emulator: the live cases run in a root browser tier in pinned chrome-headless-shell. Rejected:
+  Node's test runner.
+- emulator: the template's integration package stays and runs in check. This revises the setup
+  decision "no integration tier", which rejected the compose stack this tier doesn't need. Domain
+  tests stay hermetic on the memory broker. Rejected: dropping it.
+- emulator: CORS is rs/cors wrapped as a web.Middleware in the spike's sdk package, as
+  go-web-sdk's middleware-sourcing note names it. Rejected: hand-written CORS. jub0bs/cors was
+  also weighed: stricter by construction and actively tagged, but with a tenth of the adoption.
+  It's left for v1.middleware to evaluate.
+- emulator: one go-core reactor, nudged when a run starts, advances every due stage. Rejected: a
+  timer per run.
+- emulator: every stage publishes one CloudEvent type, with the run as the subject and the stage
+  in data. Rejected: one type per stage.
+- emulator: conversations keep their history in memory. Rejected: a stateless conversation stream.
+- emulator: an upload is a raw body read by ReadUpload, one file per request, with the name as a
+  query parameter. herald's multipart path was compared: its ParseMultipartForm limit is a memory
+  threshold that never caps the body. Rejected: multipart FormData.
+- emulator: the scripted reply is one assistant message item streamed as output_text deltas,
+  ending at response.completed with no [DONE]. Rejected: a reasoning item ahead of it.
+- emulator: the scripted failure (the error event, then response.failed) happens only on a
+  deliberately triggered fixed input, never as part of the simulated sequence (architect).
+  Rejected: no failure path.
+- emulator: a stateless POST `<base>/responses` serves the same scripted stream from one writer,
+  proven by spike-ai-pipeline-client v0.4.0's GenerateStream in the Go tests. go.mod's go
+  directive goes from 1.27 to 1.27.3, revising the layers decision. Rejected: mirroring the
+  spec's JSON without the client.
+- emulator: the README's spike-ai-pipeline-client pin moves from v0.1.0 to v0.4.0, and the
+  architect keeps it current as that spike progresses.
+- emulator: the standards-lab Go modules are public on proxy.golang.org, so the root needs no
+  GOPRIVATE.
+- emulator: the template was generated by hand, as a git archive of go-web-sdk-template's
+  template/ with the module path rewritten, because the gonew mise shim couldn't resolve a Go
+  version. A generated file carries no provenance line, since it is the template's intended
+  output; a file copied by hand carries one.
+- emulator: the root keeps its `go` task name. From the template's tasks only `test:integration`
+  and `serve` were added. Currency reads the go directive with node, not jq. The template's
+  README, LICENSE, and CI were left out.
+- emulator: an empty allowed-origins list makes the CORS middleware a pass-through, because rs/cors
+  reads an empty list as every origin. The middleware panics on an invalid origin or on no
+  methods. Every response carries Vary: Origin. The caller names the methods; the root passes GET,
+  HEAD, and POST. A refused preflight is answered 204 with no CORS headers.
+- emulator: with an empty origins list, the NATS WebSocket listener uses nats-server's
+  SameOrigin check, which refuses every cross-origin upgrade. A client that sends no Origin is
+  admitted with the token.
+- emulator: the NATS ports are fixed, never 0, because the broker's URL is built before the server
+  binds. Outside the process, the store path shows only in the "nats started" log line, which the
+  integration and browser tiers read. nats-server logs through the service's logger, with NoSigs.
+- emulator: the unit tier replaces the broker node with memory.Broker through
+  App.Graph().Replace, so the graph never builds the embedded server.
+- emulator: a run's schedule is anchored at its start: stage k is due at start + (k-1) × interval.
+  The reactor ticks at a fifth of the interval. A stage's event is published before the stage is
+  marked complete, and a failed publish is retried under the same event id, `<runID>.<position>`.
+- emulator: document content is served as an attachment, never inline, following go-web-service.
+  Inline previews would need a change.
+- emulator: each search match carries a `field`, name or content, and a snippet of up to 40 runes
+  on each side of the match with U+2026 ellipses. Search scans every document, with no index.
+- emulator: POST /messages takes {"text"}. The failure trigger is exactly `/fail`, and the failed
+  partial item's status is `incomplete`. Concurrent turns on one conversation aren't serialized.
+  Listings carry each conversation's history. A reply lifts its connection's write deadline by
+  the script's duration through http.ResponseController.
+- emulator: the pipeline app's routes are custom elements, since the sdk router mounts by tag.
+  vite.config.ts sits at the repository root, because the app tier forbids importing vite inside
+  apps/. The app hardcodes the event type `emulator.run.stage`, since the shell's config carries
+  no prefix. The log keeps its last cursor in sessionStorage, and forgets it when a read fails
+  before showing anything.
+- emulator: NewClient never serves a dotfile, the manifest included. Only files under the
+  manifest's directories are cached as immutable; any other file is no-cache. A bare prefix
+  redirects (301) to the prefix with its trailing slash. A deep link whose last segment has an
+  extension is a 404, not the shell. The shell adds modulepreload links for the entry's static
+  imports. `nats.websocket.public_url` is a setting of its own. The app's title is a constant.
+- emulator: check builds the app: `test:integration` and `test:browser` depend on `build:app`,
+  which writes the gitignored dist/ and then re-creates dist/.gitkeep. The `go` task waits for
+  `build:app`, so the Go steps never compile a half-written build.
+- emulator: config.local.json allows http://localhost:8080 and http://127.0.0.1:8080, because the
+  app's origin and the NATS WebSocket port differ.
+- emulator: both harnesses relaunch a boot that failed on a taken reserved port, up to 5 launches,
+  and only on address-in-use. The browser tier serves a page whose shell or origin a test changes
+  through a loopback proxy, because Chrome's Local Network Access check blocks a page served by
+  DevTools Fetch from opening loopback WebSockets.
+- emulator: the pipeline app's config requires a non-empty token.
+- emulator: go-messaging moved to v0.2.0 and nats.go to v1.55.0 during BUILD, keeping currency
+  silent.
+- emulator: shipped. The emulator, NewClient, CORS, embedded NATS, the pipeline app's first build, and the root's browser tier merged (spike-html-apps PR, after spike-html-apps-sdk's pin bump merged with no tag); accepted by the architect after running it live.
 
 ## Pending edits
 
@@ -529,3 +713,21 @@ declarations, and the cursor format ship frozen with it. Two-way for the rest.
 - standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, and -noctis.
 - standards-lab `.claude/marathon.toml` `[workspace.paths]`: spike-html-apps-noctis =
   "~/experiments/spike-html-apps-noctis".
+- v1.middleware, facts for the answer task: rs/cors's latest tag is v1.11.1 (2024-08) while
+  main stays active, with #220 (credentialed wildcard) and #222 (malformed origins) open;
+  jub0bs/cors is the alternative to weigh; herald's CORS middleware (`HERALD_CORS_*`) is prior
+  art.
+- go-messaging backlog candidate: `nats.Config` has no credentials field, so an authenticated
+  server's token rides in the URL, and `Start`'s error prints that URL.
+- v1.client, NewClient's measured shape, for the answer task: `NewClient(dist fs.FS,
+  ClientOptions{Base, Title, Entry, Config})`, reading Vite's manifest once. At the root it is
+  the router's not-found handler, so it answers only what no module or native route claims;
+  under a prefix it is a handler module, and the bare prefix redirects (301) to prefix/. A path
+  under the manifest's directories, a dotfile path, or a last segment with an extension, with no
+  file behind it, is a 404 problem, never the shell.
+- standards-lab `context/roadmap.toml`, the `emulator` task's summary: name what it built: the
+  four domains and the stateless responses route, proven with spike-ai-pipeline-client v0.4.0's
+  GenerateStream; embedded NATS with the token on both listeners; NewClient and CORS in the
+  spike's `sdk` package; the integration tier; and the browser tier in pinned
+  chrome-headless-shell, running the adapter's live cases and two instances. The `repos` edit
+  above adds spike-html-apps-sdk.
