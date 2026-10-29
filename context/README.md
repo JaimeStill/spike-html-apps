@@ -39,8 +39,8 @@ when they compose the capstone's UI primitives, live over a backend?
    upload dropzone with progress, stage timeline, event log, search results, artifact viewer
    (text, JSON, Markdown), and document list; carried over: status badge, entry, and pagination.
 6. A pipeline app composing them live over the emulator, embedded in its binary.
-7. The layers clean at scale: zero direction violations; each layer within a brotli budget and
-   passing its own check.
+7. The layers clean at scale: zero direction violations, and each layer within the brotli budget
+   its own check enforces.
 8. An external client hosted apart, calling two emulator instances cross-origin under CORS the
    spike owns, with a base and token provider for each.
 9. Consumption by tag from outside the spike, and the gaps: Firefox and WebKit, real auth, real
@@ -80,6 +80,10 @@ client, not the capstone's backend.
 
 - **Layers:** the foundation, components, and SDK repositories, each with its own check and
   released by tag.
+- **Budgets:** each layer's unit tier fails when the brotli size of its pack's runtime `.js` and
+  `.css`, each file compressed alone and dependencies not counted, exceeds its budget: the baseline
+  plus 10%, rounded up to whole KB of 1,000 B. The foundation's is 48 KB (baseline 43,595 B), the
+  components' 40 KB (36,070 B), and the SDK's 13 KB (11,669 B).
 - **Foundation:** the Intl formatters; spike-html-design's profiles, each a unit of a sheet and a
   registration module that a page or an outside package adds; the stored preference and the theme
   menu; and the conformance check for color, space, and type profiles.
@@ -93,7 +97,10 @@ client, not the capstone's backend.
   integration and browser tiers.
 - **Serving half:** `NewClient` in the root's `sdk` package, serving one build at a prefix and at
   the root.
-- **Primitives:** the capstone's UI components, finished in every state and profile.
+- **Primitives:** the components layer's eleven Lit shadow components, eight of them the
+  capstone's new primitives, and a Markdown renderer on marked's lexer. Each component has a
+  specimen page of every state, which the browser tier renders in every profile, light and dark.
+  The primitives task stages them as components v0.3.0, which it tags when it ships.
 - **Pipeline app:** the primitives composed live over the emulator, with its shortcuts.
 - **External client:** an app hosted apart over two services.
 
@@ -114,7 +121,8 @@ The tasks, in the order they run; each cites the evidence it proves.
    (evidence 1, 3).
 4. `emulator`: the service, its domains, embedded NATS, the chat stream, `NewClient`, and CORS
    (evidence 3, 4).
-5. `primitives`: the eight new components and each layer's brotli budget (evidence 5, 7, 10).
+5. `primitives`: the eight new components, the Markdown renderer, and each layer's brotli budget,
+   released as components v0.3.0 (evidence 5, 7, 10).
 6. `pipeline`: the pipeline app, its shortcuts, the external client, and the full-sequence
    walkthrough (evidence 6, 8, 10).
 7. `answer`: consumption by tag, the gaps, and the answer (evidence 9).

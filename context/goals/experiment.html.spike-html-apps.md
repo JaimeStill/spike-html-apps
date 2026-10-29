@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** primitives
+- **Branch:** primitives
 
 ## Tasks
 
@@ -14,221 +14,173 @@
 6. [ ] pipeline
 7. [ ] answer
 
-## Task brief · experiment.html.spike-html-apps · emulator
+## Task brief · experiment.html.spike-html-apps · primitives
 
-**Problem.** The client layers exist (sdk v0.2.0, components v0.2.0), but nothing live runs
-behind them. The NATS adapter has never read a stream the emulator publishes, NewClient is only a
-proposal, and the primitives and pipeline tasks have no backend to compose against. This task
-builds the pipeline emulator as one Go binary from go-web-sdk-template template/v0.13.0, all state
-in memory: four domains, embedded nats-server publishing through go-messaging, a scripted Open
-Responses stream that spike-ai-pipeline-client can consume, CORS for the external client, and the
-serving half with a minimal pipeline app. It then proves the adapter and NewClient live in a
-browser (evidence 3 and 4).
+**Problem.** The emulator runs live, but the capstone's UI has only three primitives (status
+badge, entry, pagination): nothing yet shows a conversation, takes a message, uploads, follows a
+run's stages, reads the event stream, searches, views an artifact, or lists documents. Until they
+exist the pipeline task has nothing to compose, evidence 5 is unproven, and evidence 7's brotli
+budget has no baseline. This task builds eight Lit shadow components in spike-html-apps-components
+(chat thread, composer, upload dropzone, stage timeline, event log, search results, artifact
+viewer, document list) to one bar, gives the carried-over components plain names, adds a Markdown
+renderer on marked's lexer, sets each layer's brotli budget in its own check, and releases
+components v0.3.0. Evidence 5, 7 (the budget), and 10.
 
 **Behaviors**
 
-Service
-1. The emulator is one binary composed on go-core's graph and lifecycle. It's configured through
-   the template's layered files and environment variables, under the emulator's own prefix. It
-   answers the template's liveness and readiness probes, and readiness includes the embedded
-   NATS server, the broker, and the stage reactor. An interrupt drains it and exits 0. All state
-   lives in memory and is gone on restart.
-2. The template's integration tier boots the built binary on reserved ports and passes as part
-   of the check. It covers boot, both probes, and the drain. Once the drain finishes, the
-   embedded server's store directory no longer exists.
+Every component
+1. Each of the eight is a Lit shadow component: properties in, events out through the
+   foundation's emit (bubbling, composed); no SDK or domain import; each data property a
+   structural shape it declares. No component binds a key; Enter, Shift+Enter, Escape, and every
+   shortcut belong to the app.
+2. In every state, every profile, light and dark, regular and compact: finished; keyboard-operable
+   with visible focus; layout-only sheets on the foundation's tokens, native elements keeping
+   spike-html-design's styling; brief motion that honours reduced motion; no layout shift as data
+   arrives; sizes to content in any parent, shrink-to-fit included; a size, time, or id never
+   breaks inside itself.
+3. Each has a specimen page: every state labelled, again in a 20rem section, and one instance
+   reached by Tab for focus. The browser tier renders each on page-full.css with register-full.js,
+   with no error, in the four colors, compact, and sans, light and dark, and checks each facet's
+   color, font, and padding reach the shadow root.
 
-Embedded NATS
-3. The emulator starts nats-server in-process with JetStream, on a store directory it creates at
-   start and removes at shutdown. The core client listener binds loopback only. The WebSocket
-   listener runs without TLS on its configured host and port.
-4. Every listener requires the one static token from the emulator's configuration. A connection
-   with no token, or another token, is refused on either listener.
-5. The WebSocket listener accepts an upgrade only from an origin on the configured
-   allowed-origins list, the same list CORS uses. Any other origin is refused.
-6. go-messaging's nats broker owns the event stream and provisions it on the embedded server
-   with the token. The emulator isn't ready until the server accepts connections and the broker
-   is connected.
+Names and package
+4. The entry is `sl-entry`, the pagination `sl-pagination`; every tag is `sl-<name>`, every module
+   `./<name>.js`; the old tags and modules are gone; the v0.3.0 CHANGELOG lists the rename as a
+   break.
+5. marked 18.1.2 is the second runtime dependency, pinned exactly as lit is; STANDARDS, the ESLint
+   layer table, and the release test admit it, and the release test still rejects a range, a tag,
+   or any other dependency. Only modules importing the Markdown renderer load marked: a page
+   importing no Markdown-rendering component requests no marked module.
+6. The foundation stays peered `^0.2.0` from its v0.2.0 tag. A pattern kept local that more than
+   one component shares (motion durations, the visually-hidden rule, …) is recorded in the
+   components' context notes under "foundation candidates" (where, why shared, the foundation
+   shape it could take), and the goal record gains a pending edit adding a foundation-extension
+   entry to the coordinator roadmap's backlog.
 
-Documents and runs
-7. An upload is a raw body: the file's bytes, its own Content-Type, a Content-Length, and its
-   name as a query parameter. It's accepted up to a configured size limit that is checked before
-   any byte is read. A body over the limit answers 413, one with no length 411, and a malformed
-   Content-Type 415, each as an RFC 9457 problem. A missing name is a 400 problem. A success
-   answers 201 with the document's id, name, content type, size, and creation time.
-8. Documents can be listed in go-web-sdk's page envelope and read by id, and their content reads
-   back with the content type they were uploaded with. An unknown id is a 404 problem.
-9. Each accepted upload starts a run for its document. The run passes through upload, metadata,
-   extraction, chunks, and embeddings, one stage per configured interval. Runs can be listed and
-   read by id, with each stage's state and completion time.
-10. Each completed stage publishes one CloudEvent through the broker. All stage events share one
-    type under the configured prefix. The subject is the run's id, the source names the emulator
-    instance, and the JSON data names the stage, its position, the stage count, and the
-    document's id. One go-core reactor, nudged when a run starts, advances every run whose next
-    stage is due. It drains at shutdown, and nothing publishes after the broker stops.
+Screenshots
+7. The screenshot run takes `--page <name>` (repeatable) and `--scheme light|dark`, combining with
+   the profile flags. An unknown page prints the registered pages and exits 2 before any capture.
+   With neither flag it captures every page in both schemes, as before.
 
-Search
-11. A search with a query matches it case-insensitively against document names and the content
-    of text-like documents (text/*, JSON, and any +json type). It answers a page of matches,
-    each with the document's id, its name, and a snippet around the first match. A missing or
-    empty query is a 400 problem.
+Markdown
+8. The renderer turns marked's lexer tokens into Lit templates: headings, paragraphs, emphasis,
+   strong, code spans, fenced and indented code, nested ordered and unordered lists, blockquotes,
+   rules, links, GFM tables. Raw HTML, block or inline, shows as literal text; no sanitizer, since
+   Lit escapes every text value.
+9. A link is an anchor only for http, https, mailto, or relative URLs; any other scheme renders
+   its text without an anchor. An image token renders as its alt text, never an `<img>`.
+10. Partial input renders in place as it grows, with no error: an unclosed fence is a code block of
+    what has arrived; a half-built list renders its items so far.
 
-Conversations and the chat stream
-12. Conversations can be created, listed, and read by id with their history, an ordered list of
-    Open Responses message items (user input, assistant output). Posting a user message answers
-    the scripted reply as a stream and adds the user's message to the history. Once the reply
-    completes, the assistant's message is added too.
-13. The reply stream is text/event-stream. Each event's event field equals its body's type,
-    sequence_number rises from 0, and no event carries an id. The sequence is:
-    - response.created (in_progress, no output)
-    - output_item.added for one assistant message
-    - content_part.added
-    - output_text deltas, paced on a timer
-    - output_text.done
-    - content_part.done
-    - output_item.done, carrying the whole item
-    - response.completed, carrying the full response: completed status, an output that is
-      exactly that item, and usage
+Chat thread
+11. Takes a list of items, a structural subset of Open Responses 2026-04-24, rendered in order:
+    message parts (`input_text` plain, `output_text` Markdown, `refusal` as a distinct refusal),
+    reasoning items, `function_call` (name and arguments), `function_call_output`. Unknown item
+    and part types are skipped with no error; no images or audio.
+12. An `in_progress` message reads as streaming; as its `output_text` grows the Markdown
+    re-renders and content above doesn't move. `incomplete` and `failed` each have a finished
+    state.
+13. `verbose` false (default) hides reasoning, `function_call`, and `function_call_output`;
+    true shows each collapsed in native `<details>`. Messages and refusals always show.
+    Display-only.
+14. Specimen states, each verbose off and on: empty, an exchange, streaming (open fence; half-built
+    list), refusal, incomplete, failed, reasoning and tool calls, an unknown item among known ones,
+    long content, narrow.
 
-    Item ids stay the same throughout, and no [DONE] follows.
-14. A client that aborts mid-reply ends the stream on the server. The cut-off reply is never
-    added to the history.
-15. The failure path is deliberate. A user message whose text is exactly the documented trigger
-    string streams part of a reply. The stream then ends with Open Responses' error event and
-    response.failed, whose response holds the partial output. The history keeps the user's
-    message and no assistant message. Only that exact input causes the failure. No run, stage,
-    timer, or other scripted reply produces it, and the normal walkthrough never hits it.
-16. A stateless POST to the API's responses route takes an Open Responses create-response body
-    with stream true. It answers the same scripted reply, from the same stream writer, and keeps
-    no state. If the last user input is the trigger string, it takes the deliberate failure path.
-    A body without stream true, or one that doesn't parse, is a 400 problem.
-17. spike-ai-pipeline-client v0.4.0's GenerateStream, using format/responses pointed at the
-    emulator, yields its events with no error. Folded by its Accumulator, they give a completed
-    response whose one message text is the script's. With the trigger input, the stream ends with
-    the error event and response.failed.
+Composer
+15. Multi-line field with a send control: send emits `send {text}` and clears; unavailable while
+    empty or whitespace. `busy` swaps send for stop, emitting `stop {}`. `disabled` blocks typing
+    and sending. Grows with its text to a bound, then scrolls. Enter does only what the native
+    field does.
 
-CORS
-18. The spike's sdk package provides a CORS middleware over rs/cors: a web.Middleware configured
-    with the allowed-origins list and mounted router-wide.
-    - A preflight from an allowed origin is answered with the API's methods and the
-      Authorization and Content-Type request headers. That includes the preflight a cross-origin
-      upload with progress sends.
-    - A request from an allowed origin gets Access-Control-Allow-Origin with Vary: Origin.
-    - A disallowed origin gets no CORS headers.
-    - Same-origin requests are unchanged.
+Upload dropzone
+16. Files enter by drop or a keyboard-operable picker, several at once; either emits
+    `files-select {files: File[]}`. Dragging over shows a drag-over state.
+17. Takes uploads (id, name, size, bytes sent, state: uploading, done, failed with message,
+    cancelled); native progress while uploading; an uploading item's cancel emits
+    `upload-cancel {id}`; sizes via the foundation's formatters. States: idle, drag-over,
+    uploading, done, failed, cancelled, disabled, many files, narrow.
 
-Serving half
-19. NewClient takes an app's build (an fs.FS) and options: base path, title, manifest entry, and
-    a config value. It reads Vite's manifest once and fails, naming the problem, when the manifest
-    or the entry is missing.
-20. Every GET or HEAD path that isn't an asset answers the shell. The shell writes
-    `<base href>` at the base path, the title, the config value as JSON in a
-    `<script type="application/json">`, and the manifest's entry as a module script with its
-    CSS. An asset answers its embedded bytes with
-    `Cache-Control: public, max-age=31536000, immutable`. A missing asset is a 404 problem,
-    never the shell. Any other method is a 405 problem.
-21. The app's mount is configuration. Under a prefix such as /app, NewClient mounts as a handler
-    module. At the root, it's the router's not-found handler. Either way, the API, the admin
-    mount, and the probes answer as before.
-22. The shell's config value carries the API base, the NATS WebSocket URL, the stream name, and
-    the static token.
-23. The Go steps compile with no web build. A binary built without the app's build output refuses
-    to start, logging the missing manifest and exiting 1.
+Stage timeline
+18. Takes ordered stages (name, position, state pending|active|complete|failed, optional
+    completion time); shows state and formatted time; an advancing stage changes in place.
+    Display-only. States: all pending, part way, complete, failed, narrow.
 
-The pipeline app and live cases
-24. The pipeline app is minimal: two routes, built by Vite with a relative base and embedded in
-    the binary. It reads the shell's config, and its token provider hands the static token to sdk
-    v0.2.0's NATS adapter, which it installs by tag. It shows each run's stage events as text as
-    they arrive.
-25. One build serves at /app and at the root. Under each mount, Vite's base, the shell's
-    `<base href>`, and the router's base agree: assets load, a deep link and a reload reach the
-    router, and back and forward move between routes.
-26. The adapter's live cases run in the browser against the binary:
-    - A read with no cursor yields an upload's stage events in order. They're decoded from
-      go-messaging's binary content mode, with the data parsed as JSON.
-    - A read resumed from the last cursor after a reload continues with no gap and no duplicate.
-    - A type filter limits the read.
-    - A wrong token fails the read.
-    - A page from a disallowed origin can't connect.
-27. Two emulator instances run side by side on distinct ports, each with its own NATS listeners
-    and store. Neither instance's events reach the other's stream.
+Event log
+19. Takes events (id, type, source, subject, time, JSON data), shown in order with each one's data
+    pretty-printed on demand; new events append without moving those shown. Display-only. States:
+    empty, live appending, long, narrow.
 
-Repository
-28. The root's currency reads its github: tag dependencies and its Go requirements, alongside its
-    mise and package pins. go.mod names go 1.27.3, the version the pipeline client's module
-    requires. The README pins spike-ai-pipeline-client at v0.4.0.
+Search results
+20. Takes a query, matches (id, name, field, snippet), loading and error. The query's
+    case-insensitive occurrences in a snippet are marked as text, never parsed HTML. Activating a
+    match emits `open {id}`. States: idle, loading, no matches, matches, error, long snippet,
+    narrow.
 
-**Test seams.** The emulator's HTTP API and its NATS WebSocket listener, reached as a client
-reaches them:
-- The Go unit tier drives the composed router hermetically, with go-messaging's memory broker in
-  place of NATS.
-- The integration tier boots the built binary.
-- The browser tier loads the embedded pipeline app from the built binary in pinned
-  chrome-headless-shell, and reads live through the sdk's NATS adapter.
+Artifact viewer
+21. Takes a name, content type, and content: text/markdown as rendered Markdown (8–10); JSON or
+    +json pretty-printed, 2-space, in a `<pre>`; other text types preformatted. Unparseable JSON
+    shows raw text in a labelled error state; an unsupported type a labelled state, not bytes;
+    loading and error states; long content scrolls within. Display-only.
+
+Document list
+22. Composes `sl-entry` and `sl-pagination`, passing the pagination's properties through; adds a
+    selected id marked on its entry for assistive technology, and empty, loading, and error states.
+    The entry's `open` and the pagination's `page-change` and `page-size-change` reach the list's
+    listener unchanged. States: empty, loading, a page, selected, error, last page, narrow.
+
+Budget
+23. Each layer's unit tier checks a brotli budget beside its release test: the sum over the
+    package's runtime `.js` and `.css` of each file's node:zlib brotli size, dependencies (lit,
+    marked) not counted. Over budget fails the check, naming size and budget.
+24. Foundation, components, and sdk budgets are each the baseline measured once the eight
+    components are built, plus 10%, rounded up to whole KB; the session brief records each.
+
+**Test seams.** The component as a custom element in a page: the browser tier loads `dist/` in
+pinned chrome-headless-shell, sets properties, reads the shadow DOM and events on the host. The
+renderer through its components and directly through its export in the same tier. The screenshot
+command line and each layer's budget test are their own seams.
 
 **Slices**
-1. **Upgrade spike-html-apps-sdk:** node 26.12.1 → 26.13.0, pnpm 12.15.0 → 12.16.1.
-   - Done when the sdk's currency exits 0 and its check passes.
-   - It merges with no version change, so no tag.
-2. **Upgrade the root:** node 26.13.0, pnpm 12.16.1, and eslint-plugin-boundaries
-   7.3.0 → 7.4.0. Then remove the 11 typescript-eslint 8.72.1 age exclusions.
-   - Drop any @boundaries/elements age exclusion pnpm writes.
-   - If 7.4.0's dot-file fix changes them, adapt the .well-known and ..x tree cases.
-   - Done when the root's currency exits 0 and its check passes.
-3. **The service (1, 2):** the template generated with gonew and moved into the root.
-   - It replaces the stand-in go.mod, the go task, .golangci.yml, and currency's go.mod scans.
-   - It keeps the root's Go and golangci-lint pins and its Node half.
-   - The template's CI is dropped, the environment prefix is renamed, and the integration tier
-     joins the check.
-   - Demo: serve, both probes answer, an interrupt drains, and the check passes with the
-     integration tier.
-4. **CORS (18):** the sdk package's rs/cors middleware and the allowed-origins setting.
-   - Demo: curl preflights from an allowed origin and a disallowed one.
-5. **Embedded NATS (3–6, and 2's store case):** the server, the token on both listeners,
-   WebSocket origins from the same list, and the owning broker.
-   - Demo: readyz lists the server and the broker.
-   - Demo: a WebSocket connect succeeds with the token and fails without it.
-   - Demo: the store is gone after the drain.
-6. **Documents and runs (7–10):** upload, list, read, and content; runs and their stages; the
-   reactor; stage events published.
-   - The unit tier runs on the memory broker, the integration tier on NATS.
-   - Demo: curl an upload, then read the run's stages and the stream's events.
-7. **Search (11).**
-   - Demo: upload two files and search for a word in one of them.
-8. **Conversations and the stream (12–17):** the conversation resource and its history, the one
-   stream writer, abort, the deliberate trigger, the stateless responses route, and the
-   pipeline client's test import (go directive 1.27.3, README pin v0.4.0).
-   - The first go get of v0.4.0 needs the network, since the proxy may not list the tag yet.
-     The install step says so.
-   - Demo: curl -N on a conversation message and on the trigger.
-   - Demo: go test shows GenerateStream folding both.
-9. **The app build (24's build, 28's currency):** Vite in the root with a relative base, the
-   minimal pipeline app, sdk v0.2.0 by tag with its @nats-io peers, currency reading github:
-   tags, and the ESLint app tier and Prettier ignores following the layout.
-   - Demo: the build's manifest and output; lint and types pass over the app.
-10. **The serving half (19–23):** NewClient in the sdk package, the committed build placeholder
-    under an all: embed, mounting at a prefix or the root, and the shell config.
-    - Demo: the built app served at /app and then at the root, each loaded in a browser.
-    - Demo: a binary without a build refuses to start.
-11. **The browser tier and live cases (25–27):** chrome-headless-shell pinned in mise and
-    currency, the browser tier adapted from the sdk's and run in the check, base agreement at
-    both mounts, the adapter's live cases, and two instances.
-    - Demo: the tier's run, with live reads printed.
+1. Upgrade spike-html-apps-foundation: node 26.13.0, pnpm 12.16.1, chrome-headless-shell
+   156.0.8078.73, eslint-plugin-boundaries 7.4.0; remove any @boundaries/elements age exclusion as
+   the sdk did. Done at currency exit 0 and check passing; merges with no tag. (sdk is current.)
+2. Upgrade spike-html-apps-components: the same four items and exclusion check.
+3. Screenshot control (7). Demo: `--page entry --scheme dark`; an unknown page exits 2 listing pages.
+4. Plain names (4). Demo: check passes; old tags absent from `dist/`.
+5. The Markdown renderer (5, 8–10). Demo: raw HTML, rejected schemes, partial fences and lists;
+   a page without the renderer loads no marked module.
+6. Artifact viewer (21) — stop.
+7. Chat thread (11–14) — stop, each state verbose off and on.
+8. Composer (15) — stop.
+9. Upload dropzone (16, 17) — stop.
+10. Stage timeline (18) — stop.
+11. Event log (19) — stop.
+12. Search results (20) — stop.
+13. Document list (22) — stop.
+14. Budgets (23, 24) across foundation, components, sdk; foundation and sdk merge with no tag.
+    Demo: each layer's check, and one over-budget run that fails naming its numbers.
+15. Release and foundation candidates (6): components 0.3.0, `[0.3.0]` CHANGELOG (rename, marked,
+    eight components); the "foundation candidates" section and the backlog pending edit. Demo:
+    the release test on the 0.3.0 pack.
 
-**Out of scope.** These belong to other tasks or goals:
-- The external client and its cross-origin calls (pipeline task).
-- The primitives, any Lit component in the app, and the brotli budget (primitives task).
-- Screenshots and design review: the minimal app isn't a UI task.
-- Real auth, persistence, real inference, Firefox, and WebKit (evidence 9).
-- Structured content mode, reasoning and function-call items, and non-streamed responses.
-- CORS in go-web-sdk (v1.middleware), and NewClient's move to go-web-service and go-web-sdk
-  (v1.client).
+A **stop** (6–13) is a design review: `mise run screenshots --page <component>` at the default
+profile, light and dark, plus its passing browser cases; BUILD waits for the architect's
+acceptance before the next slice. The session brief carries `--all` for every new page.
 
-**Door.** Two-way. The root releases nothing, and the sdk's upgrade slice merges without a tag.
-If the live cases find a defect in the sdk, BUILD escalates instead of fixing it in place. The
-escalation's answer then adds the fix and its exact release (`spike-html-apps-sdk` v0.2.1, a
-one-way door) to this brief.
+**Out of scope.** Wiring to the emulator, the app's key table, and the walkthrough (pipeline
+task); a foundation release or any foundation change beyond its upgrade and budget test (a shared
+need escalates); SDK changes beyond its budget test; a sanitizer, syntax highlighting, a JSON tree,
+images and audio in the thread, an embedding-space panel, toast, image viewer; Firefox and WebKit.
 
-**Release.** None.
+**Door.** One-way for the `v0.3.0` tag only. Everything else is two-way: foundation and sdk merge
+with no tag, and the components' branch is revertible before SHIP.
+
+**Release.** spike-html-apps-components `v0.3.0`.
+
+## Progress
+
+slices 15/15 committed · standards done · spec done (no gaps) · editor done
 
 ## Decisions
 
@@ -679,6 +631,79 @@ one-way door) to this brief.
 - emulator: go-messaging moved to v0.2.0 and nats.go to v1.55.0 during BUILD, keeping currency
   silent.
 - emulator: shipped. The emulator, NewClient, CORS, embedded NATS, the pipeline app's first build, and the root's browser tier merged (spike-html-apps PR, after spike-html-apps-sdk's pin bump merged with no tag); accepted by the architect after running it live.
+- primitives: Markdown renders from marked 18.1.2's lexer as Lit templates, with no sanitizer,
+  since Lit escapes every text value; the Sanitizer API isn't in Safari 26.2, and DOMPurify adds
+  10.5 KB. Rejected: markdown-it (38.6 KB, 6 dependencies), micromark (about 15), and a
+  hand-built parser.
+- primitives: every tag is a plain `sl-<name>`; sl-entry-lit-shadow and sl-pagination-lit-shadow
+  become sl-entry and sl-pagination, a break that v0.3.0's CHANGELOG lists.
+- primitives: the chat thread shows message items (input_text as plain text, output_text as
+  Markdown re-rendered as deltas arrive, refusal labelled), reasoning, function_call, and
+  function_call_output, with no images or audio. It skips unknown item and part types, and the
+  system and developer roles. `verbose`, false by default, hides reasoning and tool calls.
+- primitives: JSON shows pretty-printed, 2-space, in a `<pre>`. Rejected: a JSON tree.
+- primitives: the document list composes sl-entry and sl-pagination, the architect's example of
+  compositional layering.
+- primitives: the composer sends `send` and `stop`, the upload dropzone `files-select` and
+  `upload-cancel`, and the search results `open`; the document list's `open`, `page-change`, and
+  `page-size-change` are its parts' own events, bubbling and composed, never re-dispatched. The
+  other components send none.
+- primitives: no foundation release. Patterns the components share locally go in the components'
+  context note `foundation-candidates.md`, for a foundation-extension backlog entry (architect).
+- primitives: each component's slice ends at a design-review stop, on the screenshot run's new
+  `--page` and `--scheme` flags.
+- primitives: the architect added a spike task, `tooling`, for a shared screenshot and
+  browser-test tooling package; it reaches the roadmap as a pending edit.
+- primitives: each layer's brotli budget lives in its own check, so the foundation and sdk join
+  the task's repos. It sums each runtime `.js` and `.css` file's node:zlib brotli size,
+  dependencies not counted, against the baseline plus 10%, rounded up to whole KB. Rejected:
+  size-limit.
+- primitives: a KB is 1,000 B, and each budget is a constant in the layer's release test, raised
+  in the commit that needs more. Rejected: a package.json field, since package.json ships in the
+  pack and the budget belongs to the check (implementer, slice 14).
+- primitives: the artifact viewer is one frame, its name and type a header row; overflow shows
+  the browser's own scrollbars, with padding at the scroll's end; it has no default height cap,
+  so the consumer sizes it and it scrolls inside. Rejected: scroll shades (architect's review).
+- primitives: the browser driver shows scrollbars on every page, so the browser tier and the
+  screenshot run paint them as a user's browser does, and the screenshot run grows its viewport to
+  the page's height before capturing, since Chromium paints a region's scrollbars only inside the
+  viewport (implementer, slice 6).
+- primitives: the chat thread is accepted as the starting point; fine tuning waits for the
+  capstone, where the primitives are seen together. It is an ordered list of articles, not
+  role=log, with no loading or error state of its own (architect's review).
+- primitives: the composer's send and stop are one button whose label swaps; typing stays
+  allowed while busy; disabled outranks busy; the field clears before `send` (architect's review).
+- primitives: each upload row groups its size with its name: a finished row's label sits at its
+  end, and an uploading row keeps a full-width bar, with Cancel on the name's line. The specimens'
+  fit parents pad their component (architect's review).
+- primitives: the upload dropzone doesn't filter a drop by `accept`, which is only a hint to the
+  picker; the app validates what arrives by either path (implementer, slice 9).
+- primitives: the stage timeline shows absolute times to the second with the full date, is
+  vertical at every width, and sorts its steps by position (architect's review).
+- primitives: a component with nothing interactive, such as the stage timeline, has no focus
+  specimen, and the screenshot run presses no Tab on its page (implementer, slice 10).
+- primitives: the event log is role=log, polite, additions only, and follows the newest event
+  only when the reader is already at the end. Below 30rem each metadata pair stacks label over
+  value; the emulator's ids fit at 20rem as they are (architect's review).
+- primitives: the event log keys events by source and id, the pair CloudEvents makes unique, so
+  one id from two sources is two events (implementer, slice 11).
+- primitives: the search results' matches property is `items`, since `matches` would shadow
+  Element.matches(). The query is marked in the name and the snippet code point by code point, as
+  the emulator folds case; snippets stay in the UI font (architect's review).
+- primitives: a selected document is shown by outlining its entry's frame. Rejected: a bar column
+  (architect's review). The carried-over sl-entry is reworked in this task: the name leads over a
+  quiet status and kind, the kind opens the meta line in place of a column, and the meta wraps
+  between values.
+- primitives: sl-entry's `selected` is a visual mark only, and the entry sets no ARIA; the
+  consumer says it to assistive technology, as the document list does with `aria-current` on its
+  item (implementer, slice 13).
+- primitives: a selected entry focused by the keyboard shows the focus ring alone; its frame
+  returns when focus leaves (architect's review).
+- primitives: sl-pagination gains a `status` slot on its summary's line and exports
+  `summaryRange()`, so the document list's status never leaves a blank line under the summary.
+- primitives: DocumentItem has the emulator's document fields (`content_type`, `created_at`) with
+  a run status beside them, and the document list maps each onto the entry's file. Rejected: the
+  entry's own item shape as the list's input (implementer, slice 13).
 
 ## Pending edits
 
@@ -701,8 +726,9 @@ one-way door) to this brief.
   "tested against a pinned nats-server", and in place of "Releases sdk v0.1.0" it names upload
   with progress and the streamed response on the client, the router's change event and failure
   handling, and the release of sdk v0.2.0 (layers released v0.1.0).
-- standards-lab `context/roadmap.toml`: the primitives task sets each layer's brotli budget
-  (evidence 7).
+- standards-lab `context/roadmap.toml`, the `primitives` task's summary: name what it built: the
+  eight components, the Markdown renderer on marked 18.1.2, the sl-entry and sl-pagination rename,
+  each layer's brotli budget in its own check (evidence 7), and the release of components v0.3.0.
 - standards-lab `context/roadmap.toml`, the `emulator` task's `repos`: add spike-html-apps-sdk,
   so a defect the adapter's live cases find is fixed in that task.
 - standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", the live-transport
@@ -731,3 +757,23 @@ one-way door) to this brief.
   spike's `sdk` package; the integration tier; and the browser tier in pinned
   chrome-headless-shell, running the adapter's live cases and two instances. The `repos` edit
   above adds spike-html-apps-sdk.
+- standards-lab `context/roadmap.toml`, the `primitives` task's `repos`: add
+  spike-html-apps-foundation and spike-html-apps-sdk, for each layer's budget test.
+- standards-lab `context/roadmap.toml`: add a task `tooling` to experiment.html.spike-html-apps,
+  between `primitives` and `pipeline` (the architect's request during primitives): a shared,
+  tag-released dev-tooling package for the screenshot utility and the browser tier, with modules
+  for the pinned chrome-headless-shell launcher over the pipe, the static server, the profile and
+  scheme matrix, tiled capture with Tab-reached focus, and the `--page`/`--scheme`/profile CLI,
+  replacing the copies of browser-pipe.js (root, foundation, components, sdk, noctis), server.js
+  (foundation, components, sdk, noctis), and screenshots.js (foundation, components, noctis),
+  which have drifted (components' screenshots.js 296 lines with --page/--scheme, the
+  foundation's 145). A new repository joins the goal's `repos` and `[workspace.paths]`.
+- standards-lab `context/roadmap.toml`, backlog: a foundation-extension entry (the architect's
+  request during primitives): a later foundation minor that takes the patterns the components
+  keep locally, staged from the "Foundation candidates" note in spike-html-apps-components'
+  context, among them a control block-size token, status colour tokens, a disabled text-field
+  look, a dark-aware `<progress>` track, a "keep whole" rule, ellipsis truncation, the
+  scrolling-frame recipe, `formatJson`, and `formatBytes(0)`'s wording.
+- primitives baselines, for the answer task (evidence 7): brotli per file, quality 11, text
+  mode, KB = 1,000 B: foundation 43,595 B over 39 files, budget 48 KB; components 36,070 B over
+  23 files, budget 40 KB; sdk 11,669 B over 7 files, budget 13 KB.
