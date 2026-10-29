@@ -709,6 +709,9 @@ with no tag, and the components' branch is revertible before SHIP.
 - primitives: shipped. Eight primitives, the Markdown renderer, the entry and pagination
   renamed, and each layer's brotli budget merged (foundation and sdk with no tag), releasing
   components v0.3.0; each component accepted by the architect from its screenshots.
+- primitives: release fix: an event id wider than its line ends in an ellipsis inside its own
+  value, never broken and never scrolling the log (architect, after CI's wider monospace broke the
+  ids in the held 20rem log); fixed forward on `primitives-fix` before tagging v0.3.0.
 
 ## Pending edits
 
