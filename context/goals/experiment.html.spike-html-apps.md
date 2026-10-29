@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** primitives
-- **Branch:** primitives
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -10,7 +10,7 @@
 2. [x] foundation
 3. [x] sdk
 4. [x] emulator
-5. [ ] primitives
+5. [x] primitives
 6. [ ] pipeline
 7. [ ] answer
 
@@ -177,10 +177,6 @@ images and audio in the thread, an embedding-space panel, toast, image viewer; F
 with no tag, and the components' branch is revertible before SHIP.
 
 **Release.** spike-html-apps-components `v0.3.0`.
-
-## Progress
-
-slices 15/15 committed · standards done · spec done (no gaps) · editor done
 
 ## Decisions
 
@@ -710,6 +706,9 @@ slices 15/15 committed · standards done · spec done (no gaps) · editor done
   width"; (2) allow a quiet loop that signals ongoing work and ends with it, all motion honouring
   reduced motion; (3) the header bar becomes about 2–6 lines, matching spike-html-conventions at
   a88828a, and document-list.ts's event note moves out of its header.
+- primitives: shipped. Eight primitives, the Markdown renderer, the entry and pagination
+  renamed, and each layer's brotli budget merged (foundation and sdk with no tag), releasing
+  components v0.3.0; each component accepted by the architect from its screenshots.
 
 ## Pending edits
 
