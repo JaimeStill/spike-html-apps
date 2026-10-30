@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** handoff
+- **State:** building
 - **Task:** pipeline
 - **Branch:** pipeline
 
@@ -217,14 +217,6 @@ session confirms each tag rather than pushing it.
 
 slices 1/18 committed (slice 2, tooling 658bc3e) · standards — · spec — · editor —
 
-## Handoff
-
-- Next move: slice 1 in spike-html-apps-tooling, eslint 10.13.0 -> 10.14.0, once pnpm's minimum
-  release age clears it (about 2026-10-31T14:12Z); slice 2 ran ahead of it, since it doesn't depend
-  on the bump. Then slice 3, the tooling v0.3.0 checkpoint: package.json to 0.3.0 and CHANGELOG
-  `[Unreleased]` to `[0.3.0]`, then the checkpoint brief.
-- No WIP slice. No escalation waiting. Branches `pipeline` exist, unpublished, in the root,
-  tooling, foundation, and components; foundation and components have no commits yet.
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
   signal), memoized, once no group member is alive; the group is also killed when SIGINT, SIGTERM,
@@ -893,6 +885,10 @@ slices 1/18 committed (slice 2, tooling 658bc3e) · standards — · spec — ·
 - pipeline: the keys defect came from spike-html-packages-foundation (5dd8a58) `src/keys.ts`, ported
   from spike-html-design's keys module; the spike never writes reference repositories, so it is a
   finding for their goals.
+- pipeline: held eslint at 10.13.0 in the root, tooling, foundation, and components: 10.14.0
+  (published 2026-10-30T14:12Z) hasn't cleared pnpm's minimum release age, and the architect chose
+  to proceed rather than wait; slices 1, 4, 7, and 10 drop to each repository's next currency
+  pass, so currency reports that line at each checkpoint (architect, BUILD).
 
 ## Pending edits
 
