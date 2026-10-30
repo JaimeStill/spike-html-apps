@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 11/17 committed (1–11; 12 redirected at its checkpoint: sources to .ts, then reviews, trial, and the checkpoint again) · standards: tooling, again after the rework · spec: the same · editor: the same
+slices 12/17 committed (1–12; tooling v0.1.0 released: PR #1 merged at 755f126, tag v0.1.0 on 17b3927, GitHub release with the tarball; 13 next) · standards: tooling done; consumers to come · spec: the same · editor: the same
 
 ## Decisions
 
