@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** pipeline
+- **Branch:** pipeline
 
 ## Tasks
 
@@ -15,209 +15,207 @@
 7. [ ] pipeline
 8. [ ] answer
 
-## Task brief · experiment.html.spike-html-apps · tooling
+## Task brief · experiment.html.spike-html-apps · pipeline
 
-**Problem.** Five repositories each keep their own copy of the browser-test and screenshot
-tooling, and the copies have drifted. The browser driver is copied five times, and only the
-components' copy shows scrollbars, so the other four browser tiers and screenshot runs paint
-pages differently from a user's browser. The static server is copied four times, three ways:
-plain, with the components' `/deps/` store map, and with the sdk's shell fallback and upload
-routes. The screenshot driver and its wrapper are copied three times (145/296/100 lines plus
-48/94/50). None of them can show images in a Neovim terminal buffer. This task creates
-spike-html-apps-tooling, releases `@jaimestill/spike-html-apps-tooling` v0.1.0 by tag, and moves
-all five consumers onto it with no layer release. It holds the raw DevTools pipe driver, the
-static server, the page wait, and one screenshot command with terminal, directory, and browser
-outputs. The pipeline task's screenshot review and browser tier then stand on one tool.
+**Problem.** The root's pipeline app is a stub: a text log of stage events and an About page.
+Nothing yet composes the eleven primitives, binds the shortcuts, or shows the full sequence
+(upload, stages live, chat, search, artifact) as one product. No external client exists, so
+evidence 6, 8, and 10 are unproven. Three defects stand in the way, and each is fixed at its
+source:
+- The foundation v0.2.0 shortcut module fires single-key bindings typed in a text field inside a
+  shadow root, and swallows the character.
+- sl-composer has no public way to send, so an app that sends on Enter would copy its private
+  rules.
+- The tooling's screenshot command can capture only its own static server, so it can't capture an
+  app that the emulator or any other server serves.
+The task releases tooling v0.3.0, foundation v0.2.1, and components v0.4.0, then builds the
+pipeline app and the external client in the root on those tags.
 
 **Behaviors**
 
-Package
-1. spike-html-apps-tooling is public, Apache-2.0, with the layers' main ruleset. It releases
-   v0.1.0 in the foundation's release shape: on a push to main whose version has no tag, the
-   check runs, the pack's tree is committed off-branch, the tag is annotated, and a GitHub
-   release from the `[0.1.0]` CHANGELOG section carries the tarball. The package has no runtime
-   dependency, its tag's tree installs with no build step, and its packed manifest has no
-   scripts. Consumers take it as the devDependency `github:JaimeStill/spike-html-apps-tooling#v0.1.0`.
-   Its check covers lint, format, types, a unit tier, and a browser tier in its own pinned
-   chrome-headless-shell, and its currency is silent. Its code and tests name no consumer.
+Tooling v0.3.0
+1. A screenshot description's server may be a start function instead of the static server's
+   options. The function resolves to an origin and a stop. The bin calls it once, after arguments,
+   `--help`, and unknown pages are checked (so `--help` and every exit 2 start nothing) and before
+   the first capture. Pages resolve against that origin. The bin calls stop once at the end, on any
+   failure, and on SIGINT or SIGTERM. A start that rejects fails the run, naming its error. The
+   static form is unchanged.
+2. The package exports a process helper:
+   - It starts a command with its args, working directory, and environment, in a process group of
+     its own.
+   - It resolves once a URL the caller names answers 2xx. It rejects if the command exits first, or
+     at its timeout; both rejections carry the command's output, and the timeout also ends the
+     group.
+   - Its stop sends the whole group SIGTERM, then SIGKILL after a drain timeout, and resolves to
+     the exit code.
+   - The group is killed if the calling process exits without stopping it.
+   - The output stays readable for errors.
+   - It works with any server or task runner, including one whose server is a grandchild, such as
+     `mise run dev` or `ng serve`. After stop, no process the command started is left.
+3. The package exports freePort, a free loopback port.
+4. Its code and tests name no consumer, it has no runtime dependency, its README documents both
+   server forms and the helper, and CHANGELOG `[0.3.0]` lists them under Added.
 
-Driver
-2. Launch starts `BROWSER_EXECUTABLE` over the DevTools pipe with today's settings: en-US, UTC,
-   a 1280×720 page, no sandbox, name resolution only to loopback, and a temporary profile
-   removed on close, with the browser killed if the process exits without closing it. An unset
-   `BROWSER_EXECUTABLE` fails and says so. A page offers goto, cdp, on, evaluate, and close, as
-   today. Every page shows its scrollbars.
-3. The page wait resolves to an expression's value once it is truthy in the page, polling inside
-   the page. After its timeout (10 s by default) it rejects, naming the expression and the
-   timeout. The settle expression resolves once fonts are ready and two frames have painted.
+Foundation v0.2.1
+5. A single-key binding never fires while the key is typed in a text field (input, textarea,
+   select, contenteditable), including fields inside open shadow roots at any depth, and the
+   character is typed. Escape in such a field, outside a modal, blurs it, as it does in light DOM.
+   Everything else the shortcut module does is unchanged. CHANGELOG `[0.2.1]` lists it under Fixed.
 
-Server
-4. The server listens on a free loopback port and returns its origin and a `stop()`. By default
-   it serves a root: `.html`, `.js`, and `.css` as on disk with no-store, anything else 404, and
-   no request outside the root. `deps` serves each named package under `/deps/<name>/` from its
-   installed directory, with its pnpm store siblings, and no request outside its package. `shell`
-   sends a given page for any extensionless path. `handler` is offered every request first, and
-   claims it or passes it on.
+Components v0.4.0
+6. sl-composer gains a public send() that does exactly what activating its send button does:
+   - nothing while the text is blank, or the composer is busy or disabled;
+   - otherwise it clears the field, then sends `send` with the text, then refocuses the field.
+   The composer still binds no key. CHANGELOG `[0.4.0]` lists send() under Added.
 
-Screenshots
-5. Each consumer describes its captures as data in a module the bin loads: its pages (name,
-   caption, path), each state's viewport and whether it captures the full page or the viewport,
-   optional prepare and open steps, its facets (flag, root attribute, default), its `--all`
-   matrix, how a page's registered profiles are read, and its server options. Each repository's
-   screenshots task runs the bin over that module and still runs raw.
-6. The command line is parsed with util.parseArgs:
+Root: serving
+7. NewClient's options gain a list of manifest keys whose modules the shell loads with
+   `blocking="render"` ahead of the entry, in the order given, each with its CSS. A key missing
+   from the manifest fails NewClient, naming it. The pipeline app loads the foundation's full
+   registration and preferences modules this way, so a stored theme choice is on the root element
+   before first paint.
+8. The browser tier's emulator harness runs on the tooling's process helper and freePort. It keeps
+   only its relaunch, up to 5 launches, when a boot fails with "address in use".
 
-   | Flag | Effect |
-   |---|---|
-   | `--palette` / `--space` / `--type <name>` | that facet's profile over the defaults; combinable |
-   | `--all` | the full matrix; not with a facet flag |
-   | `--page <name>` | only the pages named; repeatable |
-   | `--scheme light\|dark` | that scheme alone |
-   | `--output terminal\|directory\|browser` | how the captures are shown (8–10) |
-   | `--dir <path>` | where the files go (11) |
-   | `--keep` | keeps the terminal output's files |
+Root: pipeline app (evidence 6, 10)
+9. The app is embedded in the emulator binary and served at `/app` and at the root, as today, on
+   foundation v0.2.1, components v0.4.0, sdk v0.2.0, and Lit 3.3.3. The app tier's ESLint table
+   admits lit, with a violation-tree case.
+10. Layout and routes:
+    - A two-pane workspace. A header holds the title, a search field, a help button, and the theme
+      menu. A side pane holds the upload dropzone and the paginated document list.
+    - A routed main pane shows one view: a document (its stage timeline and its content in the
+      artifact viewer), the chat, the search results for `?q=`, or the event log. The About route
+      is dropped.
+    - Deep links, reloads, and back and forward reach each view at either mount.
+    - Below a width, the panes stack into one column.
+11. Upload: files chosen or dropped upload with per-file progress and cancel. A finished upload
+    joins the list, and a failed one shows its problem's title.
+12. Live: one NATS sequence from the shell's config drives the stage timeline and each list
+    entry's run status as events arrive, with no reload. The event log shows the stream through
+    sl-event-log and resumes from its stored cursor with no gap and no duplicate.
+13. Chat:
+    - Enter calls the composer's send() and Shift+Enter inserts a newline.
+    - A reply streams into the thread as it arrives, with the composer busy.
+    - Stop, or Escape while a reply streams (in the composer included), aborts the reply.
+    - `/fail` shows the failed item.
+14. Search: submitting the field opens the search view with the query marked in each match.
+    Opening a match opens its document.
+15. Artifact: the document's content shows as Markdown, JSON, or text by its content type, or as
+    unsupported, with loading and error states.
+16. Shortcuts: `/` focuses search, `?` opens the help dialog listing every binding, `t` opens the
+    theme menu, and Escape cancels a streaming reply or closes a dialog. None of them fires inside
+    a text field, the composer's included.
+17. Theme: the menu offers every built-in profile (the full entries). The stored choice holds
+    across reloads and tabs.
+18. Every view and state is finished in every built-in profile, light and dark: visible focus,
+    motion that honours reduced motion, and no layout shift as live data arrives.
 
-   No flags captures every page, both schemes, at the default profile. A usage error prints the
-   usage and exits 2. An unknown page lists the pages and exits 2 before launch. A profile a page
-   hasn't registered names that facet's registered names and exits 2, checked after each page
-   loads and before any capture.
-7. Each capture is taken at width 1280 and scale 1, with the scheme emulated and the profile's
-   and scheme's attributes set on the root. It waits until every custom element is defined and
-   has finished updating, then turns focus emulation on, reaches the focus state with real Tab
-   presses from the page's focus-start mark (none without a mark), and settles. A full-page state
-   grows the viewport to the page's height and cuts tiles of at most 1200 px: a cut moves up to a
-   section's top within the tile's last quarter, else to a state's top within its last half. A
-   viewport state is captured at its own size. Each name and caption gives the page, the whole
-   profile, the scheme, and "k of m" when there is more than one tile.
-8. `--output terminal` (default) prints each caption and path in order, and shows each image
-   with `kitten icat --transfer-mode=stream --align=left --fit=both` (or `kitty +kitten icat`)
-   only when stdout is a terminal, `/dev/tty` opens, and icat's support detection passes.
-   Otherwise it prints captions and paths plus one stderr line giving the reason and naming
-   `--output browser`. It never opens a browser by itself. It removes its files on exit unless
-   `--keep`, which prints the kept directory.
-9. `--output directory` writes the files, prints each caption and path, and keeps them.
-10. `--output browser` writes the tiles flat in the directory with an `index.html` at its root,
-    showing every tile in capture order with its caption and loading nothing else. It opens the
-    page with xdg-open as a `file://` URL and keeps the files. A failed open prints the gallery's
-    path on stderr and exits 1.
-11. `--dir <path>` sets where the files go; the default is a fresh mktemp-style directory under
-    `${TMPDIR:-/tmp}`. Terminal cleanup removes what it wrote, and the directory only if it
-    created it.
-12. Diagnosis: Decisions records, confirmed by observation, why a Neovim terminal buffer shows no
-    image, and whether any route renders images there: the outer terminal's tty through `$NVIM`
-    or Neovim's channel, kitty remote control (`allow_remote_control yes`, `KITTY_LISTEN_ON` set
-    here), Neovim 0.12's own image or terminal support, or a tmux-style passthrough. A route that
-    works with no new decision becomes part of the terminal output (8). One that needs a decision
-    (a change to the architect's kitty or Neovim config, a dependency, a new output) escalates.
+Root: external client (evidence 8)
+19. A second app in the app tier, built by Vite to static files and never embedded in the binary.
+    At start it fetches services.json relative to the page. The file lists two services, each with
+    a name, an API base, and a NATS WebSocket URL, stream, and token. A missing or malformed file
+    shows an error naming it.
+20. Each service gets its own panel:
+    - its own sdk client, with its base and its token provider;
+    - its own NATS sequence with its token;
+    - its document list, upload with progress (preflighted), search, and live stage events.
+    One service's events never appear in the other's panel.
+21. The client is hosted on an origin of its own. Each emulator admits that origin in its CORS and
+    its WebSocket allowed origins. A service that doesn't list the origin fails its own panel with
+    the network problem, and the other panel keeps working.
 
-Consumers
-13. The root, foundation, components, sdk, and noctis take the tooling at `#v0.1.0` as a
-    devDependency. No copy of the driver, server, screenshot driver, or wrapper remains, and each
-    screenshots task keeps only its capture description (5). The root's page wait is the
-    package's; freePort and the emulator harness's Node-side poll stay in the root. The sdk's
-    `/upload/` fixture routes and request log are the handler it passes in, and the components
-    pass their `/deps/` packages. Each consumer's currency reads the `github:` tag; the
-    foundation's and the sdk's gain this.
-14. Every consumer's check passes with visible scrollbars. A test or demo that changes with the
-    narrower layout is fixed in that repository and recorded in Decisions. A change needed in a
-    layer's shipped source escalates.
-15. The foundation still captures its current states. With no flags it now captures the
-    defaults, and `--all` gives its six profiles. Noctis captures its three states in noctis,
-    light and dark.
+Root: review
+22. `mise run screenshots` runs the tooling bin over the root's TypeScript description.
+    - Its start function builds nothing. It boots the emulator binary through the process helper,
+      with the app at `/app`.
+    - Its states walk the full sequence (upload, stages live, chat, search, artifact) and the help
+      dialog and theme menu, at a wide and a narrow viewport.
+    - A run captures light and dark at the default profile; `--all` gives every built-in profile.
+    - A `mise run` task hosts the external client with Vite's preview beside two emulators, for the
+      demo.
 
-**Test seams.** The package's exports (launch, page wait and settle, serve) in its own browser
-tier against fixture pages. The bin as a command line: arguments, exit codes, stdout and stderr,
-and files written, with kitten and xdg-open stubbed on PATH. In each consumer, its existing
-browser tier and `mise run screenshots`.
+**Test seams.** In the tooling, the bin as a command line and the helper's exports, in its own
+browser tier: fixture start functions, and a fixture task-runner command whose server is a
+grandchild. In the foundation and the components, each one's existing browser tier: shadow-root
+fields and composer send(). In the root:
+- NewClient's Go unit tests.
+- The browser tier against the emulator binary: the pipeline app at both mounts; the external
+  client on its own origin over two emulators; the harness.
+- `mise run screenshots`.
 
 **Slices**
-1. foundation: chrome-headless-shell 156.0.8078.80 (sha256 and size by hand, preflight confirms).
-   Done when currency exits 0 and the check passes.
-2. components: the same.
-3. sdk: the same.
-4. noctis: node 26.13.0, pnpm 12.16.1, chrome-headless-shell 156.0.8078.80.
-5. root: chrome-headless-shell 156.0.8078.80.
-6. Diagnosis (12). Demo: the Decision, and the observed behavior in a Neovim terminal buffer and
-   in plain kitty.
-7. The tooling repository, once the architect has created it (init commit, public, Apache-2.0,
-   main ruleset): mise pins for node, pnpm, and chrome-headless-shell at their latest, its check
-   and currency, the release and CI workflows, and an empty `[0.1.0]` CHANGELOG section (1).
-   Demo: check passes, currency silent, the pack has no scripts.
-8. Driver and page wait (2, 3). Demo: the package's browser tier, including a page whose
-   scrollbar is visible and measured.
-9. Server (4). Demo: the default root, a `/deps/` package and its store sibling, the shell
-   fallback, a claiming handler, and refused traversal.
-10. Capture with directory output (5–7, 9, 11). Demo: the bin over a fixture description with
-    the facet flags, `--all`, `--page`, `--scheme`, tiles, Tab focus, and each exit-2 case.
-11. Terminal and browser outputs (8, 10, and the route from 12). Demo: a run in kitty, a run in
-    a Neovim terminal buffer, and `--output browser` opening the gallery.
-12. **Checkpoint: tooling v0.1.0.** Before the merge, the components' check and screenshots run
-    against the tooling's local pack, with nothing committed. The session stops with a
-    checkpoint brief; the architect's acceptance authorizes the publish and merge, which waits
-    for the PR's checks to register. The release workflow cuts v0.1.0, and the session confirms
-    the tag and the GitHub release. A failed release is fixed forward on `tooling-fix` at
-    v0.1.0. No consumer slice starts before the tag exists.
-13. foundation onto the tag (13–15). Demo: check, `mise run screenshots`, and
-    `--all --output browser`.
-14. components onto the tag (13, 14). Demo: check, `mise run screenshots --page entry --scheme
-    dark`, and an unknown page exiting 2.
-15. sdk onto the tag (13, 14). Demo: check, including the upload and router cases that read the
-    request log.
-16. noctis onto the tag (13–15). Demo: check and `mise run screenshots --output directory`.
-17. root onto the tag (13, 14). Demo: check, with the emulator's browser tier on the package's
-    driver and page wait.
+1. tooling: eslint 10.14.0, once its release age clears (about 2026-10-31T14:12Z). Done when
+   currency exits 0 and the check passes.
+2. Tooling start function and process helper (1–4). Demo: the package's tiers, including a
+   `mise run` fixture whose server is a grandchild, every group process gone after stop, and the
+   bin over a start-function description.
+3. **Checkpoint: tooling v0.3.0.** A checkpoint brief. Accepting it authorizes the publish and
+   the merge, which waits for the PR's checks to register. The release workflow cuts the tag, and
+   the session confirms the tag and the GitHub release. A failed release is fixed forward on
+   `pipeline-fix`. No foundation slice starts before the tag exists.
+4. foundation: eslint 10.14.0 and tooling `#v0.3.0`. Done when currency exits 0 and the check
+   passes.
+5. Shortcuts in shadow-root fields (5). Demo: browser-tier cases for nested open shadow roots.
+6. **Checkpoint: foundation v0.2.1**, as slice 3's.
+7. components: eslint 10.14.0, tooling `#v0.3.0`, foundation devDependency `#v0.2.1` (peer stays
+   `^0.2.0`). Done when currency exits 0 and the check passes.
+8. Composer send() (6). Demo: browser-tier cases, and the composer's screenshots unchanged.
+9. **Checkpoint: components v0.4.0**, as slice 3's.
+10. root: eslint 10.14.0. Done when currency exits 0 and the check passes.
+11. root onto the tags (8, 9): foundation `#v0.2.1`, components `#v0.4.0`, tooling `#v0.3.0`,
+    lit 3.3.3, the ESLint table, and the harness on the helper. Demo: check.
+12. Render-blocking modules and the workspace frame (7, 10, 16, 17): the header, panes, routes,
+    help, and theme menu. Demo: check, a stored theme with no default first paint, and the
+    shortcuts in and out of fields.
+13. Documents pane (11, 12): upload, list, live status. Design-review stop on screenshots.
+14. Document view (12, 15): timeline live, artifact. Design-review stop.
+15. Chat (13). Design-review stop.
+16. Search and events (12, 14). Design-review stop.
+17. External client (19–21) and its demo task. Demo: the browser tier over two emulators, and
+    the demo task.
+18. Walkthrough (18, 22). Demo: `mise run screenshots` light and dark, and `--all`. The
+    architect's acceptance of the walkthrough in the session brief is the design review.
 
-18. `--help` (escalation 2): tooling v0.2.0 adds `--help`, which prints the usage, each flag's
-    meaning, the pages with their captions, each facet's flag, attribute, default, and the names
-    its `--all` profiles give, the schemes, the outputs, and the exit codes, and exits 0 before
-    any launch, with no BROWSER_EXECUTABLE needed. Demo: the bin's tests and `--help` over the
-    fixture description.
-19. **Checkpoint: tooling v0.2.0**, as slice 12's: a checkpoint brief, then publish, merge, and
-    the CI-cut tag, confirmed.
-20. The five consumers move from `#v0.1.0` to `#v0.2.0` on their `tooling` branches. The
-    foundation's, components', and noctis's descriptions become `scripts/screenshots.config.ts`,
-    typed as `Description`, type-checked by a noEmit project over `scripts/` (erasable syntax
-    only) as its own `types` step. Demo: each check, and `mise run screenshots -- --help` in
-    the foundation, components, and noctis.
+Slices 10–18 merge at SHIP with no tag.
 
-21. Tests in TypeScript (escalation 3), in all six repositories: the Node-side tests and their
-    helpers become `.ts`, run by `node --test` under Node's type stripping (erasable syntax only,
-    `.ts` relative imports), and type-checked by a noEmit project over `test/` and `scripts/`
-    as its own `types` step; each test glob becomes `*.test.ts`. Fixture modules the servers
-    send to the browser stay `.js`. Tooling's convert on its v0.1.1 branch. Demo: each check,
-    with the same test counts as before.
+**Rejected.**
+- An app-side workaround for the shortcut defect.
+- The app copying the composer's send rules.
+- Plain custom elements for the app's views.
+- A render-blocking entry, or a default-theme first paint.
+- Routed full-page views.
+- Serving the external client with NewClient.
+- An external client that makes API calls only.
+- Absolute-URL pages on tooling v0.2.0.
+- A declared-command server form.
+- Stdout-line or TCP-port readiness.
+- A config.js module, or build-time values, for the external client's services.
+- noctis in the app.
+- Moving the other repositories' pins in this task.
 
-Slices 1–5 and 13–17 merge at SHIP with no tag. A tooling defect found after v0.1.0 needs a
-v0.1.1 this brief doesn't plan, so it escalates.
+**Out of scope.**
+- The sdk's and noctis's trailing pins (each one's next currency pass).
+- The keys defect in the reference repositories.
+- Firefox and WebKit, real auth, persistence, real inference.
+- Emulator API changes.
+- Inline screenshots in a Neovim `:terminal`.
+- Consumption by tag and the answer (task `answer`).
 
-**Rejected.** Playwright (1.25× the raw pipe's time; Linux support Ubuntu and Debian only; the
-architect keeps the raw pipe to show what minimal raw tooling can do). puppeteer-core. A server
-package such as sirv or serve-handler. The components' hand-rolled argument loop. Per-repo shell
-wrappers. Kitty graphics escape codes written from Node. A gallery served on loopback until
-Ctrl-C. A terminal output that falls back to a browser by itself. Moving freePort and the
-Node-side poll into the package.
+**Door.** One-way: tooling v0.3.0, foundation v0.2.1, and components v0.4.0, each cut at its
+checkpoint. Two-way: the root's work, which merges with no tag and can be reverted.
 
-**Out of scope.** Firefox and WebKit. Each consumer's mise chrome-headless-shell pin and
-preflight (a mise pin can't ride an npm package). The foundation's computed-styles helper. The
-root's emulator harness, proxy, and NATS requester. Any layer release or change to a layer's
-shipped source. Changes to the architect's kitty or Neovim configuration. The goal's `repos` and
-`[workspace.paths]` entries for tooling and noctis, which this plan's PR makes.
+**Release.** spike-html-apps-tooling `v0.3.0`, spike-html-apps-foundation `v0.2.1`,
+spike-html-apps-components `v0.4.0`, in that order; the root consumes all three.
 
-**Door.** One-way: tooling v0.1.0, cut at slice 12's checkpoint, and the public repository's
-creation. Everything else is two-way: each consumer's branch merges with no tag and can be
-reverted.
+**Sequencing note.** The tooling releases first, because every layer takes it as a
+devDependency. With that order, each layer's currency is silent at its own checkpoint, and the
+components take both new tags before they release. CI cuts each tag after its merge, so the
+session confirms each tag rather than pushing it.
 
-**Release.** spike-html-apps-tooling `v0.1.0`, `v0.2.0` (escalation 2; the version at its checkpoint).
+## Progress
 
-**Sequencing note.** Consumers install by tag and their CI installs from the remote, so v0.1.0
-is cut mid-task at slice 12, as the foundation task cut v0.2.0 before any components slice. CI
-cuts the tag after the merge, so the session confirms it rather than pushing it.
-
-**Choices beyond the rounds (flagged for review):** the foundation's no-flag run drops from six
-profiles to the defaults (`--all` keeps six); registry reading and `/deps/` lists come from each
-consumer so the package names none; a failed xdg-open exits 1 and keeps the files; `--dir`
-cleanup removes a directory only if the bin created it.
-
+slices 0/18 committed · standards — · spec — · editor —
 
 ## Decisions
 
@@ -667,7 +665,9 @@ cleanup removes a directory only if the bin created it.
 - emulator: the pipeline app's config requires a non-empty token.
 - emulator: go-messaging moved to v0.2.0 and nats.go to v1.55.0 during BUILD, keeping currency
   silent.
-- emulator: shipped. The emulator, NewClient, CORS, embedded NATS, the pipeline app's first build, and the root's browser tier merged (spike-html-apps PR, after spike-html-apps-sdk's pin bump merged with no tag); accepted by the architect after running it live.
+- emulator: shipped. The emulator, NewClient, CORS, embedded NATS, the pipeline app's first build,
+  and the root's browser tier merged (spike-html-apps PR, after spike-html-apps-sdk's pin bump
+  merged with no tag); accepted by the architect after running it live.
 - primitives: Markdown renders from marked 18.1.2's lexer as Lit templates, with no sanitizer,
   since Lit escapes every text value; the Sanitizer API isn't in Safari 26.2, and DOMPurify adds
   10.5 KB. Rejected: markdown-it (38.6 KB, 6 dependencies), micromark (about 15), and a
@@ -844,6 +844,37 @@ cleanup removes a directory only if the bin created it.
 - tooling: shipped. spike-html-apps-tooling v0.1.0 and v0.2.0 released; the root, foundation,
   components, sdk, and noctis on `#v0.2.0` with no copy of the driver, server, or screenshot
   scripts; all six repositories' tests in TypeScript; the descriptions `.ts` with profiles readers.
+- pipeline: defects are fixed at their source once found, never worked around in a consumer
+  (architect, round 1); a retro standards candidate, since no architecture principle covers it.
+- pipeline: foundation v0.2.1 fixes single-key bindings firing in shadow-root text fields. Rejected:
+  an app-side workaround (round 1).
+- pipeline: the app's views use Lit 3.3.3, admitted to the app tier's ESLint table (round 1).
+- pipeline: NewClient's shell loads named manifest modules with blocking="render" ahead of the
+  entry. Rejected: a render-blocking entry, and a default-theme first paint (round 1).
+- pipeline: the app registers every built-in profile; no noctis (round 1).
+- pipeline: the app is a two-pane workspace, with the document list beside a routed main pane (round
+  1).
+- pipeline: the external client is static files on a host of its own. Rejected: NewClient serving it
+  (round 1).
+- pipeline: the external client makes API calls and reads each service's live stage events over its
+  own NATS WebSocket, cross-origin (round 1).
+- pipeline: tooling v0.3.0 supports servers other than its static one. Rejected: absolute-URL pages
+  on v0.2.0 (round 1).
+- pipeline: a description's server may be a consumer-written start function resolving to an origin
+  and a stop. Rejected: a declared-command form (rounds 2, 3).
+- pipeline: tooling exports a process helper and freePort, shown working with any server or task
+  runner; the root's harness moves onto them and keeps only its relaunch. Reverses the tooling
+  task's decision (rounds 2, 3).
+- pipeline: the sdk's and noctis's pins outside this task move in each one's next currency pass; the
+  components move within this task, since they release here (round 2).
+- pipeline: the external client reads services.json beside its build. Rejected: config.js, and
+  build-time values (rounds 2, 3).
+- pipeline: sl-composer gains a public send() keeping its rules, released as components v0.4.0
+  (round 2).
+- pipeline: the root's capture description is TypeScript, as the other repositories' are (round 3).
+- pipeline: the keys defect came from spike-html-packages-foundation (5dd8a58) `src/keys.ts`, ported
+  from spike-html-design's keys module; the spike never writes reference repositories, so it is a
+  finding for their goals.
 
 ## Pending edits
 
@@ -927,3 +958,7 @@ cleanup removes a directory only if the bin created it.
   screenshot bin. It shows captures with `kitten icat --transfer-mode=stream`, and inside a Neovim
   `:terminal` it shows none, since the buffer reports no pixel size and libvterm doesn't pass the
   graphics through, so `--output browser` opens a gallery instead.
+- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: `["spike-html-apps",
+  "spike-html-apps-foundation", "spike-html-apps-components", "spike-html-apps-tooling"]`.
+- v1.client, the NewClient pending edit: the measured shape gains the list of render-blocking
+  manifest modules.
