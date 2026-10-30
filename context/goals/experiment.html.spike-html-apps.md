@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 12/17 committed (1–12; tooling v0.1.0 released: PR #1 merged at 755f126, tag v0.1.0 on 17b3927, GitHub release with the tarball; 13 next) · standards: tooling done; consumers to come · spec: the same · editor: the same
+slices 17/17 committed (tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
 
 ## Decisions
 
