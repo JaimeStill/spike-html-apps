@@ -16,12 +16,12 @@ shellcheck = "0.11.0"
 # from the download by hand at each bump; currency reads the version_list_url through mise outdated.
 # From spike-html-apps-sdk (be6341d): mise.toml, its chrome-headless-shell pin.
 [tools."http:chrome-headless-shell"]
-version = "156.0.8078.73"
+version = "156.0.8078.80"
 version_list_url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json"
 version_json_path = ".channels.Stable.version"
 
 [tools."http:chrome-headless-shell".platforms]
-linux-x64 = { url = "https://storage.googleapis.com/chrome-for-testing-public/{{ version }}/linux64/chrome-headless-shell-linux64.zip", checksum = "sha256:77eb8d52798efc7a857ab61abcc62a456d8ea9635b02341d06dffee2761768c8", size = "126938225" }
+linux-x64 = { url = "https://storage.googleapis.com/chrome-for-testing-public/{{ version }}/linux64/chrome-headless-shell-linux64.zip", checksum = "sha256:547dcd374e02961bf998f6046a267644f8502225c36bb78ca307dab32a0b3eb4", size = "126922702" }
 
 [env]
 # The root module alone, outside any go.work; and the pinned Go, never a toolchain go.mod asks
