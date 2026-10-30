@@ -6,7 +6,7 @@
 # through `mise run currency`, which sets GOWORK=off and GO_MODULES.
 #
 # A package.json pin is a version, compared against the registry's latest, or a github: tag,
-# github:<owner>/<repo>#vX.Y.Z (the layer packages), compared against the repository's highest
+# github:<owner>/<repo>#vX.Y.Z (the layer packages and the tooling), compared against the repository's highest
 # vX.Y.Z tag in `git ls-remote --tags`, which neither the registry nor `pnpm outdated` knows. A tag
 # trails only when that tag is strictly higher: a repository with no such tag, or whose highest is
 # below the pin, has an unreleased pin rather than a trailing one. A pin in any other form is

@@ -100,7 +100,11 @@ client, not the capstone's backend.
 - **Primitives:** the components layer's eleven Lit shadow components, eight of them the
   capstone's new primitives, and a Markdown renderer on marked's lexer. Each component has a
   specimen page of every state, which the browser tier renders in every profile, light and dark.
-  The primitives task stages them as components v0.3.0, which it tags when it ships.
+  They are released in components v0.3.0.
+- **Tooling:** spike-html-apps-tooling, the browser driver, page wait, static server, and
+  screenshot command that every repository's browser tier and screenshot task run on, taken as a
+  devDependency by tag. The tests are TypeScript in every repository, run under Node's type
+  stripping.
 - **Pipeline app:** the primitives composed live over the emulator, with its shortcuts.
 - **External client:** an app hosted apart over two services.
 
@@ -123,9 +127,13 @@ The tasks, in the order they run; each cites the evidence it proves.
    (evidence 3, 4).
 5. `primitives`: the eight new components, the Markdown renderer, and each layer's brotli budget,
    released as components v0.3.0 (evidence 5, 7, 10).
-6. `pipeline`: the pipeline app, its shortcuts, the external client, and the full-sequence
+6. `tooling`: spike-html-apps-tooling, released as v0.1.0 and v0.2.0, which the other five
+   repositories take in place of their copies of the browser-test and screenshot code, and every
+   repository's tests in TypeScript. It proves no evidence; the pipeline task's browser tier and
+   screenshot review run on it.
+7. `pipeline`: the pipeline app, its shortcuts, the external client, and the full-sequence
    walkthrough (evidence 6, 8, 10).
-7. `answer`: consumption by tag, the gaps, and the answer (evidence 9).
+8. `answer`: consumption by tag, the gaps, and the answer (evidence 9).
 
 ## Shortcuts
 
@@ -139,7 +147,9 @@ table; no component binds a key.
 Each layer repository releases `@jaimestill/spike-html-apps-<layer>` at 0.y.z, by tag, from
 v0.1.0. The components depend on the foundation by tag and peer it at its current minor. The
 extension repository spike-html-apps-noctis releases `@jaimestill/spike-html-apps-noctis` the same
-way, and depends on and peers the foundation as the components do. The root releases nothing.
+way, and depends on and peers the foundation as the components do. spike-html-apps-tooling
+releases `@jaimestill/spike-html-apps-tooling` the same way, and every other repository takes it
+as a devDependency by tag. The root releases nothing.
 
 ## References
 
