@@ -220,7 +220,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 17/21 committed (18–20 from escalation 2, 21 from escalation 3; tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
+slices 18/21 committed, 21 in five of six (v0.1.0 released; 18 --help c43e214; 21: foundation 7e5d6c2, components c6a4fe2, sdk 4379f5c, noctis b040996, root a7bdea4; next: tooling exit-cleanup fix, tooling 21, checkpoint 19, slice 20) · standards: tooling v0.1.0 and consumers 13–17 done · spec: tooling v0.1.0 done · editor: tooling v0.1.0 done
 
 ## Decisions
 
