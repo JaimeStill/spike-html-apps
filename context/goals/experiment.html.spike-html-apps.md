@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 11/17 committed (1–11; 12 at the checkpoint brief, trial passed) · standards: tooling done · spec: tooling done · editor: tooling done
+slices 11/17 committed (1–11; 12 redirected at its checkpoint: sources to .ts, then reviews, trial, and the checkpoint again) · standards: tooling, again after the rework · spec: the same · editor: the same
 
 ## Decisions
 
@@ -750,6 +750,11 @@ slices 11/17 committed (1–11; 12 at the checkpoint brief, trial passed) · sta
   captions and paths plus one stderr line naming `--output browser`, with the reason "inside a
   Neovim :terminal (no pixel size, graphics not passed through)". Rejected for v0.1.0: the
   `$NVIM` placeholder route, kept as a later idea (architect, escalation 1).
+- tooling: the package's sources are TypeScript in the foundation's shape: `.ts` sources, tsc
+  emits `dist/`, and `dist/` lives only in the release tag's tree. "Its tag's tree installs with
+  no build step" means the consumer builds nothing. Slice 7 had read it as "no build" and shipped
+  plain `.js` with handwritten `.d.ts`, which both reviews let pass (architect, at the v0.1.0
+  checkpoint).
 
 ## Pending edits
 
