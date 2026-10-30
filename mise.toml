@@ -65,8 +65,11 @@ find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 
 dir = "{{config_root}}"
 
 [tasks.types]
-description = "Type-check tsconfig.json's inputs (eslint.config.js, vite.config.ts, and apps/) with tsc, and the suite with types:test; reads no network, writes nothing"
-depends = ["types:test"]
+description = "Type-check tsconfig.json's inputs with types:src and the suite with types:test; reads no network, writes nothing"
+depends = ["types:src", "types:test"]
+
+[tasks."types:src"]
+description = "Type-check tsconfig.json's inputs (eslint.config.js, vite.config.ts, and apps/) with tsc; reads no network, writes nothing"
 run = "tsc -p ."
 dir = "{{config_root}}"
 

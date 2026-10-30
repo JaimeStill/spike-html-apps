@@ -51,4 +51,4 @@ design to a finished product's bar at every layer.
 - A test harness relaunches a boot only when it failed on a taken reserved port (address in use);
   any other failure fails the test at once.
 - Tests are TypeScript run under Node's type stripping, erasable syntax only, type-checked by
-  tsconfig.test.json; browser-served fixtures stay .js.
+  `tsconfig.test.json`; browser-served fixtures stay `.js`.
