@@ -215,8 +215,9 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 3/18 (tooling v0.3.0 released: PR #4 merged 08378cd, tag and release confirmed; foundation
-  slice 4 committed, tooling #v0.3.0 only, eslint held) · standards: tooling done · spec — · editor —
+slices 7/18 (tooling v0.3.0 released, PR #4, 08378cd; foundation v0.2.1 released, PR #5,
+  8b12185; components slice 7 committed, tooling #v0.3.0 and foundation #v0.2.1, eslint held) ·
+  standards: tooling, foundation done · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
@@ -892,6 +893,13 @@ slices 3/18 (tooling v0.3.0 released: PR #4 merged 08378cd, tag and release conf
   (published 2026-10-30T14:12Z) hasn't cleared pnpm's minimum release age, and the architect chose
   to proceed rather than wait; slices 1, 4, 7, and 10 drop to each repository's next currency
   pass, so currency reports that line at each checkpoint (architect, BUILD).
+- pipeline: the foundation's IME guard no longer reads the deprecated `event.keyCode`; it is what
+  keys needs with keyCode gone: `key === "Process"` for Chrome and Firefox, and a compositionend
+  mark taken by the first keydown within 100 ms for WebKit's post-composition Enter or Escape, as
+  CodeMirror 6 does. Rejected: keeping keyCode 229 with a comment, and `"Process"` alone (architect,
+  foundation checkpoint).
+- pipeline: tooling v0.3.0's CHANGELOG dropped its empty `[Unreleased]` header and link, which the
+  foundation keeps; restore it at tooling's next change.
 
 ## Pending edits
 
