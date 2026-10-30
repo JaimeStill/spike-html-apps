@@ -5,8 +5,9 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
+import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+
 import { lines, linesOnce, mounted, openWith } from "./support/app.js";
-import { launch } from "./support/browser-pipe.js";
 import { start, token } from "./support/emulator.js";
 import { streamState } from "./support/nats.js";
 

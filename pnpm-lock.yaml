@@ -21,6 +21,9 @@ importers:
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.13.0(supports-color@7.2.0))
+      '@jaimestill/spike-html-apps-tooling':
+        specifier: github:JaimeStill/spike-html-apps-tooling#v0.1.0
+        version: https://codeload.github.com/JaimeStill/spike-html-apps-tooling/tar.gz/17b3927b823e554df47671d5de4daf27a9c940f3
       eslint:
         specifier: 10.13.0
         version: 10.13.0(supports-color@7.2.0)
@@ -140,6 +143,11 @@ packages:
         optional: true
       '@nats-io/nats-core':
         optional: true
+
+  '@jaimestill/spike-html-apps-tooling@https://codeload.github.com/JaimeStill/spike-html-apps-tooling/tar.gz/17b3927b823e554df47671d5de4daf27a9c940f3':
+    resolution: {gitHosted: true, integrity: sha512-GNVWFB2XSBsj8hTM4dRbOfUnGUbvWBrX6rNVHZiO55o/V01SpYrfL8/dTlbsLd5SqqMbUsuj4kog1qGsy0OhzQ==, tarball: https://codeload.github.com/JaimeStill/spike-html-apps-tooling/tar.gz/17b3927b823e554df47671d5de4daf27a9c940f3}
+    version: 0.1.0
+    hasBin: true
 
   '@keyv/bigmap@1.3.1':
     resolution: {integrity: sha512-WbzE9sdmQtKy8vrNPa9BRnwZh5UF4s1KTmSK0KUVLo3eff5BlQNNWDnFOouNpKfPKDnms9xynJjsMYjMaT/aFQ==}
@@ -1163,6 +1171,8 @@ snapshots:
     optionalDependencies:
       '@nats-io/jetstream': 3.4.0
       '@nats-io/nats-core': 3.4.0
+
+  '@jaimestill/spike-html-apps-tooling@https://codeload.github.com/JaimeStill/spike-html-apps-tooling/tar.gz/17b3927b823e554df47671d5de4daf27a9c940f3': {}
 
   '@keyv/bigmap@1.3.1(keyv@5.6.0)':
     dependencies:

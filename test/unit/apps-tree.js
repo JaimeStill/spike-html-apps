@@ -18,6 +18,9 @@ export const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf
 
 const [foundation, components, sdk] = packages;
 
+/** The test tooling, a devDependency the browser tier imports, and never an app. */
+const tooling = "@jaimestill/spike-html-apps-tooling";
+
 // The rules a case names: the table, the relative-path rule, and the resolution rule.
 export const table = "boundaries/dependencies";
 export const relativePackages = "import-x/no-relative-packages";
@@ -57,6 +60,8 @@ export const violations = {
     // and a package whose name begins with a layer's, which the table's names must not prefix.
     ...forms(`${app}/forms/lit`, "lit"),
     [`${app}/typescript.ts`]: `import ts from "typescript";`,
+    // The test tooling, which only test/ imports.
+    ...forms(`${app}/forms/tooling`, `${tooling}/browser.js`),
     [`${app}/foundation-prefix.ts`]: `import "${foundation}x/dom.js";`,
     // A root file outside any app.
     [`${app}/root.ts`]: `import "../../test/unit/x.js";`,
@@ -111,9 +116,9 @@ const targets = {
   "test/unit/x.js": "export {};",
 };
 
-/** The packages the cases name, as stubs in node_modules/: the layers, lit, typescript, and the
- * foundation's namesake, each a module and its types at every subpath. */
-const externals = [...packages, "lit", "typescript", `${foundation}x`];
+/** The packages the cases name, as stubs in node_modules/: the layers, lit, typescript, the
+ * test tooling, and the foundation's namesake, each a module and its types at every subpath. */
+const externals = [...packages, "lit", "typescript", tooling, `${foundation}x`];
 const stub = (name) => ({
   "package.json": JSON.stringify({
     name,

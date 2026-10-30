@@ -9,8 +9,9 @@
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
 
+import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+
 import { click, linesOnce, lines, mounted, openWith, reload } from "./support/app.js";
-import { launch } from "./support/browser-pipe.js";
 import { stageNames, start, token } from "./support/emulator.js";
 import { publishEvent, streamState } from "./support/nats.js";
 import { proxy } from "./support/proxy.js";

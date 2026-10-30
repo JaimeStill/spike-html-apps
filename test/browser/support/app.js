@@ -1,26 +1,15 @@
 // The browser tier's reading of the pipeline app: which route a page shows, the lines its log
 // shows, parsed back into the events they render, and the navigations a person makes, through the
-// DevTools Protocol, as the sdk's router tier makes them.
+// DevTools Protocol, as the sdk's router tier makes them. Each wait is the tooling's page wait,
+// until, which polls an expression inside the page.
+
+import { until } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
 /** The page's URL path and the tag of the element its router mounted in <main>. */
 export const route = (page) =>
   page.evaluate(
     "({ path: location.pathname, tag: document.querySelector('main')?.firstElementChild?.localName ?? null })",
   );
-
-/** Resolves once the expression is truthy in the page, to its value; rejects naming it after 10 s. */
-export function until(page, expression, timeout = 10_000) {
-  return page.evaluate(`new Promise((resolve, reject) => {
-    const deadline = performance.now() + ${timeout};
-    const poll = () => {
-      const value = (${expression});
-      if (value) resolve(value);
-      else if (performance.now() > deadline) reject(new Error(${JSON.stringify(`not within ${timeout} ms: ${expression}`)}));
-      else setTimeout(poll, 25);
-    };
-    poll();
-  })`);
-}
 
 /** Resolves once the page's router has mounted `tag`. */
 export const mounted = (page, tag) =>

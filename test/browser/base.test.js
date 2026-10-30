@@ -5,8 +5,9 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
+import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+
 import { click, mounted, openWith, reload, route, traverse } from "./support/app.js";
-import { launch } from "./support/browser-pipe.js";
 import { start } from "./support/emulator.js";
 
 let browser;
