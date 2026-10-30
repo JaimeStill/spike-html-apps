@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 8/17 committed (1–5, 7–9; 6 diagnosed, awaiting escalation 1; 10 building) · standards — · spec — · editor —
+slices 9/17 committed (1–5, 7–10; 6 diagnosed, awaiting escalation 1, which holds 11) · standards — · spec — · editor —
 
 ## Decisions
 
