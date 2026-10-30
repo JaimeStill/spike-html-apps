@@ -785,8 +785,8 @@ slices 18/21 committed, 21 in five of six (v0.1.0 released; 18 --help c43e214; 2
   escalation 2).
 - tooling: the capture descriptions are TypeScript, `scripts/screenshots.config.ts`, loaded
   by Node's type stripping (erasable syntax only) and type-checked by a noEmit project over
-  `scripts/`. The package needs no change; its README says so in v0.1.1. The tests and their
-  shared helpers stay `.js` (architect).
+  `scripts/`. The package needs no change; its README says so in v0.1.1. The tests followed in
+  escalation 3 (architect).
 - tooling: the tests convert to TypeScript in this task, in all six repositories, so the goal's
   tooling work is complete in one session; browser-served fixtures stay `.js` (architect,
   escalation 3).
