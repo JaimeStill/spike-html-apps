@@ -198,6 +198,10 @@ profiles to the defaults (`--all` keeps six); registry reading and `/deps/` list
 consumer so the package names none; a failed xdg-open exits 1 and keeps the files; `--dir`
 cleanup removes a directory only if the bin created it.
 
+## Progress
+
+slices 5/17 committed · standards — · spec — · editor —
+
 ## Decisions
 
 - setup: scope widened by the architect: beyond what a client application looks like, the spike
