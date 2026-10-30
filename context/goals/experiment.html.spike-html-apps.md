@@ -180,6 +180,13 @@ browser tier and `mise run screenshots`.
     only) as its own `types` step. Demo: each check, and `mise run screenshots -- --help` in
     the foundation, components, and noctis.
 
+21. Tests in TypeScript (escalation 3), in all six repositories: the Node-side tests and their
+    helpers become `.ts`, run by `node --test` under Node's type stripping (erasable syntax only,
+    `.ts` relative imports), and type-checked by a noEmit project over `test/` and `scripts/`
+    as its own `types` step; each test glob becomes `*.test.ts`. Fixture modules the servers
+    send to the browser stay `.js`. Tooling's convert on its v0.1.1 branch. Demo: each check,
+    with the same test counts as before.
+
 Slices 1–5 and 13–17 merge at SHIP with no tag. A tooling defect found after v0.1.0 needs a
 v0.1.1 this brief doesn't plan, so it escalates.
 
@@ -213,7 +220,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 17/20 committed (18–20 from escalation 2; tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
+slices 17/21 committed (18–20 from escalation 2, 21 from escalation 3; tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
 
 ## Decisions
 
@@ -780,6 +787,9 @@ slices 17/20 committed (18–20 from escalation 2; tooling v0.1.0 released; cons
   by Node's type stripping (erasable syntax only) and type-checked by a noEmit project over
   `scripts/`. The package needs no change; its README says so in v0.1.1. The tests and their
   shared helpers stay `.js` (architect).
+- tooling: the tests convert to TypeScript in this task, in all six repositories, so the goal's
+  tooling work is complete in one session; browser-served fixtures stay `.js` (architect,
+  escalation 3).
 
 ## Pending edits
 
