@@ -167,14 +167,14 @@ browser tier and `mise run screenshots`.
 17. root onto the tag (13, 14). Demo: check, with the emulator's browser tier on the package's
     driver and page wait.
 
-18. `--help` (escalation 2): tooling v0.1.1 adds `--help`, which prints the usage, each flag's
+18. `--help` (escalation 2): tooling v0.2.0 adds `--help`, which prints the usage, each flag's
     meaning, the pages with their captions, each facet's flag, attribute, default, and the names
     its `--all` profiles give, the schemes, the outputs, and the exit codes, and exits 0 before
     any launch, with no BROWSER_EXECUTABLE needed. Demo: the bin's tests and `--help` over the
     fixture description.
-19. **Checkpoint: tooling v0.1.1**, as slice 12's: a checkpoint brief, then publish, merge, and
+19. **Checkpoint: tooling v0.2.0**, as slice 12's: a checkpoint brief, then publish, merge, and
     the CI-cut tag, confirmed.
-20. The five consumers move from `#v0.1.0` to `#v0.1.1` on their `tooling` branches. The
+20. The five consumers move from `#v0.1.0` to `#v0.2.0` on their `tooling` branches. The
     foundation's, components', and noctis's descriptions become `scripts/screenshots.config.ts`,
     typed as `Description`, type-checked by a noEmit project over `scripts/` (erasable syntax
     only) as its own `types` step. Demo: each check, and `mise run screenshots -- --help` in
@@ -207,7 +207,7 @@ shipped source. Changes to the architect's kitty or Neovim configuration. The go
 creation. Everything else is two-way: each consumer's branch merges with no tag and can be
 reverted.
 
-**Release.** spike-html-apps-tooling `v0.1.0`, `v0.1.1` (escalation 2).
+**Release.** spike-html-apps-tooling `v0.1.0`, `v0.2.0` (escalation 2; the version at its checkpoint).
 
 **Sequencing note.** Consumers install by tag and their CI installs from the remote, so v0.1.0
 is cut mid-task at slice 12, as the foundation task cut v0.2.0 before any components slice. CI
@@ -790,6 +790,9 @@ slices 18/21 committed, 21 in five of six (v0.1.0 released; 18 --help c43e214; 2
 - tooling: the tests convert to TypeScript in this task, in all six repositories, so the goal's
   tooling work is complete in one session; browser-served fixtures stay `.js` (architect,
   escalation 3).
+- tooling: the second release is v0.2.0, not v0.1.1: it adds `--help` and reserves the facet
+  flag `help`, and every layer release with an Added section bumped the minor (architect, at
+  its checkpoint).
 
 ## Pending edits
 
