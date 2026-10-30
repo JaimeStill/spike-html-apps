@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 11/17 committed (1–11; 12 the checkpoint next) · standards: tooling under review · spec — · editor —
+slices 11/17 committed (1–11; 12 at the checkpoint brief, trial passed) · standards: tooling done · spec: tooling done · editor: tooling done
 
 ## Decisions
 
