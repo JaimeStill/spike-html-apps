@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** building
+- **State:** handoff
 - **Task:** pipeline
 - **Branch:** pipeline
 
@@ -215,7 +215,25 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 0/18 committed · standards — · spec — · editor —
+slices 1/18 committed (slice 2, tooling 658bc3e) · standards — · spec — · editor —
+
+## Handoff
+
+- Next move: slice 1 in spike-html-apps-tooling, eslint 10.13.0 -> 10.14.0, once pnpm's minimum
+  release age clears it (about 2026-10-31T14:12Z); slice 2 ran ahead of it, since it doesn't depend
+  on the bump. Then slice 3, the tooling v0.3.0 checkpoint: package.json to 0.3.0 and CHANGELOG
+  `[Unreleased]` to `[0.3.0]`, then the checkpoint brief.
+- No WIP slice. No escalation waiting. Branches `pipeline` exist, unpublished, in the root,
+  tooling, foundation, and components; foundation and components have no commits yet.
+- Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
+  positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
+  signal), memoized, once no group member is alive; the group is also killed when SIGINT, SIGTERM,
+  or SIGHUP ends a caller with no listener of its own; the bin handles SIGINT/SIGTERM for every
+  output, exiting 130/143 after stopping the server (CHANGELOG Changed); a start's origin resolves
+  as a directory, so a base path like `/app` holds; a rejecting start is wrapped "the
+  description's server didn't start: <message>"; readiness polls with node:http(s) get, agent
+  false, 1 s per request, every 100 ms; a command exiting before ready also stops its group; the
+  group code moved from browser.ts to `src/group.ts` (reachable as `./group.js`, undocumented).
 
 ## Decisions
 
