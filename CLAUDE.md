@@ -7,8 +7,9 @@ workflow; start from `context/README.md`.
 
 - **Standards:** `STANDARDS.md`, with pointers into the architecture repository.
 - **Check:** `mise run check`, after `mise run install`: ESLint (with the app tier's direction
-  table over apps/, and its violation tree under `node --test`), Prettier, shellcheck, tsc, and
-  go-web-sdk-template's seven Go steps over the root module. It then builds the pipeline app with
+  table over apps/, and its violation tree under `node --test`), Prettier, shellcheck, tsc over
+  the sources and over the TypeScript tests (`tsconfig.test.json`), and go-web-sdk-template's
+  seven Go steps over the root module. It then builds the pipeline app with
   Vite (`build:app`) and boots the emulator binary on reserved loopback ports for the integration
   tier and for the browser tier, which runs in the pinned chrome-headless-shell. It reads no
   network.
@@ -18,7 +19,8 @@ workflow; start from `context/README.md`.
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-apps`. Its goal record
   is `context/goals/experiment.html.spike-html-apps.md`.
 - **Repositories:** the root, the three layer repositories spike-html-apps-foundation,
-  -components, and -sdk, and the extension repository spike-html-apps-noctis. Each but the root
-  is released by tag; the coordinator's `[workspace.paths]` locates them all.
+  -components, and -sdk, the extension repository spike-html-apps-noctis, and
+  spike-html-apps-tooling, the browser-test and screenshot tooling the others share. Each but the
+  root is released by tag; the coordinator's `[workspace.paths]` locates them all.
 - **References:** the repositories this spike reads are listed in `context/README.md`. The spike
   reads them and never writes to them.

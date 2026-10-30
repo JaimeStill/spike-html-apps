@@ -5,13 +5,17 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
-import { lines, linesOnce, mounted, openWith } from "./support/app.js";
-import { launch } from "./support/browser-pipe.js";
-import { start, token } from "./support/emulator.js";
-import { streamState } from "./support/nats.js";
+import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-let browser;
-const instances = [];
+import { lines, linesOnce, mounted, openWith } from "./support/app.ts";
+import { start, token } from "./support/emulator.ts";
+import type { Emulator } from "./support/emulator.ts";
+import { streamState } from "./support/nats.ts";
+import type { StreamState } from "./support/nats.ts";
+
+let browser: Browser;
+const instances: Emulator[] = [];
 
 before(async () => {
   browser = await launch();
@@ -22,24 +26,26 @@ after(async () => {
 });
 
 /** Opens the app's log on the instance, once it has mounted. */
-async function openLog(instance) {
+async function openLog(instance: Emulator): Promise<Page> {
   const page = await openWith(browser, `${instance.origin}${instance.base}`, async () => {});
   await mounted(page, "pipeline-log");
   return page;
 }
 
 /** Uploads to the instance, resolving to the document once its run is complete. */
-async function uploadRun(instance, name) {
+async function uploadRun(instance: Emulator, name: string) {
   const doc = await instance.upload(name);
   await instance.complete(doc.run_id);
   return doc;
 }
 
 /** The runs the page's log shows a line of, each by its subject, with its count of lines. */
-async function runsShown(page) {
-  const counts = {};
-  for (const { event } of await lines(page))
-    counts[event.subject] = (counts[event.subject] ?? 0) + 1;
+async function runsShown(page: Page): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const line of await lines(page)) {
+    assert.ok(line.event, `an event line: ${JSON.stringify(line)}`);
+    counts[line.event.subject] = (counts[line.event.subject] ?? 0) + 1;
+  }
   return counts;
 }
 
@@ -80,4 +86,4 @@ test("neither instance's events reach the other's stream", async (t) => {
 });
 
 /** A stream state's message count and first and last sequences. */
-const counts = ({ messages, first_seq, last_seq }) => [messages, first_seq, last_seq];
+const counts = ({ messages, first_seq, last_seq }: StreamState) => [messages, first_seq, last_seq];

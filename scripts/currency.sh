@@ -6,11 +6,11 @@
 # through `mise run currency`, which sets GOWORK=off and GO_MODULES.
 #
 # A package.json pin is a version, compared against the registry's latest, or a github: tag,
-# github:<owner>/<repo>#vX.Y.Z (the layer packages), compared against the repository's highest
-# vX.Y.Z tag in `git ls-remote --tags`, which neither the registry nor `pnpm outdated` knows. A tag
-# trails only when that tag is strictly higher: a repository with no such tag, or whose highest is
-# below the pin, has an unreleased pin rather than a trailing one. A pin in any other form is
-# reported as one this script can't compare, so none is skipped silently.
+# github:<owner>/<repo>#vX.Y.Z (the layer packages and the tooling), compared against the
+# repository's highest vX.Y.Z tag in `git ls-remote --tags`, which neither the registry nor `pnpm
+# outdated` knows. A tag trails only when that tag is strictly higher: a repository with no such
+# tag, or whose highest is below the pin, has an unreleased pin rather than a trailing one. A pin
+# in any other form is reported as one this script can't compare, so none is skipped silently.
 # Adapted from spike-html-apps-foundation (12f4d53): scripts/currency.sh, its package.json scan;
 # and from go-web-sdk-template (b6ad574): template/scripts/currency.sh, its go.mod scans, with
 # JSON read by node; and from spike-html-conventions (a88828a): scripts/currency.sh, its github:

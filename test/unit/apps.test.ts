@@ -1,8 +1,8 @@
-// The app tier's import rules: eslint.config.js run over test/unit/apps-tree.js's tree, passing
+// The app tier's import rules: eslint.config.js run over test/unit/apps-tree.ts's tree, passing
 // only when ESLint flags exactly the files that break a rule, each with exactly the rules its case
 // names.
 // Adapted from spike-html-apps-foundation (12f4d53): test/unit/layers.test.js, on the app tier's
-// tree.
+// tree, in TypeScript.
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, test } from "node:test";
-import { allowed, lint, manifest, sources, violations, watched, writeTree } from "./apps-tree.js";
+import { allowed, lint, manifest, sources, violations, watched, writeTree } from "./apps-tree.ts";
 
 const root = join(import.meta.dirname, "../..");
 
@@ -23,8 +23,9 @@ describe("app-tier imports", () => {
 
   // One tree, so each case is judged beside the others, as the root's files will be.
   const files = { ...sources(violations), ...allowed };
-  let scratch;
-  let found;
+  let scratch: string;
+  /** Each file the lint flags, by its path in the tree, to the watched rules it draws, sorted. */
+  let found: Record<string, string[]>;
   before(() => {
     scratch = mkdtempSync(join(tmpdir(), "apps-"));
     const code = writeTree(scratch, files);
@@ -42,8 +43,8 @@ describe("app-tier imports", () => {
     );
     found = {};
     for (const file of report) {
-      const rules = [...new Set(file.messages.map((m) => m.ruleId))].filter((id) =>
-        watched.includes(id),
+      const rules = [...new Set(file.messages.map((m) => m.ruleId))].filter(
+        (id): id is string => id !== null && watched.includes(id),
       );
       if (rules.length > 0) found[file.filePath.slice(scratch.length + 1)] = rules.sort();
     }

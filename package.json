@@ -5,6 +5,8 @@
   "type": "module",
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@jaimestill/spike-html-apps-tooling": "github:JaimeStill/spike-html-apps-tooling#v0.2.0",
+    "@types/node": "26.6.6",
     "eslint": "10.13.0",
     "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-boundaries": "7.4.0",

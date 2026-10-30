@@ -1,0 +1,17 @@
+// mise run types:test: tsc type-checks the suite under test/, the TypeScript node --test runs
+// under node's type stripping, against node's types (@types/node) and the test tooling's
+// declarations, without emitting. allowJs: the unit tier imports eslint.config.js's table, whose
+// types tsc infers from the JavaScript; tsconfig.json checks that file itself. The suite runs on
+// node alone, so no DOM library: what it runs in the page is expression text.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "checkJs": false
+  },
+  "include": ["test/**/*.ts"],
+  "exclude": []
+}

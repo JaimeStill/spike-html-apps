@@ -3,12 +3,13 @@
 
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 
-import { freePort, start } from "./support/emulator.js";
+import { freePort, start } from "./support/emulator.ts";
 
 /** A reserve handing out `first` as its first port and a free one after, counting its calls. */
-function reserving(first) {
+function reserving(first: number) {
   const reserve = async () => (++reserve.calls === 1 ? first : freePort());
   reserve.calls = 0;
   return reserve;
@@ -17,9 +18,10 @@ function reserving(first) {
 test("a boot whose first reserved port is taken launches again on fresh ports", async () => {
   // The holder drops each connection, so its close is prompt; it never answers HTTP.
   const held = createServer((socket) => socket.destroy());
-  await new Promise((resolve) => held.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => held.listen(0, "127.0.0.1", resolve));
   try {
-    const { port } = held.address();
+    // A server listening on a host and port has an AddressInfo, never a pipe's path.
+    const { port } = held.address() as AddressInfo;
     const reserve = reserving(port);
     const emulator = await start({ reserve });
     try {
@@ -31,7 +33,7 @@ test("a boot whose first reserved port is taken launches again on fresh ports", 
       await emulator.stop();
     }
   } finally {
-    await new Promise((resolve) => held.close(resolve));
+    await new Promise<void>((resolve) => held.close(() => resolve()));
   }
 });
 
