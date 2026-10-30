@@ -167,6 +167,16 @@ browser tier and `mise run screenshots`.
 17. root onto the tag (13, 14). Demo: check, with the emulator's browser tier on the package's
     driver and page wait.
 
+18. `--help` (escalation 2): tooling v0.1.1 adds `--help`, which prints the usage, each flag's
+    meaning, the pages with their captions, each facet's flag, attribute, default, and the names
+    its `--all` profiles give, the schemes, the outputs, and the exit codes, and exits 0 before
+    any launch, with no BROWSER_EXECUTABLE needed. Demo: the bin's tests and `--help` over the
+    fixture description.
+19. **Checkpoint: tooling v0.1.1**, as slice 12's: a checkpoint brief, then publish, merge, and
+    the CI-cut tag, confirmed.
+20. The five consumers move from `#v0.1.0` to `#v0.1.1` on their `tooling` branches. Demo: each
+    check, and `mise run screenshots -- --help` in the foundation, components, and noctis.
+
 Slices 1–5 and 13–17 merge at SHIP with no tag. A tooling defect found after v0.1.0 needs a
 v0.1.1 this brief doesn't plan, so it escalates.
 
@@ -187,7 +197,7 @@ shipped source. Changes to the architect's kitty or Neovim configuration. The go
 creation. Everything else is two-way: each consumer's branch merges with no tag and can be
 reverted.
 
-**Release.** spike-html-apps-tooling `v0.1.0`.
+**Release.** spike-html-apps-tooling `v0.1.0`, `v0.1.1` (escalation 2).
 
 **Sequencing note.** Consumers install by tag and their CI installs from the remote, so v0.1.0
 is cut mid-task at slice 12, as the foundation task cut v0.2.0 before any components slice. CI
@@ -200,7 +210,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 17/17 committed (tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
+slices 17/20 committed (18–20 from escalation 2; tooling v0.1.0 released; consumers: foundation cdf886b, components 5d8ac09, sdk b4d82ce, noctis 9cafa38, root f86f24f) · standards: tooling done; consumers next · spec: tooling done · editor: tooling done
 
 ## Decisions
 
@@ -758,6 +768,11 @@ slices 17/17 committed (tooling v0.1.0 released; consumers: foundation cdf886b, 
 - tooling: eslint stays at 10.13.0, behind pnpm's minimum release age, with no exclusion:
   10.14.0 (published 2026-10-30T14:12Z) arrives once it has aged, in whichever repository's next
   currency pass finds it. Tooling v0.1.0 doesn't wait on it (architect, checkpoint).
+- tooling: `--help` ships in this task as tooling v0.1.1, with its own checkpoint before the
+  consumers merge, and the five consumers pin `#v0.1.1` (architect, escalation 2).
+- tooling: `--help` reads no browser: a facet's names are its default plus those its `--all`
+  profiles give, and the run still checks each page's registered names (architect,
+  escalation 2).
 
 ## Pending edits
 
