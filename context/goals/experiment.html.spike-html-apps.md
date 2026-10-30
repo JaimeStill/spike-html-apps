@@ -174,8 +174,11 @@ browser tier and `mise run screenshots`.
     fixture description.
 19. **Checkpoint: tooling v0.1.1**, as slice 12's: a checkpoint brief, then publish, merge, and
     the CI-cut tag, confirmed.
-20. The five consumers move from `#v0.1.0` to `#v0.1.1` on their `tooling` branches. Demo: each
-    check, and `mise run screenshots -- --help` in the foundation, components, and noctis.
+20. The five consumers move from `#v0.1.0` to `#v0.1.1` on their `tooling` branches. The
+    foundation's, components', and noctis's descriptions become `scripts/screenshots.config.ts`,
+    typed as `Description`, type-checked by a noEmit project over `scripts/` (erasable syntax
+    only) as its own `types` step. Demo: each check, and `mise run screenshots -- --help` in
+    the foundation, components, and noctis.
 
 Slices 1–5 and 13–17 merge at SHIP with no tag. A tooling defect found after v0.1.0 needs a
 v0.1.1 this brief doesn't plan, so it escalates.
@@ -773,6 +776,10 @@ slices 17/20 committed (18–20 from escalation 2; tooling v0.1.0 released; cons
 - tooling: `--help` reads no browser: a facet's names are its default plus those its `--all`
   profiles give, and the run still checks each page's registered names (architect,
   escalation 2).
+- tooling: the capture descriptions are TypeScript, `scripts/screenshots.config.ts`, loaded
+  by Node's type stripping (erasable syntax only) and type-checked by a noEmit project over
+  `scripts/`. The package needs no change; its README says so in v0.1.1. The tests and their
+  shared helpers stay `.js` (architect).
 
 ## Pending edits
 
