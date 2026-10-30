@@ -792,7 +792,58 @@ slices 21/21 committed (tooling v0.1.0 and v0.2.0 released; consumers on #v0.2.0
   escalation 3).
 - tooling: the second release is v0.2.0, not v0.1.1: it adds `--help` and reserves the facet
   flag `help`, and every layer release with an Added section bumped the minor (architect, at
-  its checkpoint).
+  its checkpoint). This supersedes v0.1.1 wherever an earlier line names it: the five consumers
+  pin `#v0.2.0`, and v0.2.0's README documents the `.ts` description.
+- tooling: a change to dev tooling alone gets no CHANGELOG entry and no version bump, since the
+  CHANGELOG records the pack. The foundation, components, sdk, and noctis record none of the
+  toolchain bumps, the move onto the tooling, the descriptions, or the tests in TypeScript, and
+  tooling v0.2.0 records none of its own tests in TypeScript.
+- tooling: `serve`'s `deps` names packages, each found as Node resolves an import and served
+  under `/deps/<name>/`. A package in pnpm's store brings its store siblings, so the components
+  name lit, marked, and the foundation, and lit's own dependencies come with lit. A flat or
+  linked package brings none, and a name found nowhere rejects `serve()`.
+- tooling: `serve`'s `handler` is offered every request first. It claims one by returning true,
+  or a promise of true, and then owns the response, which it may leave unanswered; any other
+  value passes the request on, and a throw or rejection destroys the response. `stop()` closes
+  every open connection, so an unanswered request can't hold the server. The sdk's upload routes
+  and request log are one such handler.
+- tooling: a description's pages hold its states, and a page with none has one full-page state.
+  A file is numbered by its state's place among all the description's states, so its name is the
+  same whichever `--page` a run chooses.
+- tooling: the terminal output runs icat's support detection at the first capture, so a run that
+  fails before any capture prints no detection line. Detection passes `--detection-timeout=3`,
+  with a 5 s kill as a backstop.
+- tooling: the browser runs in its own process group, which its renderers and services join.
+  Ending it, by `close()` or at a process exit without one, sends the group SIGKILL and removes
+  the profile only once no live process is left in it, waiting at most 2 s. SIGKILL, because a
+  browser shutting down on SIGTERM wrote its profile again after the removal. v0.1.0 removed the
+  profile while the group's processes still ran, and about one exit in a hundred left
+  `Default/Shared Dictionary/` behind; v0.2.0 fixes it. A parent killed by a signal still ends
+  the group, since its DevTools pipe closes (implementer, 109c197).
+- tooling: the driver's host-resolver rules exclude `localhost` as well as `127.0.0.1`, so a page
+  on `http://localhost:<port>` loads; `example.com` and `page.localhost` still fail to resolve.
+- tooling: tsc rewrites the sources' `.ts` relative specifiers in the emitted `.js`, and the
+  emitted `.d.ts` keep `.ts` specifiers, as the foundation's and the sdk's do; a checkJs consumer
+  with skipLibCheck false resolves them.
+- tooling: all six repositories type-check their tests with `tsconfig.test.json`, a noEmit project
+  that extends `tsconfig.json` with nodenext resolution and `@types/node` 26.6.6, and `types` is a
+  depends list of `types:src` and `types:test`. `types:test` depends on `build` in the tooling,
+  the foundation, and the sdk, whose tests import the package by its name. A `.ts` description
+  joins that project's include, superseding the separate noEmit project over `scripts/` that the
+  descriptions line and slice 20 name.
+- tooling: a module a server sends to a page stays `.js`, since the server transforms nothing: the
+  foundation's computed-styles.js, the components' probe.js and restyle.js, and the sdk's router
+  and upload fixtures. The tooling's PATH stub, stub.js, also stays `.js`: a test runs it through a
+  symlink by its node shebang, and as `.ts` it would run only because Node resolves the link
+  before it decides to strip types.
+- tooling: the foundation's and noctis's descriptions read each page's registered profiles, so a
+  profile a page hasn't registered exits 2, as behavior 6 and `--help` say. The foundation's
+  prepare step, which points the page's link at `page-full.css`, also imports
+  `dist/register-full.js`, so each page registers exactly the profiles that sheet styles; its
+  demo pages load no registration module of their own (standards review, 75c85a9).
+- tooling: the sdk's `src/api.ts` and `src/router.ts` headers name
+  `test/unit/declarations.test.js`, now `.ts`. They are shipped source, so the sdk's next release
+  corrects them.
 
 ## Pending edits
 
@@ -859,3 +910,20 @@ slices 21/21 committed (tooling v0.1.0 and v0.2.0 released; consumers on #v0.2.0
 - standards-lab `context/roadmap.toml`, backlog idea for a later spike-html-apps-tooling release:
   inline screenshots in a Neovim `:terminal`, sending kitty graphics through `nvim_ui_send` over
   `$NVIM` and printing icat's unicode placeholders (tooling, escalation 1).
+- standards-lab `context/roadmap.toml`, the `tooling` task's summary: in place of "released as
+  v0.1.0 by tag", it names the releases, tooling v0.1.0 and v0.2.0 (`--help`, the reserved
+  facet flag `help`, and the browser's ending waiting for its process group before removing its
+  profile), and the TypeScript sources built into `dist/`. The root, the foundation, the
+  components, the sdk, and noctis move onto `#v0.2.0`, dropping their copies of the driver,
+  server, and screenshot scripts; the foundation's, components', and noctis's capture
+  descriptions are `scripts/screenshots.config.ts`; and all six repositories' tests are
+  TypeScript under Node's type stripping, type-checked by `tsconfig.test.json`.
+- standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", its first paragraph:
+  "in four repositories: the root ... and three layer repositories" becomes six, adding the
+  extension repository spike-html-apps-noctis and spike-html-apps-tooling, the browser-test and
+  screenshot tooling the others take by tag.
+- standards-lab `context/html-artifacts.md`, "Settled for the spikes", the in-session review
+  bullet: for the spike-html-apps repositories, the review script is spike-html-apps-tooling's
+  screenshot bin. It shows captures with `kitten icat --transfer-mode=stream`, and inside a Neovim
+  `:terminal` it shows none, since the buffer reports no pixel size and libvterm doesn't pass the
+  graphics through, so `--output browser` opens a gallery instead.
