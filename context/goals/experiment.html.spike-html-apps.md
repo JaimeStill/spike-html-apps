@@ -215,7 +215,8 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 1/18 committed (slice 2, tooling 658bc3e) · standards — · spec — · editor —
+slices 3/18 (tooling v0.3.0 released: PR #4 merged 08378cd, tag and release confirmed; foundation
+  slice 4 committed, tooling #v0.3.0 only, eslint held) · standards: tooling done · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
@@ -225,7 +226,9 @@ slices 1/18 committed (slice 2, tooling 658bc3e) · standards — · spec — ·
   as a directory, so a base path like `/app` holds; a rejecting start is wrapped "the
   description's server didn't start: <message>"; readiness polls with node:http(s) get, agent
   false, 1 s per request, every 100 ms; a command exiting before ready also stops its group; the
-  group code moved from browser.ts to `src/group.ts` (reachable as `./group.js`, undocumented).
+  group code moved from browser.ts to `src/group.ts`; the exports name the four public modules in
+  place of `./*.js`, so group.js isn't importable (standards review, escalation 1, settled by the
+  brief's export list); stop() has no bound past SIGKILL, left as is (review, escalation 2).
 
 ## Decisions
 
