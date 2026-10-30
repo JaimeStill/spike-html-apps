@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** tooling
-- **Branch:** tooling
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -11,7 +11,7 @@
 3. [x] sdk
 4. [x] emulator
 5. [x] primitives
-6. [ ] tooling
+6. [x] tooling
 7. [ ] pipeline
 8. [ ] answer
 
@@ -218,9 +218,6 @@ profiles to the defaults (`--all` keeps six); registry reading and `/deps/` list
 consumer so the package names none; a failed xdg-open exits 1 and keeps the files; `--dir`
 cleanup removes a directory only if the bin created it.
 
-## Progress
-
-slices 21/21 committed · standards done · spec done (one gap closed) · editor done · validated: check in all six
 
 ## Decisions
 
@@ -844,6 +841,9 @@ slices 21/21 committed · standards done · spec done (one gap closed) · editor
 - tooling: the sdk's `src/api.ts` and `src/router.ts` headers name
   `test/unit/declarations.test.js`, now `.ts`. They are shipped source, so the sdk's next release
   corrects them.
+- tooling: shipped. spike-html-apps-tooling v0.1.0 and v0.2.0 released; the root, foundation,
+  components, sdk, and noctis on `#v0.2.0` with no copy of the driver, server, or screenshot
+  scripts; all six repositories' tests in TypeScript; the descriptions `.ts` with profiles readers.
 
 ## Pending edits
 
