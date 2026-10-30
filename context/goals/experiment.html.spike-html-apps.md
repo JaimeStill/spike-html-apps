@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** building
+- **State:** brief ready
 - **Task:** tooling
 - **Branch:** tooling
 
@@ -220,7 +220,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 21/21 committed (tooling v0.1.0 and v0.2.0 released; consumers on #v0.2.0: foundation 9ce513f, components ac6c954, sdk 9c5a23e, noctis bdb82cb, root 8886d4e) · standards: tooling done; consumers 13–17 done, 20–21 under review · spec: tooling done; consumers next · editor: tooling v0.1.0 done; v0.2.0 and consumers next
+slices 21/21 committed · standards done · spec done (one gap closed) · editor done · validated: check in all six
 
 ## Decisions
 
