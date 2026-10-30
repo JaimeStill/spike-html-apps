@@ -10,15 +10,45 @@ import { connect } from "node:net";
 /** The inbox the one reply arrives on. */
 const inbox = "_INBOX.browser";
 
+/** The client listener a request goes to: its port, and the token it presents. */
+export interface Listener {
+  port: number;
+  token: string;
+}
+
+/** A JetStream API reply's error, which a refused request carries. */
+interface APIError {
+  error?: { description: string };
+}
+
+/** A stream's state, as the JetStream API's stream info gives it: the fields the tier reads. */
+export interface StreamState {
+  messages: number;
+  first_seq: number;
+  last_seq: number;
+}
+
+/** A JetStream publish's ack: the stream and the sequence it stored the message at. */
+export interface PubAck {
+  stream: string;
+  seq: number;
+}
+
 /**
  * Sends one request to `subject` on the client listener at `port`, presenting `token`, with
  * `headers` (each a NATS header, sent in an HPUB) and `data` (a string), and resolves to the reply's
  * payload parsed as JSON; rejects on the server's -ERR, or after 5 s with no reply.
  */
-export function request({ port, token, subject, headers = {}, data = "" }) {
-  return new Promise((resolve, reject) => {
+export function request<T>({
+  port,
+  token,
+  subject,
+  headers = {},
+  data = "",
+}: Listener & { subject: string; headers?: Record<string, string>; data?: string }): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
     const socket = connect(port, "127.0.0.1");
-    const done = (fn, value) => {
+    const done = <V>(fn: (value: V) => void, value: V) => {
       clearTimeout(timer);
       socket.destroy();
       fn(value);
@@ -42,13 +72,15 @@ export function request({ port, token, subject, headers = {}, data = "" }) {
     // gives the payload's size, and the payload follows it, ended by CRLF.
     let buffer = Buffer.alloc(0);
     socket.on("data", (chunk) => {
-      buffer = Buffer.concat([buffer, chunk]);
+      // The socket has no encoding set, so each chunk is a Buffer.
+      buffer = Buffer.concat([buffer, chunk as Buffer]);
       const text = buffer.toString("latin1");
       const error = text.match(/(?:^|\r\n)-ERR ([^\r]*)\r\n/);
       if (error) return done(reject, new Error(`the NATS server refused: ${error[1]}`));
       const reply = text.match(new RegExp(`(?:^|\\r\\n)MSG ${inbox} 1 (\\d+)\\r\\n`));
       if (!reply) return;
-      const start = reply.index + reply[0].length;
+      // A match of a regular expression without the g flag always has its index.
+      const start = reply.index! + reply[0].length;
       const end = start + Number(reply[1]);
       if (buffer.length < end) return;
       done(resolve, JSON.parse(buffer.subarray(start, end).toString("utf8")));
@@ -57,8 +89,16 @@ export function request({ port, token, subject, headers = {}, data = "" }) {
 }
 
 /** The stream's state, its messages and first and last sequences, from the JetStream API. */
-export async function streamState({ port, token, stream = "EMULATOR" }) {
-  const info = await request({ port, token, subject: `$JS.API.STREAM.INFO.${stream}` });
+export async function streamState({
+  port,
+  token,
+  stream = "EMULATOR",
+}: Listener & { stream?: string }): Promise<StreamState> {
+  const info = await request<APIError & { state: StreamState }>({
+    port,
+    token,
+    subject: `$JS.API.STREAM.INFO.${stream}`,
+  });
   if (info.error) throw new Error(`stream ${stream}: ${info.error.description}`);
   return info.state;
 }
@@ -68,8 +108,22 @@ export async function streamState({ port, token, stream = "EMULATOR" }) {
  * subject, its attributes ce-* headers, and its JSON data the body; resolves to the stream's ack,
  * the stream and the sequence it stored the event at.
  */
-export async function publishEvent({ port, token, type, id, source, subject, data }) {
-  const ack = await request({
+export async function publishEvent({
+  port,
+  token,
+  type,
+  id,
+  source,
+  subject,
+  data,
+}: Listener & {
+  type: string;
+  id: string;
+  source: string;
+  subject: string;
+  data: unknown;
+}): Promise<PubAck> {
+  const ack = await request<APIError & PubAck>({
     port,
     token,
     subject: type,

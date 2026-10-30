@@ -1,6 +1,6 @@
 // The lint the check runs: the recommended rules over the code, and the app-tier direction in
-// apps/, by the file each import resolves to. test/unit/apps.test.js runs it over
-// test/unit/apps-tree.js's tree.
+// apps/, by the file each import resolves to. test/unit/apps.test.ts runs it over
+// test/unit/apps-tree.ts's tree.
 // Adapted from spike-html-apps-foundation (12f4d53): eslint.config.js, its layer table replaced
 // by the app tier's, on spike-html-conventions (a88828a) eslint.config.js's app rows; without the
 // CSS module script rule, the declarations rule, and the manifest rules, which the root has no

@@ -65,14 +65,20 @@ find . -name '*.sh' -not -path './node_modules/*' -not -path './.git/*' -print0 
 dir = "{{config_root}}"
 
 [tasks.types]
-description = "Type-check tsconfig.json's inputs (eslint.config.js, vite.config.ts, and apps/) with tsc; reads no network, writes nothing"
+description = "Type-check tsconfig.json's inputs (eslint.config.js, vite.config.ts, and apps/) with tsc, and the suite with types:test; reads no network, writes nothing"
+depends = ["types:test"]
 run = "tsc -p ."
+dir = "{{config_root}}"
+
+[tasks."types:test"]
+description = "Type-check the suite, test/'s TypeScript that node --test runs under type stripping, with tsc against tsconfig.test.json; reads no network, writes nothing"
+run = "tsc -p tsconfig.test.json"
 dir = "{{config_root}}"
 
 [tasks."test:unit"]
 description = "Run the unit tier under node --test: the app tier's violation tree, linted in a scratch directory of TMPDIR, removed after; reads no network, writes nothing in the repository"
 depends = ["preflight"]
-run = "node --test 'test/unit/*.test.js'"
+run = "node --test 'test/unit/*.test.ts'"
 dir = "{{config_root}}"
 
 # Adapted from go-web-sdk-template (b6ad574): template/mise.toml, its check task as the
@@ -114,7 +120,7 @@ dir = "{{config_root}}"
 # Adapted from spike-html-apps-sdk (be6341d): mise.toml, its test:browser task. The tier builds
 # cmd/server once, embedding the pipeline app's build, into a temporary directory the task removes,
 # and each file boots it on reserved loopback ports, under its own TMPDIR, as test/browser/support/
-# emulator.js does.
+# emulator.ts does.
 [tasks."test:browser"]
 description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the NATS adapter's live reads, two instances side by side, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["preflight browser", "build:app"]
@@ -124,7 +130,7 @@ bin=$(mktemp -d)
 trap 'rm -rf "$bin"' EXIT
 go build -o "$bin/server" ./cmd/server
 EMULATOR_BINARY="$bin/server" BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
-  node --test 'test/browser/*.test.js'
+  node --test 'test/browser/*.test.ts'
 '''
 dir = "{{config_root}}"
 

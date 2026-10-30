@@ -2,11 +2,12 @@
 // cmd/server into a temporary directory, embedding the pipeline app's build), booted on reserved
 // loopback ports with its configuration in its environment, as the integration tier's harness
 // boots it, and driven over its HTTP API as a client drives it.
-// Adapted from integration/harness.go: its Launch, Ready, and environment, in node.
+// Adapted from integration/harness.go: its Launch, Ready, and environment, in TypeScript on node.
 
 import { spawn } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -29,20 +30,25 @@ export const bootAttempts = 5;
 const addressInUse = /address already in use/;
 
 /** A free loopback port: one the system hands out, released for the emulator to take. */
-export async function freePort() {
+export async function freePort(): Promise<number> {
   const server = createServer();
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
   });
-  const { port } = server.address();
+  // A server listening on a host and port has an AddressInfo, never a pipe's path.
+  const { port } = server.address() as AddressInfo;
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
 
 /** Polls `check` every 25 ms until it resolves truthy, resolving to its value, and rejects naming
  * `what` after the failsafe or once `failed()` returns a reason. */
-async function until(what, check, failed = () => undefined) {
+async function until<T>(
+  what: string,
+  check: () => Promise<T | false>,
+  failed: () => string | false | undefined = () => undefined,
+): Promise<T> {
   const deadline = Date.now() + failsafe;
   for (;;) {
     const reason = failed();
@@ -52,6 +58,40 @@ async function until(what, check, failed = () => undefined) {
     if (Date.now() > deadline) throw new Error(`${what}: not within ${failsafe} ms`);
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
+}
+
+/** What start takes, each optional, as its comment describes. */
+export interface StartOptions {
+  mount?: string;
+  origins?: string[];
+  env?: Record<string, string>;
+  reserve?: () => Promise<number>;
+}
+
+/** An uploaded document, as the API answers it: the fields the tier reads. */
+export interface UploadedDocument {
+  id: string;
+  /** The run the upload started. */
+  run_id: string;
+}
+
+/** A run, as the API answers it: the field the tier reads. */
+export interface Run {
+  status: string;
+}
+
+/** An emulator start booted, ready; start's comment and the members' describe each. */
+export interface Emulator {
+  origin: string;
+  launches: number;
+  base: string;
+  natsPort: number;
+  wsURL: string;
+  output(): string;
+  store(): string | undefined;
+  upload(name?: string): Promise<UploadedDocument>;
+  complete(runId: string): Promise<Run>;
+  stop(): Promise<void>;
 }
 
 /**
@@ -69,7 +109,12 @@ async function until(what, check, failed = () => undefined) {
  * WebSocket listener's; a test of the retry hands it a port another socket holds. The emulator
  * resolved to records its launches.
  */
-export async function start({ mount = "/app", origins, env = {}, reserve = freePort } = {}) {
+export async function start({
+  mount = "/app",
+  origins,
+  env = {},
+  reserve = freePort,
+}: StartOptions = {}): Promise<Emulator> {
   const binary = process.env.EMULATOR_BINARY;
   if (!binary) throw new Error("EMULATOR_BINARY names no binary: run mise run test:browser");
   for (let launches = 1; ; launches++) {
@@ -81,12 +126,24 @@ export async function start({ mount = "/app", origins, env = {}, reserve = freeP
   }
 }
 
+/** start's options with their defaults applied, and the launch's count among start's. */
+interface LaunchOptions {
+  mount: string;
+  origins: string[] | undefined;
+  env: Record<string, string>;
+  reserve: () => Promise<number>;
+  launches: number;
+}
+
 /** A launch whose emulator exited, before its readiness, naming a port another socket holds. */
 class PortTaken extends Error {}
 
 /** One launch of start's: the emulator on ports `reserve` hands out, resolving once it is ready,
  * and rejecting with PortTaken when it exits having lost one of them. */
-async function launch(binary, { mount, origins, env, reserve, launches }) {
+async function launch(
+  binary: string,
+  { mount, origins, env, reserve, launches }: LaunchOptions,
+): Promise<Emulator> {
   const [port, natsPort, wsPort] = [await reserve(), await reserve(), await reserve()];
   const origin = `http://127.0.0.1:${port}`;
   const temp = mkdtempSync(join(tmpdir(), "browser-emulator."));
@@ -116,15 +173,18 @@ async function launch(binary, { mount, origins, env, reserve, launches }) {
     stream.setEncoding("utf8");
     stream.on("data", (chunk) => (output += chunk));
   }
-  let exit;
-  const exited = new Promise((resolve) => child.once("exit", (code) => resolve((exit = code))));
+  /** The emulator's exit code once it has exited, null when a signal ended it. */
+  let exit: number | null | undefined;
+  const exited = new Promise<number | null>((resolve) =>
+    child.once("exit", (code) => resolve((exit = code))),
+  );
   // A run that ends without stopping the emulator still ends it.
   const orphan = () => child.kill("SIGKILL");
   process.once("exit", orphan);
 
   /** Drains the emulator with SIGTERM, or after the failsafe kills it, and removes its TMPDIR;
    * rejects when it exits other than 0 or leaves anything in its TMPDIR. */
-  async function stop() {
+  async function stop(): Promise<void> {
     process.off("exit", orphan);
     if (exit === undefined) child.kill("SIGTERM");
     const timer = setTimeout(() => child.kill("SIGKILL"), failsafe);
@@ -137,7 +197,7 @@ async function launch(binary, { mount, origins, env, reserve, launches }) {
   }
 
   /** The API's JSON answer to `path`, failing on any status but `status`. */
-  async function api(path, init = {}, status = 200) {
+  async function api<T>(path: string, init: RequestInit = {}, status = 200): Promise<T> {
     const response = await fetch(origin + path, init);
     const body = await response.text();
     if (response.status !== status) {
@@ -156,7 +216,10 @@ async function launch(binary, { mount, origins, env, reserve, launches }) {
     );
   } catch (error) {
     await stop().catch(() => {});
-    if (exit !== undefined && addressInUse.test(output)) throw new PortTaken(error.message);
+    // until rejects with an Error alone, and stop's own failure is caught.
+    if (exit !== undefined && addressInUse.test(output)) {
+      throw new PortTaken((error as Error).message);
+    }
     throw error;
   }
 
@@ -174,7 +237,7 @@ async function launch(binary, { mount, origins, env, reserve, launches }) {
     store: () => output.match(/msg="nats started".* store=(\S+)/)?.[1],
     /** Uploads a text document, resolving to the document, its run_id the run it started. */
     upload: (name = "brief.txt") =>
-      api(
+      api<UploadedDocument>(
         `/api/documents?name=${encodeURIComponent(name)}`,
         { method: "POST", headers: { "content-type": "text/plain" }, body: "the capstone's brief" },
         201,
@@ -182,7 +245,7 @@ async function launch(binary, { mount, origins, env, reserve, launches }) {
     /** Resolves to the run once its status is complete. */
     complete: (runId) =>
       until(`run ${runId}`, async () => {
-        const run = await api(`/api/runs/${runId}`);
+        const run = await api<Run>(`/api/runs/${runId}`);
         return run.status === "complete" && run;
       }),
     stop,

@@ -1,20 +1,25 @@
 // The app tier's import cases as one file tree in the root's shape: a file per forbidden import
 // and form, each with the rules that catch it, and the imports an app may make in the same
-// layout. apps.test.js lints it. The root holds no app yet, so the tree is the table's only
+// layout. apps.test.ts lints it. The root holds no app yet, so the tree is the table's only
 // subject: two apps in apps/, the pipeline app and the external client, and the layers below
 // them as stub packages in node_modules/.
 // Adapted from spike-html-apps-foundation (12f4d53): test/unit/layers-tree.js, its cases replaced
-// by the app tier's.
+// by the app tier's, in TypeScript.
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+
+import type { ESLint } from "eslint";
+
 import { packages } from "../../eslint.config.js";
 
 const root = join(import.meta.dirname, "../..");
 
-/** The root's manifest as it stands, which the tree carries. */
-export const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+/** The root's manifest as it stands, which the tree carries; the tests read its pins. */
+export const manifest: { devDependencies: Record<string, string> } = JSON.parse(
+  readFileSync(join(root, "package.json"), "utf8"),
+);
 
 const [foundation, components, sdk] = packages;
 
@@ -26,11 +31,17 @@ export const table = "boundaries/dependencies";
 export const relativePackages = "import-x/no-relative-packages";
 export const unresolved = "import-x/no-unresolved";
 /** The rules the lint flags the tree with. */
-export const watched = [table, relativePackages, unresolved];
+export const watched: string[] = [table, relativePackages, unresolved];
+
+/** Files by their path in the tree, each to its source. */
+export type Files = Record<string, string>;
+
+/** Cases by their path in the tree, each to its source and the rules that flag it. */
+export type Cases = Record<string, { source: string; rules: string[] }>;
 
 /** An edge in each of the four import forms, one file per form, each named for the edge and its
  * form: a side-effect import, a type import, a re-export, and an import(). */
-function forms(base, specifier) {
+function forms(base: string, specifier: string): Files {
   return {
     [`${base}.ts`]: `import "${specifier}";`,
     [`${base}-type.ts`]: `import type { X } from "${specifier}";`,
@@ -40,7 +51,7 @@ function forms(base, specifier) {
 }
 
 /** `files`, each path to its source and the rules that flag it, sorted. */
-function by(rules, files) {
+function by(rules: string[], files: Files): Cases {
   return Object.fromEntries(
     Object.entries(files).map(([path, source]) => [path, { source, rules: [...rules].sort() }]),
   );
@@ -49,7 +60,7 @@ function by(rules, files) {
 const app = "apps/pipeline";
 
 // Each file holds one import, named for what it imports.
-export const violations = {
+export const violations: Cases = {
   ...by([table], {
     // Another app, in each form, by a path that climbs out and back in, and from deeper down.
     ...forms(`${app}/forms/client`, "../../client/main.js"),
@@ -81,12 +92,12 @@ export const violations = {
 };
 
 /** `cases`, each path to its source alone. */
-export const sources = (cases) =>
+export const sources = (cases: Cases): Files =>
   Object.fromEntries(Object.entries(cases).map(([path, { source }]) => [path, source]));
 
 // Every import an app may make, in each form, with names that hold dots, which a rule must tell
 // from . and .. segments: each layer by its name, at a subpath, and the app's own files.
-export const allowed = {
+export const allowed: Files = {
   [`${app}/main.ts`]: [
     `import { define } from "${foundation}/dom.js";`,
     `import type { X } from "${components}/status-badge.js";`,
@@ -109,7 +120,7 @@ export const allowed = {
 };
 
 /** The files the cases import that no case is. */
-const targets = {
+const targets: Files = {
   [`${app}/index.ts`]: "export {};",
   [`${app}/..x/y.ts`]: "export {};",
   [`${app}/.well-known/a.ts`]: "export {};",
@@ -119,7 +130,7 @@ const targets = {
 /** The packages the cases name, as stubs in node_modules/: the layers, lit, typescript, the
  * test tooling, and the foundation's namesake, each a module and its types at every subpath. */
 const externals = [...packages, "lit", "typescript", tooling, `${foundation}x`];
-const stub = (name) => ({
+const stub = (name: string): Files => ({
   "package.json": JSON.stringify({
     name,
     type: "module",
@@ -140,8 +151,8 @@ const stub = (name) => ({
 /** Writes `files` under `dir` with the manifest, the targets, and the externals, so every import
  * but the unresolved case's resolves and the lint judges it. Returns the code files written under
  * apps/. */
-export function writeTree(dir, files) {
-  const written = { ...files, ...targets, "package.json": JSON.stringify(manifest) };
+export function writeTree(dir: string, files: Files): string[] {
+  const written: Files = { ...files, ...targets, "package.json": JSON.stringify(manifest) };
   for (const name of externals) {
     for (const [path, source] of Object.entries(stub(name))) {
       written[join("node_modules", name, path)] = source;
@@ -157,7 +168,7 @@ export function writeTree(dir, files) {
 /** ESLint's JSON report on the tree under `dir`'s apps/. -c takes the root's config, whose
  * patterns then match from the working directory, the tree, and whose plugins load from the
  * root's node_modules. Throws when ESLint doesn't run or exits other than 0 or 1. */
-export function lint(dir) {
+export function lint(dir: string): ESLint.LintResult[] {
   const eslint = join(root, "node_modules", ".bin", "eslint");
   const run = spawnSync(eslint, ["-c", join(root, "eslint.config.js"), "-f", "json", "apps"], {
     cwd: dir,

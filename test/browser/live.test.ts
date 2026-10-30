@@ -3,18 +3,22 @@
 // shell's static token. Each case boots its own emulator, so its stream starts empty and its
 // cursors at 1, and opens its own page, so its sessionStorage starts empty; each event line the
 // log shows is printed. A page whose shell the test changes, or whose origin it varies, is
-// served through a proxy (support/proxy.js), a real loopback answer the browser's Local Network
+// served through a proxy (support/proxy.ts), a real loopback answer the browser's Local Network
 // Access checks let reach the listener.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
+import type { TestContext } from "node:test";
 
 import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-import { click, linesOnce, lines, mounted, openWith, reload } from "./support/app.js";
-import { stageNames, start, token } from "./support/emulator.js";
-import { publishEvent, streamState } from "./support/nats.js";
-import { proxy } from "./support/proxy.js";
+import { click, linesOnce, lines, mounted, openWith, reload } from "./support/app.ts";
+import type { Line } from "./support/app.ts";
+import { stageNames, start, token } from "./support/emulator.ts";
+import type { Emulator, StartOptions, UploadedDocument } from "./support/emulator.ts";
+import { publishEvent, streamState } from "./support/nats.ts";
+import { proxy } from "./support/proxy.ts";
 
 /** The stage event's type, the default prefix's run.stage. */
 const stageType = "emulator.run.stage";
@@ -22,12 +26,12 @@ const stageType = "emulator.run.stage";
 /** The sessionStorage key the log keeps its last cursor under (apps/pipeline/src/log.ts). */
 const cursorKey = "pipeline-log.cursor";
 
-let browser;
+let browser: Browser;
 /** The case's emulator, which boot() starts. */
-let emulator;
-const pages = [];
+let emulator: Emulator;
+const pages: Page[] = [];
 /** What the case started, stopped after it in reverse: its emulator and any proxy. */
-const stops = [];
+const stops: (() => Promise<void>)[] = [];
 
 before(async () => {
   browser = await launch();
@@ -41,20 +45,23 @@ after(async () => {
 });
 
 /** Starts the case's emulator with the options. */
-async function boot(options) {
+async function boot(options?: StartOptions) {
   emulator = await start(options);
   stops.push(emulator.stop);
 }
 
 /** Starts a proxy of the case's emulator, rewriting its shell with `rewrite`. */
-async function proxyOf(rewrite) {
+async function proxyOf(rewrite?: (html: string) => string) {
   const server = await proxy(() => emulator.origin, rewrite);
   stops.push(server.stop);
   return server;
 }
 
 /** Opens the app's log at the origin (the emulator's own by default), once it has mounted. */
-async function openLog(origin = emulator.origin, prepare = async () => {}) {
+async function openLog(
+  origin = emulator.origin,
+  prepare: (page: Page) => Promise<void> = async () => {},
+): Promise<Page> {
   const page = await openWith(browser, `${origin}${emulator.base}`, prepare);
   pages.push(page);
   await mounted(page, "pipeline-log");
@@ -63,7 +70,11 @@ async function openLog(origin = emulator.origin, prepare = async () => {}) {
 
 /** Prints each line, and asserts the event lines are the run's five stage events in order, at
  * the cursors from `first`. */
-function assertRun(t, shown, { doc, first }) {
+function assertRun(
+  t: TestContext,
+  shown: Line[],
+  { doc, first }: { doc: UploadedDocument; first: number },
+) {
   for (const line of shown) t.diagnostic(line.text ?? JSON.stringify(line));
   assert.deepEqual(
     shown.map(({ cursor, event }) => ({ cursor, event: { ...event, time: undefined } })),
@@ -77,11 +88,12 @@ function assertRun(t, shown, { doc, first }) {
       },
     })),
   );
-  for (const { event } of shown) assert.ok(!Number.isNaN(Date.parse(event.time)), event.time);
+  // The deepEqual above has held each line to a stage event.
+  for (const { event } of shown) assert.ok(!Number.isNaN(Date.parse(event!.time)), event!.time);
 }
 
 /** Uploads a document and resolves to it once its run is complete. */
-async function uploadRun(name) {
+async function uploadRun(name: string) {
   const doc = await emulator.upload(name);
   await emulator.complete(doc.run_id);
   return doc;
@@ -168,7 +180,7 @@ describe("a wrong token", () => {
       /"token":"not-the-token"/,
     );
     const shown = await linesOnce(page, 1);
-    for (const line of shown) t.diagnostic(line.error ?? line.text);
+    for (const line of shown) t.diagnostic(line.error ?? line.text ?? JSON.stringify(line));
     assert.equal(shown.length, 1);
     assert.equal(
       shown[0].error,
@@ -179,7 +191,7 @@ describe("a wrong token", () => {
 
 describe("the WebSocket listener's origins", () => {
   /** Opens a WebSocket from the page to the listener, resolving to "open" or "refused". */
-  const probe = (page) =>
+  const probe = (page: Page): Promise<"open" | "refused"> =>
     page.evaluate(`new Promise((resolve) => {
       const ws = new WebSocket(${JSON.stringify(emulator.wsURL)});
       ws.onopen = () => { ws.close(); resolve("open"); };
@@ -188,12 +200,15 @@ describe("the WebSocket listener's origins", () => {
 
   /** Opens the log at the origin, recording each WebSocket handshake's outcome in `handshakes`:
    * its status on an upgrade, the browser's error on a refusal. */
-  const openRecorded = (origin, handshakes) =>
+  const openRecorded = (origin: string, handshakes: (number | string)[]) =>
     openLog(origin, async (page) => {
-      page.on("Network.webSocketHandshakeResponseReceived", ({ response }) =>
-        handshakes.push(response.status),
+      page.on(
+        "Network.webSocketHandshakeResponseReceived",
+        ({ response }: { response: { status: number } }) => handshakes.push(response.status),
       );
-      page.on("Network.webSocketFrameError", ({ errorMessage }) => handshakes.push(errorMessage));
+      page.on("Network.webSocketFrameError", ({ errorMessage }: { errorMessage: string }) =>
+        handshakes.push(errorMessage),
+      );
       await page.cdp("Network.enable");
     });
 
@@ -204,7 +219,7 @@ describe("the WebSocket listener's origins", () => {
     const other = await proxyOf();
 
     // The same app, shell and config, from the proxy's origin, which the list doesn't name.
-    const refusals = [];
+    const refusals: (number | string)[] = [];
     const refused = await openRecorded(other.origin, refusals);
     const failed = await linesOnce(refused, 1);
     assert.equal(await probe(refused), "refused");
@@ -217,7 +232,7 @@ describe("the WebSocket listener's origins", () => {
     }
 
     // From the emulator's own origin, the one the list names.
-    const upgrades = [];
+    const upgrades: (number | string)[] = [];
     const allowed = await openRecorded(emulator.origin, upgrades);
     assertRun(t, await linesOnce(allowed, 5), { doc, first: 1 });
     assert.equal(await probe(allowed), "open");

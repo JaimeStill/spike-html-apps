@@ -6,11 +6,13 @@ import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
 import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
+import type { Browser } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-import { click, mounted, openWith, reload, route, traverse } from "./support/app.js";
-import { start } from "./support/emulator.js";
+import { click, mounted, openWith, reload, route, traverse } from "./support/app.ts";
+import { start } from "./support/emulator.ts";
+import type { Emulator } from "./support/emulator.ts";
 
-let browser;
+let browser: Browser;
 
 before(async () => {
   browser = await launch();
@@ -21,7 +23,7 @@ after(async () => {
 
 for (const mount of ["/app", "/"]) {
   describe(`the build at ${mount}`, () => {
-    let emulator;
+    let emulator: Emulator;
     before(async () => {
       emulator = await start({ mount });
     });
@@ -32,14 +34,18 @@ for (const mount of ["/app", "/"]) {
     test("loads every asset, and a deep link, a reload, and history reach the router", async (t) => {
       const { origin, base } = emulator;
       // Every response and failed load the page's network log records, from the first request.
-      const responses = [];
-      const failures = [];
+      const responses: { url: string; status: number }[] = [];
+      const failures: { requestId: string; errorText: string }[] = [];
       const page = await openWith(browser, "about:blank", async (page) => {
-        page.on("Network.responseReceived", ({ response }) =>
-          responses.push({ url: response.url, status: response.status }),
+        page.on(
+          "Network.responseReceived",
+          ({ response }: { response: { url: string; status: number } }) =>
+            responses.push({ url: response.url, status: response.status }),
         );
-        page.on("Network.loadingFailed", ({ requestId, errorText }) =>
-          failures.push({ requestId, errorText }),
+        page.on(
+          "Network.loadingFailed",
+          ({ requestId, errorText }: { requestId: string; errorText: string }) =>
+            failures.push({ requestId, errorText }),
         );
         await page.cdp("Network.enable");
       });
