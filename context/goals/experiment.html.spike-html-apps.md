@@ -200,7 +200,7 @@ cleanup removes a directory only if the bin created it.
 
 ## Progress
 
-slices 9/17 committed (1–5, 7–10; 6 diagnosed, awaiting escalation 1, which holds 11) · standards — · spec — · editor —
+slices 9/17 committed (1–5, 7–10; 6 settled by escalation 1; 11 next) · standards — · spec — · editor —
 
 ## Decisions
 
@@ -737,6 +737,20 @@ slices 9/17 committed (1–5, 7–10; 6 diagnosed, awaiting escalation 1, which 
   value, never broken and never scrolling the log (architect, after CI's wider monospace broke the
   ids in the held 20rem log); fixed forward on `primitives-fix` before tagging v0.3.0.
 
+- tooling: kitten icat shows no image in a Neovim 0.12.6 `:terminal` buffer for two reasons:
+  the buffer's pty reports 0×0 pixels, so icat's detection exits 1 ("Terminal does not support
+  reporting screen sizes in pixels") before it sends anything; and libvterm consumes the APC
+  graphics sequences (raised as TermRequest), never forwarding them to kitty. Observed in kitty
+  0.49.2. Routes: the outer tty through `$NVIM` (`nvim_ui_send` over msgpack-RPC plus icat
+  `--unicode-placeholder`) renders, but needs a decision (an RPC client, a guessed cell geometry,
+  a second icat path); a kitty remote-control overlay needs a decision (a new output covering
+  Neovim; `KITTY_LISTEN_ON` can name a dead socket); Neovim's own support has no image API, and a
+  TermRequest forwarder needs a config change; tmux-style passthrough doesn't work (escalation 1).
+- tooling: behavior 8 stays as briefed: inside a Neovim `:terminal`, the terminal output prints
+  captions and paths plus one stderr line naming `--output browser`, with the reason "inside a
+  Neovim :terminal (no pixel size, graphics not passed through)". Rejected for v0.1.0: the
+  `$NVIM` placeholder route, kept as a later idea (architect, escalation 1).
+
 ## Pending edits
 
 - v1.client: `NewClient`, proven in spike-html-apps' `sdk` package, moves to go-web-service's
@@ -799,3 +813,6 @@ slices 9/17 committed (1–5, 7–10; 6 diagnosed, awaiting escalation 1, which 
 - primitives baselines, for the answer task (evidence 7): brotli per file, quality 11, text
   mode, KB = 1,000 B: foundation 43,595 B over 39 files, budget 48 KB; components 36,070 B over
   23 files, budget 40 KB; sdk 11,669 B over 7 files, budget 13 KB.
+- standards-lab `context/roadmap.toml`, backlog idea for a later spike-html-apps-tooling release:
+  inline screenshots in a Neovim `:terminal`, sending kitty graphics through `nvim_ui_send` over
+  `$NVIM` and printing icat's unicode placeholders (tooling, escalation 1).
