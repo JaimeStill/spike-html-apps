@@ -755,6 +755,9 @@ slices 11/17 committed (1–11; 12 redirected at its checkpoint: sources to .ts,
   no build step" means the consumer builds nothing. Slice 7 had read it as "no build" and shipped
   plain `.js` with handwritten `.d.ts`, which both reviews let pass (architect, at the v0.1.0
   checkpoint).
+- tooling: eslint stays at 10.13.0, behind pnpm's minimum release age, with no exclusion:
+  10.14.0 (published 2026-10-30T14:12Z) arrives once it has aged, in whichever repository's next
+  currency pass finds it. Tooling v0.1.0 doesn't wait on it (architect, checkpoint).
 
 ## Pending edits
 
