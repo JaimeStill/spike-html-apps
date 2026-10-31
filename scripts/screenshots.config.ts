@@ -1,6 +1,6 @@
 // The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
-// side pane's documents in each state, light and dark, over an emulator the start function boots
-// for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
+// side pane's documents in each state, docked at 1280px and in the drawer at 375px, light and
+// dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
 // app (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
@@ -23,7 +23,13 @@ import type { Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import { freePort, start } from "@jaimestill/spike-html-apps-tooling/process.js";
 import type { Description, Step } from "@jaimestill/spike-html-apps-tooling/screenshots.js";
 
-import { choose, entriesShown, listReady, throttle } from "../test/browser/support/documents.ts";
+import {
+  choose,
+  entriesShown,
+  listReady,
+  PAGINATION,
+  throttle,
+} from "../test/browser/support/documents.ts";
 
 /** The repository root, where the emulator reads config.json. */
 const root = join(import.meta.dirname, "..");
@@ -112,15 +118,70 @@ const failure: Step = async (page) => {
   );
 };
 
-/** The stacked layout: an upload under way above the list, the document view below. */
-const narrow: Step = async (page) => {
+/** The docked pane at its full width: an upload from the page under way above the list, and on
+ * the list's last page, the newest documents, runs a second apart advancing live. */
+const docked: Step = async (page) => {
   await listReady(page);
+  await throttle(page, 150_000);
+  await choose(page, [{ name: "annual-review-2026.pdf", size: 1_200_000 }]);
+  await upload("vendor-agreement.txt");
+  await wait(1_500);
+  await upload("release-notes.md");
+  await wait(300);
+  // Next page, until there is none: the last page, which holds the newest documents.
+  for (;;) {
+    const next = await page.evaluate(`(() => {
+      const next = ${PAGINATION}.querySelector('button[aria-label="Next page"]');
+      if (!next || next.disabled) return false;
+      next.click();
+      return true;
+    })()`);
+    if (!next) break;
+    await wait(200);
+    await listReady(page);
+  }
+  await until(page, `document.querySelector("pipeline-documents").uploads[0].sent > 400000`);
+};
+
+/** The drawer, as a page expression. */
+const DRAWER = "document.querySelector('pipeline-workspace sl-drawer')";
+
+/** Opens the drawer, and waits out its slide. */
+async function showDrawer(page: Page) {
+  await page.evaluate(`${DRAWER}.show()`);
+  await until(page, `${DRAWER}.shadowRoot.querySelector("dialog")?.matches(":modal")`);
+  await wait(400);
+}
+
+/** The narrow main view, the drawer closed: the documents button's badge counts an upload under
+ * way behind it. */
+const narrowBadge: Step = async (page) => {
+  await listReady(page);
+  await throttle(page, 100_000);
+  await choose(page, [{ name: "field-photos.zip", size: 1_500_000 }]);
+  await until(page, `document.querySelector("pipeline-documents").uploads[0].sent > 200000`);
+  await until(page, `document.querySelector(".workspace-documents .workspace-badge")`);
+};
+
+/** The drawer open over the narrow view, its list of the documents so far. */
+const narrowList: Step = async (page) => {
+  await listReady(page);
+  await showDrawer(page);
+};
+
+/** The drawer open mid-upload, the long name wrapping in the narrow pane. */
+const narrowUploading: Step = async (page) => {
+  await listReady(page);
+  await showDrawer(page);
   await throttle(page, 100_000);
   await choose(page, [
     { name: "a-long-document-name-that-wraps-in-a-narrow-pane.txt", size: 900_000 },
   ]);
   await until(page, `document.querySelector("pipeline-documents").uploads[0].sent > 300000`);
 };
+
+/** A phone's viewport. */
+const phone = { width: 375, height: 667 };
 
 const description: Description = {
   pages: [
@@ -134,11 +195,31 @@ const description: Description = {
         { name: "live", caption: "Side pane, live statuses", full: false, open: live },
         { name: "failure", caption: "Side pane, an upload refused", full: false, open: failure },
         {
-          name: "narrow",
-          caption: "Side pane, stacked at 375px",
-          viewport: { width: 375, height: 800 },
-          full: true,
-          open: narrow,
+          name: "docked",
+          caption: "Side pane, docked at 1280px, live and uploading",
+          full: false,
+          open: docked,
+        },
+        {
+          name: "narrow-badge",
+          caption: "Drawer closed at 375px, an upload counted on its button",
+          viewport: phone,
+          full: false,
+          open: narrowBadge,
+        },
+        {
+          name: "narrow-list",
+          caption: "Drawer open at 375px, the list",
+          viewport: phone,
+          full: false,
+          open: narrowList,
+        },
+        {
+          name: "narrow-uploading",
+          caption: "Drawer open at 375px, mid-upload",
+          viewport: phone,
+          full: false,
+          open: narrowUploading,
         },
       ],
     },

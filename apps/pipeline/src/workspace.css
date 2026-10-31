@@ -6,10 +6,18 @@
  * focus outline. Nothing here moves: no transition and no animation, so reduced motion has
  * nothing to stop.
  *
+ * The workspace's own content, the navigation, the panes' prose, and the views', is in the
+ * interface voice, the type profile's --font-ui and --leading-ui, as the components' controls are;
+ * the components' shadow roots inherit it, the dropzone's prose and its uploads' names among them.
+ *
  * Wide, the workspace fills the viewport: the header across the top, the side pane and the main
  * pane beside it below, each scrolling inside itself, its gutter kept so content arriving never
- * shifts it sideways. Below 48rem the panes stack into one column, header, side pane, then main
- * pane, and the page scrolls as one.
+ * shifts it sideways. The side pane is wide enough for a document's entry to take two lines, its
+ * name and status, then its size, type, and date: 26rem, or a third of the viewport where that is
+ * less, never below 20rem, so the main pane keeps at least 28rem at 48rem. Below 48rem (the
+ * query reads 47.99rem, the drawer's dock, workspace.ts's DOCK) the documents leave the side pane
+ * for the drawer's modal dialog, the header shows the button that opens it, the side pane holds
+ * only the navigation, a row below the header, and the page scrolls as one.
  */
 
 @layer app {
@@ -18,15 +26,17 @@
     grid-template:
       "header header" auto
       "side main" minmax(0, 1fr)
-      / minmax(16rem, 20rem) minmax(0, 1fr);
+      / clamp(20rem, 38vw, 30rem) minmax(0, 1fr);
     block-size: 100dvh;
+    font-family: var(--font-ui);
+    line-height: var(--leading-ui);
   }
 
   .workspace-header {
     grid-area: header;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "title search actions";
+    grid-template-areas: "title find actions";
     align-items: center;
     gap: var(--space-s);
     padding: var(--space-xs) var(--space-m);
@@ -43,8 +53,18 @@
     text-decoration: none;
   }
 
+  /* The search field, and narrow the documents button after it. */
+  .workspace-find {
+    grid-area: find;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+  }
+
   .workspace-search {
-    grid-area: search;
+    flex: 1 1 auto;
+    min-inline-size: 0;
     max-inline-size: 40rem;
 
     & input {
@@ -64,11 +84,51 @@
     gap: var(--space-2xs);
   }
 
+  /* The documents button, with its live region: the drawer docks wide, so only narrow, where it
+     follows the search field. */
+  .workspace-documents {
+    display: none;
+
+    & button {
+      white-space: nowrap;
+    }
+  }
+
+  /* The count of uploads in flight, and the mark of one that failed, on the documents button. */
+  .workspace-badge {
+    display: inline-block;
+    min-inline-size: 1.5em;
+    margin-inline-start: var(--space-3xs);
+    padding-inline: var(--space-3xs);
+    border-radius: var(--radius-full);
+    background-color: var(--blue);
+    color: var(--bg);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .workspace-failed {
+    background-color: var(--red);
+    color: var(--bg);
+  }
+
+  /* Read aloud, never shown: the documents button's live region. */
+  .workspace-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .workspace-side {
     grid-area: side;
     overflow-y: auto;
     scrollbar-gutter: stable;
-    padding: var(--space-m);
+    padding: var(--space-xs);
     border-inline-end: var(--line-s) solid var(--border);
     background-color: var(--bg);
 
@@ -112,9 +172,18 @@
     }
   }
 
-  /* The side pane's documents: the upload dropzone and the document list, each a pane. */
+  /* The side pane's documents, in the drawer: the upload dropzone and the document list, each a
+     pane. The first takes no room above it, the drawer's frame or its header being there. */
   pipeline-documents {
     display: block;
+
+    & > .workspace-pane:first-child {
+      margin-block-start: 0;
+    }
+  }
+
+  .workspace-side sl-drawer {
+    margin-block-start: var(--space-m);
   }
 
   /* While the live feed is paused, a quiet line above the list says so; the statuses below it
@@ -171,7 +240,7 @@
     }
   }
 
-  @media (width < 48rem) {
+  @media (max-width: 47.99rem) {
     pipeline-workspace {
       grid-template:
         "header" auto
@@ -182,25 +251,36 @@
     }
 
     .workspace-header {
+      padding-inline: var(--space-s);
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
         "title actions"
-        "search search";
+        "find find";
     }
 
     .workspace-search {
       max-inline-size: none;
     }
 
-    .workspace-side,
-    .workspace-main {
-      overflow-y: visible;
-      padding: var(--space-m);
+    .workspace-documents {
+      display: flex;
     }
 
+    /* The navigation alone, a row below the header; the drawer's closed dialog takes no room. */
     .workspace-side {
+      overflow-y: visible;
+      padding: var(--space-2xs) var(--space-s);
       border-inline-end: 0;
       border-block-end: var(--line-s) solid var(--border);
+    }
+
+    .workspace-side sl-drawer {
+      margin-block-start: 0;
+    }
+
+    .workspace-main {
+      overflow-y: visible;
+      padding: var(--space-m) var(--space-s);
     }
   }
 }

@@ -13,8 +13,16 @@
 // (live.ts), each run's entry changing in place. The page and its size are kept in sessionStorage,
 // so a reload shows the same page. Activating an entry navigates to its document's view, whose
 // entry is then the selected one.
+//
+// The element reports its uploads as they change, by `uploads-change`, so the workspace's header
+// can count those in flight while the drawer holding this element is closed. The element never
+// moves: the drawer swaps only its own wrapper around it, so the uploads, the page, and the live
+// statuses carry on whether the drawer is docked, open, or closed.
 
 import { html, LitElement, nothing } from "lit";
+import type { PropertyValues } from "lit";
+
+import { emit } from "@jaimestill/spike-html-apps-foundation/dom.js";
 
 import "@jaimestill/spike-html-apps-components/document-list.js";
 import type { DocumentItem } from "@jaimestill/spike-html-apps-components/document-list.js";
@@ -81,6 +89,11 @@ function storePaging(page: number, size: number) {
   } catch {
     // Nothing to keep the page in: a reload shows the first.
   }
+}
+
+/** `uploads-change`'s detail: every upload the element shows, in flight or finished. */
+export interface UploadsChangeDetail {
+  uploads: readonly UploadItem[];
 }
 
 /** An upload in flight or finished, with the controller that cancels it. */
@@ -162,6 +175,12 @@ export class PipelineDocuments extends LitElement {
     this.#disconnect?.abort();
     this.#load?.abort();
     clearTimeout(this.#soon);
+  }
+
+  protected updated(changed: PropertyValues<this>) {
+    if (changed.has("uploads")) {
+      emit<UploadsChangeDetail>(this, "uploads-change", { uploads: this.uploads });
+    }
   }
 
   render() {

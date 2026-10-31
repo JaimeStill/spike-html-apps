@@ -116,3 +116,13 @@ export async function openWith(
   await page.goto(url);
   return page;
 }
+
+/** Sizes the page's viewport to `width` by `height`, as a window of that size is. */
+export async function resize(page: Page, width: number, height = 800): Promise<void> {
+  await page.cdp("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+}
