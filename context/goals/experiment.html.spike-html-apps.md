@@ -938,6 +938,16 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
   terminal themes where every hue is text on the backgrounds. Foundation v0.3.0 establishes an
   accent token beside `--interaction-color`; v0.2.3 releases the keys fixes and the accent
   documentation first (architect).
+- pipeline: the accent is a hook, `--accent-color`, the same mechanism as `--interaction-color`:
+  read as `var(--accent-color, var(--magenta))`, declared by no profile, set by a page on any
+  subtree. It marks what is current, active, or in progress; `--interaction-color` marks what you
+  can act on. Magenta, not purple (visited links), cyan (beside blue, near green; everforest's is
+  green), or a status hue. Moving to it: the active stage, the streaming dot, the selected entry's
+  frame, the app's in-flight badge and current nav link, and native `progress`; checkbox, radio,
+  range, links, focus, caret, selection, hover, and the drag-over zone stay on the primary.
+  Releases: foundation v0.3.0, components v0.6.0 (peer ^0.3.0, carrying the drawer's dock and
+  docked-heading changes in place of v0.5.1), noctis v0.1.1 (peer ^0.3.0) in this task, the root
+  on all of them (architect).
 
 ## Pending edits
 
@@ -1025,3 +1035,5 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
   "spike-html-apps-foundation", "spike-html-apps-components", "spike-html-apps-tooling"]`.
 - v1.client, the NewClient pending edit: the measured shape gains the list of render-blocking
   manifest modules.
+- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
+  `spike-html-apps-noctis` (its peer range moves to foundation ^0.3.0 in this task).
