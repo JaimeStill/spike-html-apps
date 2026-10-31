@@ -65,8 +65,11 @@ export default defineConfig([
   globalIgnores(["apps/*/dist/"]),
   { files: code, extends: [js.configs.recommended, tseslint.configs.recommended] },
   { files: code, languageOptions: { globals: globals.browser } },
-  // The suite and the config run on node.
-  { files: ["test/**", "eslint.config.js"], languageOptions: { globals: globals.node } },
+  // The suite, the scripts, and the config run on node.
+  {
+    files: ["test/**", "scripts/**", "eslint.config.js"],
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ["apps/**"],
     plugins: { boundaries, "import-x": importX },

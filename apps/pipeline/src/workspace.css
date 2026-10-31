@@ -112,6 +112,23 @@
     }
   }
 
+  /* The side pane's documents: the upload dropzone and the document list, each a pane. */
+  pipeline-documents {
+    display: block;
+  }
+
+  /* While the live feed is paused, a quiet line above the list says so; the statuses below it
+     stand as they were last told. */
+  .documents-live {
+    margin-block: 0 var(--space-2xs);
+    font-size: var(--text-s);
+    color: var(--fg-2);
+  }
+
+  .documents-retry {
+    margin-block-start: var(--space-xs);
+  }
+
   .workspace-main {
     grid-area: main;
     overflow-y: auto;

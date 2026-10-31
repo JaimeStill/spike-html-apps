@@ -1,7 +1,7 @@
 // The app's frame, <pipeline-workspace>: a header holding the title, the search field, the help
-// button, and the theme menu; a side pane holding the views' navigation, the upload dropzone, and
-// the document list (placeholders until slice 13); the main pane, the router's outlet, which shows
-// one view; and the help dialog. It renders into light DOM, so the foundation's keys module, which
+// button, and the theme menu; a side pane holding the views' navigation and <pipeline-documents>,
+// the upload dropzone and the document list, its entry for the document the main pane shows
+// marked; the main pane, the router's outlet, which shows one view; and the help dialog. It renders into light DOM, so the foundation's keys module, which
 // reads data-keys from the document, binds its controls, and the page's sheets style it.
 //
 // The shortcuts are the foundation's: data-keys on the search field (/), which keys.js focuses,
@@ -14,6 +14,8 @@ import { html, LitElement } from "lit";
 import { live } from "lit/directives/live.js";
 
 import type { Match } from "@jaimestill/spike-html-apps-sdk/router.js";
+
+import "./documents.ts";
 
 export const workspaceTag = "pipeline-workspace";
 
@@ -46,6 +48,8 @@ export class PipelineWorkspace extends LitElement {
   render() {
     const pattern = this.route?.pattern;
     const query = pattern === "/search" ? (this.route?.query.get("q") ?? "") : "";
+    const selected =
+      pattern === "/documents/:document" ? (this.route?.params.document ?? null) : null;
     return html`
       <header class="workspace-header">
         <a class="workspace-title" href=".">Pipeline</a>
@@ -83,14 +87,7 @@ export class PipelineWorkspace extends LitElement {
             )}
           </ul>
         </nav>
-        <section class="workspace-pane" aria-labelledby="upload-heading">
-          <h2 id="upload-heading">Upload</h2>
-          <p class="view-placeholder">Drop files here, or choose them, to start a run.</p>
-        </section>
-        <section class="workspace-pane" aria-labelledby="documents-heading">
-          <h2 id="documents-heading">Documents</h2>
-          <p class="view-placeholder">Each uploaded document and its run's status, a page at a time.</p>
-        </section>
+        <pipeline-documents .selected=${selected}></pipeline-documents>
       </aside>
       <main class="workspace-main"></main>
       <dialog id="help" class="workspace-help" aria-labelledby="help-title">

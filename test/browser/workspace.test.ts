@@ -134,7 +134,8 @@ for (const mount of ["/app", "/"]) {
         true,
         "the search view stays mounted for a new query",
       );
-      // The document list's links come with slice 13; a same-document navigation stands in.
+      // An entry of the document list reaches the view in documents.test.ts; a same-document
+      // navigation stands in here.
       await page.evaluate("navigation.navigate('documents/doc-1').finished.then(() => true)");
       await reached(page, base, doc);
 

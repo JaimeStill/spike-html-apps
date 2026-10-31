@@ -95,7 +95,16 @@ for (const mount of ["/app", "/"]) {
           assets.some(({ url }) => /\/chat-[\w-]+\.js$/.test(url)),
           "the chunk loaded",
         );
-        assert.ok(responses.every(({ url }) => url.startsWith(`${origin}${base}`)));
+        // Every other response is under the base, but the API's, at its own mount, which the side
+        // pane's document list calls.
+        const api = `${origin}/api/`;
+        assert.ok(
+          responses.every(({ url }) => url.startsWith(`${origin}${base}`) || url.startsWith(api)),
+        );
+        assert.ok(
+          responses.some(({ url }) => url.startsWith(`${api}documents?`)),
+          "the document list loaded",
+        );
       } finally {
         await page.close();
       }

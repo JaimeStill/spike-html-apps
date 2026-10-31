@@ -1,28 +1,19 @@
 // The live event log, the "/" route: each run's stage events as text lines as they arrive, until
-// slice 16 shows the stream through sl-event-log. The element reads while it is connected and
-// stops when the router replaces it. It keeps the cursor
-// of the last event it showed in sessionStorage, so a reload, or a return to the route, continues
-// the sequence after it with no gap and no duplicate; a tab that has shown none reads from the
-// oldest event the stream keeps.
+// slice 16 shows the stream through sl-event-log, on the app's one feed (live.ts). Until then the
+// log keeps a read of its own, on the feed's sequence and so on its one connection. The element
+// reads while it is connected and stops when the router replaces it. It keeps the cursor of the
+// last event it showed in sessionStorage, so a reload, or a return to the route, continues the
+// sequence after it with no gap and no duplicate; a tab that has shown none reads from the oldest
+// event the stream keeps.
 
 import { html, LitElement } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 
 import type { Cursor, EventSequence } from "@jaimestill/spike-html-apps-sdk/events.js";
 
+import { stageType } from "./live.ts";
+import type { StageData } from "./live.ts";
 import { frame } from "./views/view.ts";
-
-/** The stage event's type: the emulator's nats.prefix ("emulator", its config's default) and the
- * run domain's run.stage. */
-export const stageType = "emulator.run.stage";
-
-/** A stage event's data, as the run domain's StageCompletedData writes it. */
-interface StageData {
-  stage: string;
-  position: number;
-  stage_count: number;
-  document_id: string;
-}
 
 /** The sessionStorage key of the last cursor the log showed. */
 export const cursorKey = "pipeline-log.cursor";
