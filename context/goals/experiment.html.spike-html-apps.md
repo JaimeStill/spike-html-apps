@@ -954,6 +954,11 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
 - pipeline: integration's TestNATS_TokenRequired is flaky: the server can close the WebSocket before
   the tokenless client's write lands, giving "broken pipe" in place of an authorization violation;
   fixed in the root's next slice.
+- pipeline: foundation v0.2.3 (keys under a shadow-root modal; PR #7, 6979663) and v0.3.0 (the
+  `--accent-color` hook, magenta; PR #8, 373e357) released. The accent stays magenta: in
+  catppuccin and everforest light Chrome draws native progress's unfilled track dark for a light
+  accent, as everforest's blue range already does; that is native behavior and isn't patched, and
+  cyan would only even out catppuccin (architect).
 
 ## Pending edits
 
