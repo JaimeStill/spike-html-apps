@@ -1,0 +1,189 @@
+/*
+ * The workspace's layout and the views' frame, in the layer app, after every foundation layer
+ * page-full.css declares, so a rule here beats the foundation's at any specificity. Colors, space,
+ * type, and lines read the foundation's tokens alone, so the frame follows every profile and
+ * scheme the theme menu applies; the foundation's elements layer gives every control its visible
+ * focus outline. Nothing here moves: no transition and no animation, so reduced motion has
+ * nothing to stop.
+ *
+ * Wide, the workspace fills the viewport: the header across the top, the side pane and the main
+ * pane beside it below, each scrolling inside itself, its gutter kept so content arriving never
+ * shifts it sideways. Below 48rem the panes stack into one column, header, side pane, then main
+ * pane, and the page scrolls as one.
+ */
+
+@layer app {
+  pipeline-workspace {
+    display: grid;
+    grid-template:
+      "header header" auto
+      "side main" minmax(0, 1fr)
+      / minmax(16rem, 20rem) minmax(0, 1fr);
+    block-size: 100dvh;
+  }
+
+  .workspace-header {
+    grid-area: header;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "title search actions";
+    align-items: center;
+    gap: var(--space-s);
+    padding: var(--space-xs) var(--space-m);
+    border-block-end: var(--line-s) solid var(--border);
+    background-color: var(--bg-1);
+  }
+
+  .workspace-title {
+    grid-area: title;
+    font-family: var(--font-heading);
+    font-size: var(--text-l);
+    font-weight: 700;
+    color: var(--fg);
+    text-decoration: none;
+  }
+
+  .workspace-search {
+    grid-area: search;
+    max-inline-size: 40rem;
+
+    & input {
+      inline-size: 100%;
+    }
+  }
+
+  /* The menu element holds only its dialog, which opens in the top layer: no box of its own, so it
+     takes no cell of the header's grid. */
+  .workspace-header sl-theme-menu {
+    display: contents;
+  }
+
+  .workspace-actions {
+    grid-area: actions;
+    display: flex;
+    gap: var(--space-2xs);
+  }
+
+  .workspace-side {
+    grid-area: side;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: var(--space-m);
+    border-inline-end: var(--line-s) solid var(--border);
+    background-color: var(--bg);
+
+    & nav ul {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2xs);
+    }
+
+    /* The flex gap spaces the items, in place of the flow's margin between list items. */
+    & nav li {
+      margin: 0;
+    }
+
+    & nav a {
+      display: block;
+      padding: var(--space-3xs) var(--space-xs);
+      border: var(--line-s) solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--fg-2);
+      text-decoration: none;
+    }
+
+    /* The current view's link, framed and in the text's strongest step; a border both states
+       hold, so marking it moves nothing. */
+    & nav a[aria-current="page"] {
+      border-color: var(--border-2);
+      background-color: var(--bg-1);
+      color: var(--fg);
+    }
+  }
+
+  .workspace-pane {
+    margin-block-start: var(--space-l);
+
+    & h2 {
+      margin-block: 0 var(--space-2xs);
+      font-size: var(--text-m);
+    }
+  }
+
+  .workspace-main {
+    grid-area: main;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: var(--space-m) var(--space-l);
+  }
+
+  .workspace-help {
+    inline-size: min(36rem, calc(100vw - 2 * var(--space-m)));
+  }
+
+  .workspace-help-note {
+    margin-block-start: var(--space-s);
+    color: var(--fg-2);
+  }
+
+  /* A view's frame, which every view in the main pane renders. */
+  .view-header h1 {
+    margin-block: 0 var(--space-s);
+    font-size: var(--text-2xl);
+  }
+
+  .view-meta {
+    color: var(--fg-2);
+  }
+
+  .view-placeholder {
+    padding: var(--space-m);
+    border: var(--line-s) dashed var(--border-2);
+    border-radius: var(--radius-md);
+    color: var(--fg-2);
+  }
+
+  .log {
+    font-family: var(--font-code);
+    font-size: var(--text-s);
+
+    & .error {
+      color: var(--red);
+    }
+  }
+
+  @media (width < 48rem) {
+    pipeline-workspace {
+      grid-template:
+        "header" auto
+        "side" auto
+        "main" auto
+        / minmax(0, 1fr);
+      block-size: auto;
+    }
+
+    .workspace-header {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "title actions"
+        "search search";
+    }
+
+    .workspace-search {
+      max-inline-size: none;
+    }
+
+    .workspace-side,
+    .workspace-main {
+      overflow-y: visible;
+      padding: var(--space-m);
+    }
+
+    .workspace-side {
+      border-inline-end: 0;
+      border-block-end: var(--line-s) solid var(--border);
+    }
+  }
+}

@@ -125,7 +125,7 @@ dir = "{{config_root}}"
 # and each file boots it on reserved loopback ports, under its own TMPDIR, as test/browser/support/
 # emulator.ts does.
 [tasks."test:browser"]
-description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the NATS adapter's live reads, two instances side by side, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the workspace's views by deep link, reload, and history at each mount and its stacked layout, the shortcuts, the theme menu and its stored choice before first paint, the NATS adapter's live reads, two instances side by side, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["preflight browser", "build:app"]
 run = '''
 set -eu

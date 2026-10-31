@@ -47,16 +47,18 @@ func defineClient(g *graph.Graph, n *Nodes) {
 // newClient constructs the pipeline app's handler over the dist node's
 // build, at the app block's mount, with the shell's config from the config
 // node: the API mount, and the nats block's public WebSocket URL, stream,
-// and token. A build with no manifest, or one without the app's entry,
-// fails here, so the Build fails and the service refuses to start, naming
+// and token; the app's render-blocking modules load ahead of its entry. A
+// build with no manifest, or one without the app's entry or one of those
+// modules, fails here, so the Build fails and the service refuses to start, naming
 // the problem.
 func newClient(n *Nodes) func(*graph.Scope) (http.Handler, error) {
 	return func(s *graph.Scope) (http.Handler, error) {
 		cfg := s.Use(n.Config)
 		return sdk.NewClient(s.Use(n.Dist), sdk.ClientOptions{
-			Base:  cfg.App.Mount,
-			Title: clientTitle,
-			Entry: pipeline.Entry,
+			Base:           cfg.App.Mount,
+			Title:          clientTitle,
+			Entry:          pipeline.Entry,
+			RenderBlocking: pipeline.RenderBlocking,
 			Config: clientConfig{
 				APIBase: apiMount,
 				NATS: clientNATSConfig{

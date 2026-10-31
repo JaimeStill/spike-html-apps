@@ -93,13 +93,20 @@ type running struct {
 }
 
 // fixtureBuild is a minimal Vite build of the pipeline app, as NewClient
-// reads it: the manifest naming the app's entry, and the entry's script.
+// reads it: the manifest naming the app's entry and its render-blocking
+// modules, and their scripts.
 // The unit tier serves it in place of the embedded build, which holds only
 // its placeholder until mise run build:app writes one.
 func fixtureBuild() fstest.MapFS {
 	return fstest.MapFS{
-		".vite/manifest.json": {Data: []byte(`{"src/main.ts": {"file": "assets/main-test.js", "isEntry": true}}`)},
-		"assets/main-test.js": {Data: []byte("export {}")},
+		".vite/manifest.json": {Data: []byte(`{
+			"src/main.ts": {"file": "assets/main-test.js", "isEntry": true},
+			"src/register.ts": {"file": "assets/register-test.js", "isEntry": true},
+			"src/preferences.ts": {"file": "assets/preferences-test.js", "isEntry": true}
+		}`)},
+		"assets/main-test.js":        {Data: []byte("export {}")},
+		"assets/register-test.js":    {Data: []byte("export {}")},
+		"assets/preferences-test.js": {Data: []byte("export {}")},
 	}
 }
 

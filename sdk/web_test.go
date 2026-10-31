@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -18,7 +19,10 @@ import (
 // build is a Vite build as NewClient reads it: a manifest whose entry
 // imports a shared chunk statically and a route dynamically, the entry and
 // the shared chunk each pulling in CSS, and a file copied from a public
-// directory, which Vite does not hash.
+// directory, which Vite does not hash. Two more entries stand for modules
+// a shell loads render-blocking: one with CSS of its own, importing the
+// entry's shared chunk and a chunk of their own, and one importing that
+// chunk alone.
 func build() fstest.MapFS {
 	return fstest.MapFS{
 		".vite/manifest.json": {Data: []byte(`{
@@ -29,7 +33,17 @@ func build() fstest.MapFS {
 				"dynamicImports": ["src/about.ts"]
 			},
 			"_shared-def.js": {"file": "assets/shared-def.js", "css": ["assets/shared-def.css"]},
-			"src/about.ts": {"file": "assets/about-ghi.js", "isDynamicEntry": true, "css": ["assets/about-ghi.css"]}
+			"src/about.ts": {"file": "assets/about-ghi.js", "isDynamicEntry": true, "css": ["assets/about-ghi.css"]},
+			"src/register.ts": {
+				"file": "assets/register-jkl.js", "src": "src/register.ts", "isEntry": true,
+				"css": ["assets/register-jkl.css"],
+				"imports": ["_shared-def.js", "_registry-mno.js"]
+			},
+			"src/preferences.ts": {
+				"file": "assets/preferences-pqr.js", "src": "src/preferences.ts", "isEntry": true,
+				"imports": ["_registry-mno.js"]
+			},
+			"_registry-mno.js": {"file": "assets/registry-mno.js"}
 		}`)},
 		"assets/main-abc.js":   {Data: []byte("console.log('main')")},
 		"assets/main-abc.css":  {Data: []byte("body{}")},
@@ -110,6 +124,7 @@ func TestNewClient_FailsNamingTheProblem(t *testing.T) {
 		"double slash":     {build(), sdk.ClientOptions{Base: "//", Entry: "src/main.ts"}, `base "//"`},
 		"unclean base":     {build(), sdk.ClientOptions{Base: "/a/../app", Entry: "src/main.ts"}, `base "/a/../app"`},
 		"unencodable":      {build(), sdk.ClientOptions{Base: "/", Entry: "src/main.ts", Config: func() {}}, "encode the config"},
+		"missing blocking": {build(), sdk.ClientOptions{Base: "/", Entry: "src/main.ts", RenderBlocking: []string{"src/register.ts", "src/theme.ts"}}, `no entry "src/theme.ts"`},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -160,6 +175,72 @@ func TestNewClient_Shell(t *testing.T) {
 				t.Errorf("shell names the dynamic import's files:\n%s", body)
 			}
 		})
+	}
+}
+
+// shellLinks matches the shell's stylesheet links, modulepreload links, and
+// module scripts, in document order: the kind, any blocking attribute, and
+// the URL.
+var shellLinks = regexp.MustCompile(`<link rel="(stylesheet|modulepreload)" href="([^"]*)">|<script type="module"( blocking="render")? src="([^"]*)"></script>`)
+
+// shellOrder lists body's links and module scripts in document order, each
+// as "stylesheet URL", "modulepreload URL", "blocking URL", or "module URL".
+func shellOrder(body string) []string {
+	var order []string
+	for _, m := range shellLinks.FindAllStringSubmatch(body, -1) {
+		switch {
+		case m[1] != "":
+			order = append(order, m[1]+" "+m[2])
+		case m[3] != "":
+			order = append(order, "blocking "+m[4])
+		default:
+			order = append(order, "module "+m[4])
+		}
+	}
+	return order
+}
+
+// The render-blocking modules load ahead of the entry, in the order
+// RenderBlocking lists them (here against the manifest's own order), each
+// a module script with blocking="render"; the entry follows them,
+// non-blocking. Their CSS comes first, then the entry's, and every chunk
+// any of them imports statically is preloaded once, never a chunk a script
+// loads itself.
+func TestNewClient_RenderBlocking(t *testing.T) {
+	opts := options("/")
+	opts.RenderBlocking = []string{"src/preferences.ts", "src/register.ts"}
+	h, err := sdk.NewClient(build(), opts)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	got := shellOrder(serve(h, http.MethodGet, "/").Body.String())
+	want := []string{
+		"stylesheet assets/register-jkl.css",
+		"stylesheet assets/shared-def.css",
+		"stylesheet assets/main-abc.css",
+		"modulepreload assets/registry-mno.js",
+		"modulepreload assets/shared-def.js",
+		"blocking assets/preferences-pqr.js",
+		"blocking assets/register-jkl.js",
+		"module assets/main-abc.js",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("shell loads\n  %s\nwant\n  %s", strings.Join(got, "\n  "), strings.Join(want, "\n  "))
+	}
+}
+
+// With no RenderBlocking the shell loads the entry alone, and nothing
+// blocks rendering.
+func TestNewClient_NoRenderBlocking(t *testing.T) {
+	got := shellOrder(serve(newClient(t, "/"), http.MethodGet, "/").Body.String())
+	want := []string{
+		"stylesheet assets/main-abc.css",
+		"stylesheet assets/shared-def.css",
+		"modulepreload assets/shared-def.js",
+		"module assets/main-abc.js",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("shell loads %q, want %q", got, want)
 	}
 }
 

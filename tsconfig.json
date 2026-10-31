@@ -3,6 +3,9 @@
 // packages' declarations. The suite isn't included: it runs on node's APIs, and
 // tsconfig.test.json checks it against node's types (mise run types:test). skipLibCheck: the
 // declarations the ESLint plugins ship name node's types and type-fest, which they don't install.
+// types names the foundation's ambient *.css declaration, so the apps' stylesheet imports resolve:
+// the side-effect imports Vite bundles as CSS, and the CSS module scripts vite.config.ts's plugin
+// loads as the CSSStyleSheet it declares.
 // Adapted from spike-html-apps-foundation (12f4d53): tsconfig.json, with no emit, the root's
 // inputs, and the library declarations skipped.
 {
@@ -11,7 +14,7 @@
     "lib": ["es2024", "dom", "dom.iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": [],
+    "types": ["@jaimestill/spike-html-apps-foundation/css"],
     "strict": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,

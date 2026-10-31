@@ -119,17 +119,17 @@ describe("a read resumed from the last cursor", () => {
     assertRun(t, await linesOnce(page, 5), { doc: first, first: 1 });
     assert.equal(await page.evaluate(`sessionStorage.getItem(${JSON.stringify(cursorKey)})`), "5");
 
-    // The about route replaces the log, whose read ends; the next run's events are appended while
+    // The chat view replaces the log, whose read ends; the next run's events are appended while
     // nothing reads, and the reload loads a new document, which keeps only the stored cursor.
-    await click(page, "About");
-    await mounted(page, "pipeline-about");
+    await click(page, "Chat");
+    await mounted(page, "pipeline-chat");
     const second = await uploadRun("second.txt");
     await reload(page);
-    await mounted(page, "pipeline-about");
+    await mounted(page, "pipeline-chat");
     assert.equal(await page.evaluate(`sessionStorage.getItem(${JSON.stringify(cursorKey)})`), "5");
 
     // The log's read starts after the stored cursor: the second run whole, then a third live.
-    await click(page, "Log");
+    await click(page, "Event log");
     await mounted(page, "pipeline-log");
     assertRun(t, await linesOnce(page, 5), { doc: second, first: 6 });
     const third = await uploadRun("third.txt");

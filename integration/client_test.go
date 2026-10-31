@@ -10,6 +10,7 @@ import (
 
 	"github.com/standards-lab/go-web-sdk"
 
+	"github.com/JaimeStill/spike-html-apps/apps/pipeline"
 	"github.com/JaimeStill/spike-html-apps/integration"
 )
 
@@ -30,23 +31,34 @@ func fetch(t *testing.T, url string) (int, http.Header, string) {
 
 // The binary serves the pipeline app's real build, the one build:app wrote
 // and the binary embedded, at the default /app and at the root: the shell
-// names the manifest's entry under the mount's base, the entry answers as
-// an immutable JavaScript asset, and the probes still answer.
+// names the manifest's render-blocking modules, then its entry, under the
+// mount's base, the entry answers as an immutable JavaScript asset, and the
+// probes still answer.
 func TestClient_ServesTheBuild(t *testing.T) {
-	entry := integration.Manifest(t)["src/main.ts"].File
+	manifest := integration.Manifest(t)
+	entry := manifest["src/main.ts"].File
 	if entry == "" {
 		t.Fatal("the build's manifest has no src/main.ts entry")
 	}
+	var scripts string
+	for _, key := range pipeline.RenderBlocking {
+		file := manifest[key].File
+		if file == "" {
+			t.Fatalf("the build's manifest has no %s entry", key)
+		}
+		scripts += `<script type="module" blocking="render" src="` + file + `"></script>` + "\n"
+	}
+	scripts += `<script type="module" src="` + entry + `">`
 	for mount, href := range map[string]string{"/app": "/app/", "/": "/"} {
 		t.Run(mount, func(t *testing.T) {
 			s := integration.Start(t, integration.Options{Env: []string{"EMULATOR_APP_MOUNT=" + mount}})
 
-			code, _, body := fetch(t, s.URL()+href+"about")
+			code, _, body := fetch(t, s.URL()+href+"chat")
 			if code != http.StatusOK ||
 				!strings.Contains(body, `<base href="`+href+`">`) ||
-				!strings.Contains(body, `<script type="module" src="`+entry+`">`) ||
+				!strings.Contains(body, scripts) ||
 				!strings.Contains(body, `"url":"`+s.WebSocketURL()+`"`) {
-				t.Errorf("GET %sabout = %d %q, want the shell at base %s naming %s and the WebSocket URL %s", href, code, body, href, entry, s.WebSocketURL())
+				t.Errorf("GET %schat = %d %q, want the shell at base %s loading %s and the WebSocket URL %s", href, code, body, href, scripts, s.WebSocketURL())
 			}
 
 			code, header, _ := fetch(t, s.URL()+href+entry)
