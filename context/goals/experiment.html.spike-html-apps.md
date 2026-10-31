@@ -900,6 +900,15 @@ slices 10/18 (tooling v0.3.0, PR #4, 08378cd; foundation v0.2.1, PR #5, 8b12185;
   foundation checkpoint).
 - pipeline: tooling v0.3.0's CHANGELOG dropped its empty `[Unreleased]` header and link, which the
   foundation keeps; restore it at tooling's next change.
+- pipeline: the layers' CSS module scripts under Vite 8: adopt vite-plugin-standard-css-modules if
+  it builds and passes on Vite 8; otherwise the foundation exports a build-time sheets() plugin in
+  v0.2.2. Rejected: each Vite consumer carrying its own (architect, slice 12 escalation).
+- pipeline: slice 13 design review (architect): the side pane widens so most entries take two
+  lines; the app's light-DOM content takes the foundation's font tokens; formatBytes says "13
+  bytes", fixed in the foundation as v0.2.2; sl-entry drops its "file"/"directory" kind word, since
+  the meta line already shows it, released as components v0.4.1; below the stacking width the
+  documents pane becomes an overlay drawer the user opens and closes, so the main pane keeps the
+  view.
 
 ## Pending edits
 
