@@ -948,6 +948,12 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
   Releases: foundation v0.3.0, components v0.6.0 (peer ^0.3.0, carrying the drawer's dock and
   docked-heading changes in place of v0.5.1), noctis v0.1.1 (peer ^0.3.0) in this task, the root
   on all of them (architect).
+- pipeline: eslint 10.14.0 cleared pnpm's release age (2026-10-31T14:12Z), so the hold ends: the
+  root, components, foundation, and noctis take it in this task; tooling, already released, takes
+  it in its next currency pass.
+- pipeline: integration's TestNATS_TokenRequired is flaky: the server can close the WebSocket before
+  the tokenless client's write lands, giving "broken pipe" in place of an authorization violation;
+  fixed in the root's next slice.
 
 ## Pending edits
 
