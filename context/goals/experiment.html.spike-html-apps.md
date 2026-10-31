@@ -909,6 +909,15 @@ slices 10/18 (tooling v0.3.0, PR #4, 08378cd; foundation v0.2.1, PR #5, 8b12185;
   the meta line already shows it, released as components v0.4.1; below the stacking width the
   documents pane becomes an overlay drawer the user opens and closes, so the main pane keeps the
   view.
+- pipeline: the dropzone's progress line keeps formatBytes' mixed forms, "0 bytes of 18.4 kB"
+  (architect, foundation v0.2.2 checkpoint).
+- pipeline: the root declares rolldown at the version Vite resolves (1.2.15), since
+  vite-plugin-standard-css-modules imports rolldown/utils without declaring it and resolves it only
+  through pnpm's hidden hoist; no upstream issue, the use case being niche (architect).
+- pipeline: the narrow-screen drawer is a component, sl-drawer, released with the entry changes as
+  components v0.5.0: one native dialog, docked inline above its `dock` width and a modal drawer at
+  or below it, the content never re-parented; the app keeps its button, badge, `d` shortcut,
+  close-on-navigate, and open-on-drag (architect).
 
 ## Pending edits
 

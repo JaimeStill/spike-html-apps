@@ -23,7 +23,8 @@ export default defineConfig({
   // Vite's CSS pipeline and is minified like the bundled CSS. include names the importers it
   // parses: the layers' modules, the only ones holding CSS module scripts (the app's own CSS is
   // side-effect imports). outputMode pins the CSSStyleSheet the components adopt, never Lit's
-  // CSSResult, which the plugin otherwise emits under SSR.
+  // CSSResult, which the plugin otherwise emits under SSR. It parses with rolldown/utils, which it
+  // doesn't declare, so package.json declares rolldown at the version Vite resolves.
   plugins: [
     standardCssModules({
       include: ["**/node_modules/@jaimestill/**/*.js"],
