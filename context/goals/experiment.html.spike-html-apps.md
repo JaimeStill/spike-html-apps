@@ -934,6 +934,10 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
   same header markup with the Close button only in drawer mode, so the app drops its own
   "Documents" heading; the search field's placeholder is "Search" on narrow widths; an accent token
   joins foundation v0.2.3 only if a review of the components shows it adds value.
+- pipeline: no contrast adjustments to the palettes: they stay as published, proven usable as
+  terminal themes where every hue is text on the backgrounds. Foundation v0.3.0 establishes an
+  accent token beside `--interaction-color`; v0.2.3 releases the keys fixes and the accent
+  documentation first (architect).
 
 ## Pending edits
 
