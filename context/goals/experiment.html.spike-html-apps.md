@@ -927,6 +927,13 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
 - pipeline: sl-drawer is an `<aside>` landmark docked and a full-viewport modal `<dialog>` with its
   own heading and Close button at or below `dock`, closing by Close, Escape, or close(); no
   hand-detected scrim click; markup `open` honoured at or below dock (architect, drawer reviews).
+- pipeline: layout review (architect): the foundation's keys sees a modal open inside a shadow
+  root, released as foundation v0.2.3, so page shortcuts are quiet while the drawer is open and `d`
+  only opens it; sl-drawer docks at and above `dock` (`(width < dock)` is the drawer), released as
+  components v0.5.1, dropping the app's `47.99rem`; sl-drawer owns its heading in both modes, the
+  same header markup with the Close button only in drawer mode, so the app drops its own
+  "Documents" heading; the search field's placeholder is "Search" on narrow widths; an accent token
+  joins foundation v0.2.3 only if a review of the components shows it adds value.
 
 ## Pending edits
 
