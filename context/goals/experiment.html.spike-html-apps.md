@@ -215,9 +215,12 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 10/18 (tooling v0.3.0, PR #4, 08378cd; foundation v0.2.1, PR #5, 8b12185; components
-  v0.4.0, PR #7, 360cefc: each released, tag and GitHub release confirmed; eslint held, so slice 10
-  drops) · standards: tooling, foundation, components done · spec — · editor —
+slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0, PR #7;
+  root slices 11 66a2447, 12 bcbe652, 13 3333b82; after slice 13's design review: the CSS-module
+  plugin b00c29c and rolldown 2e8843b; foundation v0.2.2, PR #6, 41d3ab7; components v0.5.0
+  (sl-drawer, sl-entry), PR #8, c8c830f; every tag and GitHub release confirmed; eslint held) ·
+  next: the root's layout fixes from slice 13's review, then slices 14–18 · standards: tooling,
+  foundation, components done · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
@@ -918,6 +921,12 @@ slices 10/18 (tooling v0.3.0, PR #4, 08378cd; foundation v0.2.1, PR #5, 8b12185;
   components v0.5.0: one native dialog, docked inline above its `dock` width and a modal drawer at
   or below it, the content never re-parented; the app keeps its button, badge, `d` shortcut,
   close-on-navigate, and open-on-drag (architect).
+- pipeline: the Release line grows by foundation v0.2.2 (formatBytes) and components v0.5.0
+  (sl-drawer; sl-entry's meta line and accessible name), each from slice 13's design review and
+  accepted at its own checkpoint (architect).
+- pipeline: sl-drawer is an `<aside>` landmark docked and a full-viewport modal `<dialog>` with its
+  own heading and Close button at or below `dock`, closing by Close, Escape, or close(); no
+  hand-detected scrim click; markup `open` honoured at or below dock (architect, drawer reviews).
 
 ## Pending edits
 
