@@ -215,9 +215,9 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 7/18 (tooling v0.3.0 released, PR #4, 08378cd; foundation v0.2.1 released, PR #5,
-  8b12185; components slice 7 committed, tooling #v0.3.0 and foundation #v0.2.1, eslint held) ·
-  standards: tooling, foundation done · spec — · editor —
+slices 10/18 (tooling v0.3.0, PR #4, 08378cd; foundation v0.2.1, PR #5, 8b12185; components
+  v0.4.0, PR #7, 360cefc: each released, tag and GitHub release confirmed; eslint held, so slice 10
+  drops) · standards: tooling, foundation, components done · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
