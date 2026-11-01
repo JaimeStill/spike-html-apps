@@ -1,8 +1,8 @@
 // The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
 // side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
-// the drawer at 375px; and the document view, a run under way, complete with a Markdown artifact,
-// a JSON artifact, a PDF unsupported, and not found, docked at 1280px and at 375px (--page
-// document); light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
+// the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
+// Markdown artifact, a JSON artifact, a PDF unsupported, a run failed, and not found, docked at
+// 1280px and at 375px (--page document); light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
 // app (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
@@ -10,7 +10,8 @@
 //
 // The start function builds cmd/server, embedding the app's build, into a temporary directory and
 // boots it on free loopback ports, as test/browser/support/emulator.ts does, its stages a second
-// apart so a capture finds runs mid-way, and its upload limit 2 MB so a larger file is refused.
+// apart so a capture finds runs mid-way, its upload limit 2 MB so a larger file is refused, and
+// its fail rule failing a document named fail-at-… at extraction, so a capture shows a failed run.
 // The states run in order, each in a fresh tab, light then dark, against the one emulator: the
 // empty state first, before any upload, and each later state adding the documents it shows, so
 // a dark capture lists the documents its light one uploaded too.
@@ -47,7 +48,7 @@ async function upload(name: string, text = "a document's text", type = "text/pla
     body: text,
   });
   if (response.status !== 201) throw new Error(`upload ${name}: ${response.status}`);
-  return (await response.json()) as { id: string };
+  return (await response.json()) as { id: string; run_id: string };
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -120,18 +121,8 @@ const failure: Step = async (page) => {
   );
 };
 
-/** The docked pane at its full width: an upload from the page under way above the list, and on
- * the list's last page, the newest documents, runs a second apart advancing live, the first of
- * them chosen, its entry the selected one and its view in the main pane. */
-const docked: Step = async (page) => {
-  await listReady(page);
-  await throttle(page, 150_000);
-  await choose(page, [{ name: "annual-review-2026.pdf", size: 1_200_000 }]);
-  await upload("vendor-agreement.txt");
-  await wait(1_500);
-  await upload("release-notes.md");
-  await wait(300);
-  // Next page, until there is none: the last page, which holds the newest documents.
+/** Turns the list to its last page, which holds the newest documents: Next, until there is none. */
+async function lastPage(page: Page) {
   for (;;) {
     const next = await page.evaluate(`(() => {
       const next = ${PAGINATION}.querySelector('button[aria-label="Next page"]');
@@ -143,6 +134,59 @@ const docked: Step = async (page) => {
     await wait(200);
     await listReady(page);
   }
+}
+
+/** The document whose run the fail rule fails at extraction, uploaded with one whose run
+ * completes after it, by the first state that shows it, and waited on until the API reads its run
+ * failed. */
+let failing: Promise<string> | undefined;
+const failedDocument = () =>
+  (failing ??= (async () => {
+    const { id, run_id } = await upload("fail-at-extraction.txt", "a scan the extractor rejects");
+    await upload("intake-form.txt", "a form the extractor reads");
+    for (;;) {
+      const response = await fetch(`${origin}/api/runs/${run_id}`);
+      if (((await response.json()) as { status: string }).status === "failed") return id;
+      await wait(100);
+    }
+  })());
+
+/** The failed document's entry's button, as a page expression; undefined while the page shown
+ * doesn't list it. */
+const FAILED_ENTRY =
+  "[...document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelectorAll('sl-entry')].find((entry) => entry.item?.name === 'fail-at-extraction.txt')?.shadowRoot.querySelector('button')";
+
+/** A run failed at extraction, its entry focused on the page that lists it, beside the run
+ * uploaded after it, still under way. */
+const listFailed: Step = async (page) => {
+  await listReady(page);
+  await failedDocument();
+  // Next page, until the page shown lists it.
+  while (!(await page.evaluate(`Boolean(${FAILED_ENTRY})`))) {
+    await page.evaluate(`${PAGINATION}.querySelector('button[aria-label="Next page"]').click()`);
+    await wait(200);
+    await listReady(page);
+  }
+  await until(
+    page,
+    `(${FAILED_ENTRY}).getRootNode().querySelector('.status').textContent.startsWith('failed')`,
+  );
+  await focus(page, FAILED_ENTRY);
+  await page.evaluate(`(${FAILED_ENTRY}).scrollIntoView({ block: "end" })`);
+};
+
+/** The docked pane at its full width: an upload from the page under way above the list, and on
+ * the list's last page, the newest documents, runs a second apart advancing live, the first of
+ * them chosen, its entry the selected one and its view in the main pane. */
+const docked: Step = async (page) => {
+  await listReady(page);
+  await throttle(page, 150_000);
+  await choose(page, [{ name: "annual-review-2026.pdf", size: 1_200_000 }]);
+  await upload("vendor-agreement.txt");
+  await wait(1_500);
+  await upload("release-notes.md");
+  await wait(300);
+  await lastPage(page);
   await page.evaluate(`[
     ...document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelectorAll('sl-entry'),
   ].find((entry) => entry.shadowRoot.querySelector('.name').textContent === 'vendor-agreement.txt')
@@ -281,6 +325,7 @@ const documentLive: Step = async (page) => {
 const documentMarkdown: Step = async (page) => showDocument(page, (await seeded()).guide);
 const documentJson: Step = async (page) => showDocument(page, (await seeded()).settings);
 const documentUnsupported: Step = async (page) => showDocument(page, (await seeded()).scan);
+const documentFailed: Step = async (page) => showDocument(page, await failedDocument());
 const documentMissing: Step = (page) => showDocument(page, "01900000-0000-7000-8000-000000000000");
 
 /** The document view's states, each docked at 1280×800 and at 375×667. */
@@ -289,6 +334,7 @@ const documentStates = [
   { name: "markdown", caption: "complete, a Markdown artifact", open: documentMarkdown },
   { name: "json", caption: "a JSON artifact", open: documentJson },
   { name: "unsupported", caption: "a PDF, unsupported", open: documentUnsupported },
+  { name: "failed", caption: "a run failed at extraction", open: documentFailed },
   { name: "missing", caption: "not found", open: documentMissing },
 ].flatMap(({ name, caption, open }) => [
   { name: `docked-${name}`, caption: `Document view, docked, ${caption}`, full: false, open },
@@ -346,6 +392,7 @@ const description: Description = {
           full: false,
           open: narrowUploading,
         },
+        { name: "failed", caption: "Side pane, a run failed", full: false, open: listFailed },
       ],
     },
     {
@@ -381,6 +428,7 @@ const description: Description = {
           EMULATOR_CORS_ALLOWED_ORIGINS: origin,
           EMULATOR_RUNS_STAGE_INTERVAL: "1s",
           EMULATOR_DOCUMENTS_MAX_SIZE: "2000000",
+          EMULATOR_RUNS_FAIL: "fail-at-*:extraction",
         },
       });
       return {

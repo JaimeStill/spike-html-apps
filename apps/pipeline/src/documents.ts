@@ -11,11 +11,12 @@
 // shows its problem's title, and a cancelled one is never stored, its body cut short. The uploads
 // are this page's: a reload lists the documents again but not the uploads that made them.
 //
-// The list shows a page of the documents, each with its run's progress as its status: read from
-// the API for the page's runs as the page loads, then raised live by the app's one stage feed
-// (live.ts), each run's entry changing in place. The page and its size are kept in sessionStorage,
-// so a reload shows the same page. Activating an entry navigates to its document's view, whose
-// entry is then the selected one.
+// The list shows a page of the documents, each with its run's progress as its status: read from the
+// API for the page's runs as the page loads, then raised live by the app's one stage feed
+// (live.ts), each run's entry changing in place; a run that fails shows failed, at its failed
+// stage, by its failure event live or by its answer on a load. The page and its size are kept in
+// sessionStorage, so a reload shows the same page. Activating an entry navigates to its document's
+// view, whose entry is then the selected one.
 //
 // The element reports its uploads as they change, by `uploads-change`, so the workspace's header
 // can count those in flight while the drawer holding this element is closed. The element never
@@ -45,7 +46,7 @@ import type { Page, Problem } from "@jaimestill/spike-html-apps-sdk/api.js";
 import { appApi } from "./api.ts";
 import type { Document } from "./api.ts";
 import { appFeed } from "./live.ts";
-import type { Progress, ProgressDetail } from "./live.ts";
+import type { Failure, Progress, ProgressDetail } from "./live.ts";
 import { appRouter } from "./route.ts";
 
 export const documentsTag = "pipeline-documents";
@@ -63,9 +64,13 @@ const pageSizes = [12, 24, 48, 96];
  * A run's progress as an entry's status: "underway 2/5" until its last stage completes, then
  * "complete 5/5"; "pending" before anything has told of the run. The two words are one length, so
  * the status keeps its width as the run advances: the entry wraps its status below a name the two
- * don't fit beside, and a status that grew would wrap there mid-run, the entry growing a line.
+ * don't fit beside, and a status that grew would wrap there mid-run, the entry growing a line. A
+ * failed run's status is "failed 3/5", the stage it failed at of its count, as the document view's
+ * "Failed at stage 3 of 5" counts it; shorter than "underway", so a run that fails never grows its
+ * status either.
  */
-export function statusOf(progress: Progress | undefined): string {
+export function statusOf(progress: Progress | undefined, failure?: Failure): string {
+  if (failure) return `failed ${failure.position}/${failure.count}`;
   if (!progress) return "pending";
   const { completed, count } = progress;
   return `${completed >= count ? "complete" : "underway"} ${completed}/${count}`;
@@ -163,11 +168,9 @@ export class PipelineDocuments extends LitElement {
     this.#disconnect = new AbortController();
     const { signal } = this.#disconnect;
     const feed = appFeed();
-    feed.addEventListener(
-      "progress",
-      (e) => this.#progress((e as CustomEvent<ProgressDetail>).detail),
-      { signal },
-    );
+    const follow = (e: Event) => this.#progress((e as CustomEvent<ProgressDetail>).detail);
+    feed.addEventListener("progress", follow, { signal });
+    feed.addEventListener("run-failed", follow, { signal });
     feed.addEventListener("failure", () => this.#followFeed(), { signal });
     this.#followFeed();
     void this.#fetch({ quiet: false });
@@ -236,8 +239,8 @@ export class PipelineDocuments extends LitElement {
   }
 
   /**
-   * A run's progress rose: its entry, when the page shows it, takes a new item with the new
-   * status, so the entry, which updates when its item changes, shows it in place. A run the
+   * A run's progress rose, or it failed: its entry, when the page shows it, takes a new item with
+   * the new status, so the entry, which updates when its item changes, shows it in place. A run the
    * element hasn't heard of before, on the last page, is a document uploaded elsewhere (another
    * tab, another client), which lands on this page or makes the next: the page refreshes quietly,
    * once for a burst of them. While a page loads, the load in flight answers for it.
@@ -249,7 +252,8 @@ export class PipelineDocuments extends LitElement {
       if (!heard && !this.more && this.listState !== "loading") this.#refreshSoon();
       return;
     }
-    const status = statusOf(appFeed().progress(run));
+    const feed = appFeed();
+    const status = statusOf(feed.progress(run), feed.failed(run));
     this.items = this.items.map((item) =>
       item.run_id === run && item.status !== status ? { ...item, status } : item,
     );
@@ -321,7 +325,7 @@ export class PipelineDocuments extends LitElement {
     for (const doc of page.items) this.#heard.add(doc.run_id);
     this.items = page.items.map((doc) => ({
       ...doc,
-      status: statusOf(feed.progress(doc.run_id)),
+      status: statusOf(feed.progress(doc.run_id), feed.failed(doc.run_id)),
     }));
     this.total = total;
     this.more = page.more;

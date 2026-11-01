@@ -1,4 +1,5 @@
-// The live event log, the "/" route: each run's stage events as text lines as they arrive, until
+// The live event log, the "/" route: each run's stage events, and a failed run's failure event, as
+// text lines as they arrive, the failure a line of its own that names the stage and why, until
 // slice 16 shows the stream through sl-event-log, on the app's one feed (live.ts). Until then the
 // log keeps a read of its own, on the feed's sequence and so on its one connection. The element
 // reads while it is connected and stops when the router replaces it. It keeps the cursor of the
@@ -11,8 +12,8 @@ import { repeat } from "lit/directives/repeat.js";
 
 import type { Cursor, EventSequence } from "@jaimestill/spike-html-apps-sdk/events.js";
 
-import { stageType } from "./live.ts";
-import type { StageData } from "./live.ts";
+import { failedData, failedType, stageType } from "./live.ts";
+import type { RunData } from "./live.ts";
 import { frame } from "./views/view.ts";
 
 /** The sessionStorage key of the last cursor the log showed. */
@@ -40,10 +41,10 @@ function storeCursor(cursor: Cursor | undefined) {
 }
 
 /** The sequence the log reads, set by main before the router mounts the element. */
-let events: EventSequence<StageData> | undefined;
+let events: EventSequence<RunData> | undefined;
 
 /** Sets the sequence every log element reads. */
-export function useEvents(sequence: EventSequence<StageData>) {
+export function useEvents(sequence: EventSequence<RunData>) {
   events = sequence;
 }
 
@@ -105,13 +106,16 @@ export class PipelineLog extends LitElement {
     const after = storedCursor();
     let shown = 0;
     try {
-      for await (const { event, cursor } of events.read({ types: [stageType], after, signal })) {
+      const types = [stageType, failedType];
+      for await (const { event, cursor } of events.read({ types, after, signal })) {
         const data = event.data;
+        const failed = failedData(event);
         const head = `${event.time ?? ""} ${event.type} run ${event.subject ?? "?"}`;
-        const text = data
+        const stage = data
           ? `${head}: ${data.stage} (${data.position}/${data.stage_count}) ` +
             `of document ${data.document_id}`
           : head;
+        const text = failed ? `${stage} failed: ${failed.reason}` : stage;
         this.#append({ text, cursor });
         storeCursor(cursor);
         shown++;

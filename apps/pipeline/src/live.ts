@@ -1,25 +1,37 @@
-// The app's one live read of the emulator's stage events, which every view that shows a run's
-// progress shares: main makes the feed over the NATS sequence and starts it once, and a view
-// listens to it rather than reading the sequence itself, so the app holds one subscription however
-// many views show runs. Today the side pane's document list reads each run's progress from it; the
-// document view's stage timeline (slice 14) and the event log (slice 16) are meant to read it too,
-// the first by a run's progress, the second by the deliveries it keeps, which a view mounted late
-// replays before it follows the live ones.
+// The app's one live read of the emulator's run events, its stage events and its failure events,
+// which every view that shows a run's progress shares: main makes the feed over the NATS sequence
+// and starts it once, and a view listens to it rather than reading the sequence itself, so the app
+// holds one subscription however many views show runs. Today the side pane's document list reads
+// each run's progress from it; the document view's stage timeline (slice 14) and the event log
+// (slice 16) are meant to read it too, the first by a run's progress, the second by the deliveries
+// it keeps, which a view mounted late replays before it follows the live ones.
 //
 // The read starts at the oldest event the stream keeps, so the feed knows every kept run's
 // progress, whatever loaded first; a run's progress also takes the API's answer for it (note), and
 // each run's completed count only ever rises, so an event and an API answer arriving in either
-// order agree. When the read fails (the connection lost for good, the token refused), the feed
-// says so and reads again after a backoff, from the last cursor it delivered, with no gap and no
-// duplicate.
+// order agree. A run's failure is recorded beside its progress, from the failure event or from an
+// API answer of a failed run, whichever arrives first, the two telling the same stage, reason, and
+// time; a failure is terminal, so nothing later, an event or an answer read before it failed,
+// un-fails the run or raises its progress past the failed stage. When the read fails (the
+// connection lost for good, the token refused), the feed says so and reads again after a backoff,
+// from the last cursor it delivered, with no gap and no duplicate.
 
-import type { Cursor, Delivery, EventSequence } from "@jaimestill/spike-html-apps-sdk/events.js";
+import type {
+  CloudEvent,
+  Cursor,
+  Delivery,
+  EventSequence,
+} from "@jaimestill/spike-html-apps-sdk/events.js";
 
 import type { Run } from "./api.ts";
 
 /** The stage event's type: the emulator's nats.prefix ("emulator", its config's default) and the
  * run domain's run.stage. */
 export const stageType = "emulator.run.stage";
+
+/** The failure event's type: the same prefix and the run domain's run.failed, which the run
+ * publishes in place of the stage event of the stage it failed at. */
+export const failedType = "emulator.run.failed";
 
 /** A stage event's data, as the run domain's StageCompletedData writes it. */
 export interface StageData {
@@ -29,13 +41,37 @@ export interface StageData {
   document_id: string;
 }
 
+/** A failure event's data, as the run domain's RunFailedData writes it: the failed stage's, as a
+ * stage event's data would be, with why it failed. */
+export interface FailedData extends StageData {
+  reason: string;
+}
+
+/** The data of either event the feed reads; the event's type tells which. */
+export type RunData = StageData | FailedData;
+
+/** The failure event's data, or undefined when the event is any other or carries none. */
+export function failedData(event: CloudEvent<RunData>): FailedData | undefined {
+  return event.type === failedType && event.data && "reason" in event.data ? event.data : undefined;
+}
+
 /** A run's progress: how many of its stages are complete, of how many. */
 export interface Progress {
   completed: number;
   count: number;
 }
 
-/** `progress`'s detail: the run whose progress rose. */
+/** A run's failure: the stage it failed at, that stage's position of how many, why, and when (an
+ * RFC 3339 timestamp, null when neither the event nor the answer told it). */
+export interface Failure {
+  stage: string;
+  position: number;
+  count: number;
+  reason: string;
+  time: string | null;
+}
+
+/** `progress`'s and `run-failed`'s detail: the run whose progress rose, or that failed. */
 export interface ProgressDetail {
   run: string;
 }
@@ -48,24 +84,27 @@ const settle = 2_000;
 
 /**
  * The live feed. It dispatches `delivery` with each delivery's CustomEvent, `progress` with a
- * ProgressDetail when a run's completed count rises, and `failure` when the read fails or recovers,
- * `failure` then holding the error or undefined.
+ * ProgressDetail when a run's completed count rises, `run-failed` with a ProgressDetail when a run
+ * fails, once a run, and `failure` when the read fails or recovers, `failure` then holding the
+ * error or undefined. The two failures are named apart: `failure` is the feed's own, its read
+ * lost, and `run-failed` a run's, which the emulator reports.
  */
 export class StageFeed extends EventTarget {
-  readonly #sequence: EventSequence<StageData>;
-  readonly #deliveries: Delivery<StageData>[] = [];
+  readonly #sequence: EventSequence<RunData>;
+  readonly #deliveries: Delivery<RunData>[] = [];
   readonly #progress = new Map<string, Progress>();
+  readonly #failures = new Map<string, Failure>();
   #failure: unknown = undefined;
   #cursor: Cursor | undefined;
   #started = false;
 
-  constructor(sequence: EventSequence<StageData>) {
+  constructor(sequence: EventSequence<RunData>) {
     super();
     this.#sequence = sequence;
   }
 
   /** Every delivery so far, in the sequence's order. */
-  get deliveries(): readonly Delivery<StageData>[] {
+  get deliveries(): readonly Delivery<RunData>[] {
     return this.#deliveries;
   }
 
@@ -80,10 +119,26 @@ export class StageFeed extends EventTarget {
     return this.#progress.get(run);
   }
 
-  /** Takes the API's answer for a run: its stages complete so far. */
+  /** The run's failure, or undefined while neither an event nor the API has told of one. */
+  failed(run: string): Failure | undefined {
+    return this.#failures.get(run);
+  }
+
+  /** Takes the API's answer for a run: its stages complete so far, and its failure, when it has
+   * failed. */
   note(run: Run) {
     const completed = run.stages.filter((stage) => stage.state === "complete").length;
     this.#rise(run.id, completed, run.stages.length);
+    const stage = run.stages.find((stage) => stage.state === "failed");
+    if (run.status === "failed" && stage) {
+      this.#failRun(run.id, {
+        stage: stage.name,
+        position: stage.position,
+        count: run.stages.length,
+        reason: stage.reason ?? "",
+        time: stage.failed_at,
+      });
+    }
   }
 
   /** Starts the one read, once; a later call does nothing. The signal ends it for good. */
@@ -96,8 +151,19 @@ export class StageFeed extends EventTarget {
   #rise(run: string, completed: number, count: number) {
     const known = this.#progress.get(run);
     if (known && known.completed >= completed) return;
+    // A failed run completes nothing from its failed stage on.
+    const failure = this.#failures.get(run);
+    if (failure && completed >= failure.position) return;
     this.#progress.set(run, { completed, count });
     this.dispatchEvent(new CustomEvent<ProgressDetail>("progress", { detail: { run } }));
+  }
+
+  /** Records the run's failure, the first told of it kept: the event and the answer tell the same
+   * one, and a failure is terminal. */
+  #failRun(run: string, failure: Failure) {
+    if (this.#failures.has(run)) return;
+    this.#failures.set(run, failure);
+    this.dispatchEvent(new CustomEvent<ProgressDetail>("run-failed", { detail: { run } }));
   }
 
   #fail(error: unknown) {
@@ -111,7 +177,11 @@ export class StageFeed extends EventTarget {
       // A read that runs a while without failing, or delivers, has reconnected.
       const settled = setTimeout(() => this.#fail(undefined), attempt === 0 ? 0 : settle);
       try {
-        const reads = this.#sequence.read({ types: [stageType], after: this.#cursor, signal });
+        const reads = this.#sequence.read({
+          types: [stageType, failedType],
+          after: this.#cursor,
+          signal,
+        });
         for await (const delivery of reads) {
           clearTimeout(settled);
           this.#fail(undefined);
@@ -119,8 +189,22 @@ export class StageFeed extends EventTarget {
           this.#cursor = delivery.cursor;
           this.#deliveries.push(delivery);
           this.dispatchEvent(new CustomEvent("delivery", { detail: delivery }));
-          const { subject, data } = delivery.event;
-          if (subject && data) this.#rise(subject, data.position, data.stage_count);
+          const { subject, data, time } = delivery.event;
+          if (!subject || !data) continue;
+          const failed = failedData(delivery.event);
+          if (failed) {
+            // The stages before the failed one completed; their own events told so already.
+            this.#rise(subject, failed.position - 1, failed.stage_count);
+            this.#failRun(subject, {
+              stage: failed.stage,
+              position: failed.position,
+              count: failed.stage_count,
+              reason: failed.reason,
+              time: time ?? null,
+            });
+          } else if (delivery.event.type === stageType) {
+            this.#rise(subject, data.position, data.stage_count);
+          }
         }
         // A read ends without failing only when its signal aborts.
         clearTimeout(settled);

@@ -18,19 +18,24 @@ export interface Document {
   run_id: string;
 }
 
-/** A run's stage, as domain/run's Stage writes it. */
+/** A run's stage, as domain/run's Stage writes it: complete with its time, failed with its time
+ * and reason, or pending. Each time and the reason is null until the stage reaches its state. */
 export interface Stage {
   name: string;
   position: number;
-  state: "pending" | "complete";
+  state: "pending" | "complete" | "failed";
   completed_at: string | null;
+  failed_at: string | null;
+  reason: string | null;
 }
 
-/** A run, as domain/run's Run writes it: its stages in their positions' order. */
+/** A run, as domain/run's Run writes it: its stages in their positions' order. A failed run has
+ * one failed stage, those before it complete and those after it pending, and no completion time;
+ * it advances no further. */
 export interface Run {
   id: string;
   document_id: string;
-  status: "running" | "complete";
+  status: "running" | "complete" | "failed";
   stages: Stage[];
   created_at: string;
   completed_at: string | null;

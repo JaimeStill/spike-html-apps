@@ -8,7 +8,11 @@
 // told more wins, and the view then follows the feed's progress events for the run, each stage
 // advancing in place. A stage's completion time is the run's when its answer had one, else the
 // time of the stage event that completed it. So a deep link or a reload shows the run as it stands
-// at once, and the stages advance with no reload as the events arrive.
+// at once, and the stages advance with no reload as the events arrive. A run that fails, by its
+// failure event or by its answer, whichever the feed heard first, shows its failed stage failed,
+// at the time it failed, the stages after it pending, and its status line names the stage and
+// says why; the timeline carries no reason of its own, so the status line is where the reason
+// shows.
 //
 // The content is fetched only when the viewer can show its type: Markdown, JSON, or text; any
 // other type, a PDF or an image, shows the viewer's unsupported note with no request made. A
@@ -39,7 +43,8 @@ import type { Problem } from "@jaimestill/spike-html-apps-sdk/api.js";
 import { appApi } from "../api.ts";
 import type { Document, Run } from "../api.ts";
 import { appFeed } from "../live.ts";
-import type { ProgressDetail, StageData } from "../live.ts";
+import { stageType } from "../live.ts";
+import type { Failure, ProgressDetail, RunData } from "../live.ts";
 import { frame } from "./view.ts";
 
 export const documentTag = "pipeline-document";
@@ -75,11 +80,11 @@ function textOf(content: unknown): string {
   return JSON.stringify(content);
 }
 
-/** Each stage's completion time, by its position, from the feed's events for the run. */
-function eventTimes(deliveries: readonly Delivery<StageData>[], run: string): Map<number, string> {
+/** Each stage's completion time, by its position, from the feed's stage events for the run. */
+function eventTimes(deliveries: readonly Delivery<RunData>[], run: string): Map<number, string> {
   const times = new Map<number, string>();
   for (const { event } of deliveries) {
-    if (event.subject === run && event.data && event.time)
+    if (event.type === stageType && event.subject === run && event.data && event.time)
       times.set(event.data.position, event.time);
   }
   return times;
@@ -89,29 +94,52 @@ function eventTimes(deliveries: readonly Delivery<StageData>[], run: string): Ma
  * The run's stages as the timeline shows them, by the feed's progress for the run, which holds at
  * least what the run's answer told: the stages up to its completed count complete, and the next
  * the active one, once the run has started; before its first stage completes, every stage is
- * pending. A stage's time is the answer's, else its event's.
+ * pending. A failed run's failed stage is failed, the stages before it complete and those after it
+ * pending, none active. A stage's time is the answer's, else its event's; the failed stage's is
+ * the time it failed, which the timeline shows in its time's place.
  */
 export function timelineOf(
   run: Run,
   completed: number,
   times: ReadonlyMap<number, string>,
+  failure?: Failure,
 ): TimelineStage[] {
-  return run.stages.map((stage) => ({
-    name: stage.name,
-    position: stage.position,
-    state:
-      stage.position <= completed
-        ? "complete"
-        : completed > 0 && stage.position === completed + 1
-          ? "active"
-          : "pending",
-    completedAt: stage.completed_at ?? times.get(stage.position) ?? null,
-  }));
+  return run.stages.map((stage) => {
+    if (failure) {
+      const state =
+        stage.position < failure.position
+          ? "complete"
+          : stage.position === failure.position
+            ? "failed"
+            : "pending";
+      const at =
+        state === "failed"
+          ? (stage.failed_at ?? failure.time)
+          : (stage.completed_at ?? times.get(stage.position) ?? null);
+      return { name: stage.name, position: stage.position, state, completedAt: at };
+    }
+    return {
+      name: stage.name,
+      position: stage.position,
+      state:
+        stage.position <= completed
+          ? "complete"
+          : completed > 0 && stage.position === completed + 1
+            ? "active"
+            : "pending",
+      completedAt: stage.completed_at ?? times.get(stage.position) ?? null,
+    };
+  });
 }
 
-/** The run's status in one line: not started, the stage in progress, or complete. */
-export function runStatus(stages: readonly TimelineStage[]): string {
+/** The run's status in one line: not started, the stage in progress, complete, or failed at its
+ * stage, with why. */
+export function runStatus(stages: readonly TimelineStage[], failure?: Failure): string {
   const count = stages.length;
+  if (failure) {
+    const at = `Failed at stage ${failure.position} of ${count}, ${failure.stage}`;
+    return failure.reason ? `${at}: ${failure.reason}` : at;
+  }
   const done = stages.filter((stage) => stage.state === "complete").length;
   if (done === 0) return "Not started";
   if (done >= count) return `Complete: all ${count} stages`;
@@ -165,16 +193,12 @@ class PipelineDocument extends LitElement {
       if (this.shown.state === "ready" && this.shown.run.ok && this.shown.run.run.id === run)
         this.requestUpdate();
     };
-    feed.addEventListener(
-      "progress",
-      (e) => follow((e as CustomEvent<ProgressDetail>).detail.run),
-      {
-        signal,
-      },
-    );
+    const followRun = (e: Event) => follow((e as CustomEvent<ProgressDetail>).detail.run);
+    feed.addEventListener("progress", followRun, { signal });
+    feed.addEventListener("run-failed", followRun, { signal });
     feed.addEventListener(
       "delivery",
-      (e) => follow((e as CustomEvent<Delivery<StageData>>).detail.event.subject ?? ""),
+      (e) => follow((e as CustomEvent<Delivery<RunData>>).detail.event.subject ?? ""),
       { signal },
     );
     feed.addEventListener("failure", () => this.#followFeed(), { signal });
@@ -368,8 +392,11 @@ class PipelineDocument extends LitElement {
     const feed = appFeed();
     const answered = run.run.stages.filter((stage) => stage.state === "complete").length;
     const completed = Math.max(feed.progress(run.run.id)?.completed ?? 0, answered);
-    const stages = timelineOf(run.run, completed, eventTimes(feed.deliveries, run.run.id));
-    return html`<p class="document-run" role="status">${runStatus(stages)}</p>
+    const failure = feed.failed(run.run.id);
+    const stages = timelineOf(run.run, completed, eventTimes(feed.deliveries, run.run.id), failure);
+    return html`<p class="document-run ${failure ? "failed" : ""}" role="status">
+        ${runStatus(stages, failure)}
+      </p>
       <sl-stage-timeline .stages=${stages}></sl-stage-timeline>`;
   }
 }
