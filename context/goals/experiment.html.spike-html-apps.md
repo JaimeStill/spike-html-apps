@@ -215,12 +215,14 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0, PR #7;
-  root slices 11 66a2447, 12 bcbe652, 13 3333b82; after slice 13's design review: the CSS-module
-  plugin b00c29c and rolldown 2e8843b; foundation v0.2.2, PR #6, 41d3ab7; components v0.5.0
-  (sl-drawer, sl-entry), PR #8, c8c830f; every tag and GitHub release confirmed; eslint held) ·
-  next: the root's layout fixes from slice 13's review, then slices 14–18 · standards: tooling,
-  foundation, components done · spec — · editor —
+slices 13/18 plus the review rounds. Released, each tag and GitHub release confirmed: tooling
+  v0.3.0 (PR #4); foundation v0.2.1 (#5), v0.2.2 (#6), v0.2.3 (#7), v0.3.0 (#8, 373e357);
+  components v0.4.0 (#7), v0.5.0 (#8), v0.6.0 (#9, 371ee3a); noctis v0.1.1 (#3, 58b3242). Root:
+  slices 11 66a2447, 12 bcbe652, 13 3333b82, the CSS-module plugin b00c29c, rolldown 2e8843b, layout
+  20802a8, eslint 2629d74. Next: the root onto foundation v0.3.0 and components v0.6.0 (drop
+  47.99rem and its own Documents heading; "Search" narrow; badge and current nav on the accent;
+  the flaky NATS test), its design review, then slices 14–18 · standards: tooling, foundation,
+  components done · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
@@ -959,6 +961,8 @@ slices 13/18 (tooling v0.3.0, PR #4; foundation v0.2.1, PR #5; components v0.4.0
   catppuccin and everforest light Chrome draws native progress's unfilled track dark for a light
   accent, as everforest's blue range already does; that is native behavior and isn't patched, and
   cyan would only even out catppuccin (architect).
+- pipeline: the Release line grows by foundation v0.2.3 and v0.3.0, components v0.6.0, and noctis
+  v0.1.1, each accepted at its own checkpoint (architect).
 
 ## Pending edits
 
