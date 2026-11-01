@@ -990,6 +990,11 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   removal), so no server endpoint changes and the external client's tokens still work. Every
   component that shows JSON uses formatJson. Released as components v0.8.0 (architect). The
   document view's status line and the list's status tones are accepted as built (architect).
+- pipeline: the components' 45,000 B brotli budget is removed; size is measured at the end of the
+  session, as whole-bundle gzip and brotli comparable to Material Web's published sizes (72.1 kB
+  gzip for all.js, with Lit), rather than enforced per commit (architect). Measured before
+  v0.8.0: components 36.9 kB gzip / 31.5 kB brotli whole, Lit's core 6.2 / 5.6, the foundation
+  38.3 / 32.6, the pipeline app's build 112.8 / 93.6.
 
 ## Pending edits
 
