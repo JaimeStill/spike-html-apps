@@ -62,7 +62,12 @@ four domains is a package under `domain/`, served under `/api`:
   attachment.
 - `run` (`/api/runs`): the stages each upload starts, upload → metadata → extraction → chunks →
   embeddings, one per interval. Each completed stage publishes one `emulator.run.stage`
-  CloudEvent.
+  CloudEvent. The test seam for a failed run is configuration, `runs.fail` (`EMULATOR_RUNS_FAIL`,
+  comma-separated): each rule `<pattern>:<stage>`, a `path.Match` pattern over the uploaded
+  document's name, so under `fail-at-*:extraction` an upload named `fail-at-extraction.txt`
+  fails there. The run's status reads `failed`, the stage `failed` with `failed_at` and `reason`,
+  and in place of that stage's event the run publishes one `emulator.run.failed` CloudEvent (id
+  `<run>.failed`), whose data is the stage event's with `reason`; it advances no further.
 - `conversation` (`/api/conversations`, and the stateless `/api/responses`): a scripted Open
   Responses stream. A user message whose text is exactly `/fail` takes the failure path.
 - `search` (`/api/search`): a text match over document names and text-like content.

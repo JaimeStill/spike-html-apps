@@ -19,9 +19,10 @@
 //     [NATSEnv] records the environment-variable names its Finalize read.
 //   - [DocumentsConfig] is the document store's upload limit, with
 //     [DocumentsEnv].
-//   - [RunsConfig] is the emulated pipeline's stage interval and the
+//   - [RunsConfig] is the emulated pipeline's stage interval, the
 //     instance name its stage events are sourced from
-//     ([RunsConfig.Source]), with [RunsEnv].
+//     ([RunsConfig.Source]), and the fail rules, the test seam that fails
+//     a run at a chosen stage, with [RunsEnv].
 //   - [ConversationsConfig] is the pace of the scripted replies' text
 //     deltas, with [ConversationsEnv].
 //   - [AppConfig] is where the pipeline app is served, a prefix or the

@@ -15,9 +15,10 @@ import (
 	"github.com/JaimeStill/spike-html-apps/domain/run"
 )
 
-// Starter starts a run for an accepted document and returns it.
+// Starter starts a run for an accepted document, given its id and name,
+// and returns it.
 type Starter interface {
-	Start(documentID string) run.Run
+	Start(documentID, name string) run.Run
 }
 
 // Service is the document layer: the store of every accepted document. It
@@ -62,7 +63,7 @@ func (s *Service) Upload(name string, u web.Upload) (Document, error) {
 	}
 	// The run starts before the document is visible, so no read sees a
 	// document without its run.
-	doc.RunID = s.runs.Start(doc.ID).ID
+	doc.RunID = s.runs.Start(doc.ID, doc.Name).ID
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	rec := &record{doc: doc, bytes: b}

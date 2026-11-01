@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -280,6 +281,143 @@ func TestRuns_StageEventsPublished(t *testing.T) {
 	}
 	if len(got) != 2*len(stageNames) || len(ids) != len(got) {
 		t.Errorf("events = %d with %d distinct ids, want %d distinct", len(got), len(ids), 2*len(stageNames))
+	}
+}
+
+// startFailing runs the app as startRuns does, under the fail rules rules.
+func startFailing(t *testing.T, interval time.Duration, rules ...string) (*running, *config.Config, *webtest.Client) {
+	t.Helper()
+	cfg := configtest.Config(t)
+	cfg.Runs.StageInterval = libconfig.Duration(interval)
+	cfg.Runs.Fail = rules
+	r := start(t, cfg)
+	return r, cfg, webtest.NewClient("http://" + waitForReady(t, r.log))
+}
+
+// A document whose name matches a fail rule starts a run that fails at the
+// rule's stage: the stages before it complete, the stage itself failed
+// with its failure time and the rule's reason, the stages after it
+// pending, and the run failed, never complete. The broker holds the run's
+// stage events for the stages before it, then one failure event, of type
+// <prefix>.run.failed, at the stage's failure time, whose data names the
+// stage, its position, the stage count, the document, and the reason the
+// read gives; the run publishes nothing after it. The first matching rule
+// wins, and a document no rule matches completes as before.
+func TestRuns_FailRuleFailsRunAtStage(t *testing.T) {
+	const interval = 20 * time.Millisecond
+	const rule = "fail-at-*:extraction"
+	r, cfg, c := startFailing(t, interval, "never-*:upload", rule, "fail-*:metadata")
+	col := collect(t, r.broker)
+
+	doc := uploadDoc(t, c, "fail-at-extraction.txt")
+	ok := uploadDoc(t, c, "report.txt")
+	_, rn := awaitRun(t, c, doc.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+	_, okRun := awaitRun(t, c, ok.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+
+	if rn.Status != run.Failed || rn.CompletedAt != nil {
+		t.Fatalf("run = %+v, want it failed, with no completion time", rn)
+	}
+	wantReason := `emulated failure: the document's name matches the fail rule "` + rule + `"`
+	for i, s := range rn.Stages {
+		switch {
+		case i < 2:
+			if s.State != run.Done || s.CompletedAt == nil || s.FailedAt != nil || s.Reason != nil {
+				t.Errorf("stage %d = %+v, want it complete", i, s)
+			}
+		case i == 2:
+			if s.Name != "extraction" || s.State != run.Faulted || s.CompletedAt != nil || s.FailedAt == nil || s.Reason == nil || *s.Reason != wantReason {
+				t.Errorf("stage %d = %+v, want extraction failed with reason %q", i, s, wantReason)
+			}
+		default:
+			if s.State != run.Pending || s.CompletedAt != nil || s.FailedAt != nil || s.Reason != nil {
+				t.Errorf("stage %d = %+v, want it pending", i, s)
+			}
+		}
+	}
+	if okRun.Status != run.Complete || completed(okRun) != len(stageNames) {
+		t.Errorf("unmatched run = %+v, want it complete", okRun)
+	}
+
+	// The failing run's two stage events and its failure event, beside the
+	// other run's five; then no more, however long the broker is watched.
+	col.await(t, 3+len(stageNames))
+	time.Sleep(4 * interval)
+	var mine []event.Event
+	for _, e := range col.snapshot() {
+		if e.Subject == doc.RunID {
+			mine = append(mine, e)
+		}
+	}
+	if len(mine) != 3 {
+		t.Fatalf("failing run's events = %+v, want two stage events and a failure", mine)
+	}
+	for i, e := range mine[:2] {
+		if e.Type != cfg.NATS.Prefix+".run.stage" || !e.Time.Equal(*rn.Stages[i].CompletedAt) {
+			t.Errorf("event %d = type %q at %s, want %s.run.stage at the stage's completion", i, e.Type, e.Time, cfg.NATS.Prefix)
+		}
+	}
+	f := mine[2]
+	if f.Type != cfg.NATS.Prefix+".run.failed" || f.ID != doc.RunID+".failed" || f.Source != "/emulator/"+cfg.Runs.Instance || f.DataContentType != "application/json" {
+		t.Errorf("failure event = %+v, want type %s.run.failed, id %s.failed, the instance's source, JSON data", f, cfg.NATS.Prefix, doc.RunID)
+	}
+	if !f.Time.Equal(*rn.Stages[2].FailedAt) {
+		t.Errorf("failure event time = %s, want the stage's failure %s", f.Time, rn.Stages[2].FailedAt)
+	}
+	type failedData struct {
+		Stage      string `json:"stage"`
+		Position   int    `json:"position"`
+		StageCount int    `json:"stage_count"`
+		DocumentID string `json:"document_id"`
+		Reason     string `json:"reason"`
+	}
+	var data failedData
+	dec := json.NewDecoder(bytes.NewReader(f.Data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&data); err != nil {
+		t.Fatalf("failure event data %s: %v", f.Data, err)
+	}
+	if want := (failedData{"extraction", 3, len(stageNames), doc.ID, wantReason}); data != want {
+		t.Errorf("failure event data = %+v, want %+v", data, want)
+	}
+}
+
+// A run can fail at its first stage, before any stage completes, and at
+// its last, after every other has.
+func TestRuns_FailRuleAtFirstAndLastStage(t *testing.T) {
+	_, _, c := startFailing(t, 10*time.Millisecond, "first.txt:upload", "last.txt:embeddings")
+	for name, at := range map[string]int{"first.txt": 0, "last.txt": len(stageNames) - 1} {
+		doc := uploadDoc(t, c, name)
+		_, rn := awaitRun(t, c, doc.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+		if rn.Status != run.Failed || completed(rn) != at || rn.Stages[at].State != run.Faulted {
+			t.Errorf("%s: run = %+v, want it failed at stage %d with %d complete", name, rn, at+1, at)
+		}
+	}
+}
+
+// A malformed fail rule fails the run layer's construction, so Run exits 1
+// naming the rule before anything reports ready.
+func TestRuns_MalformedFailRuleFailsStartup(t *testing.T) {
+	for name, rule := range map[string]string{
+		"no stage":      "fail-*",
+		"unknown stage": "fail-*:indexing",
+		"empty pattern": ":upload",
+		"bad pattern":   "fail-[:upload",
+	} {
+		t.Run(name, func(t *testing.T) {
+			cfg := configtest.Config(t)
+			cfg.Runs.Fail = []string{rule}
+			var log syncBuffer
+			a := newApp(t, cfg, &log)
+			withMemoryBroker(a)
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if code := a.Run(ctx); code != 1 {
+				t.Errorf("Run = %d, want 1", code)
+			}
+			if out := log.String(); !strings.Contains(out, "fail rule") || strings.Contains(out, "server ready") {
+				t.Errorf("log = %q, want a failure naming the fail rule and no ready record", out)
+			}
+		})
 	}
 }
 
