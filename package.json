@@ -13,15 +13,15 @@
     "eslint-plugin-import-x": "4.17.1",
     "globals": "17.13.0",
     "prettier": "3.9.10",
-    "rolldown": "1.2.15",
+    "rolldown": "1.2.16",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
     "vite": "8.3.5",
     "vite-plugin-standard-css-modules": "0.3.0"
   },
   "dependencies": {
-    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.5.0",
-    "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.2.2",
+    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.6.0",
+    "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.3.0",
     "@jaimestill/spike-html-apps-sdk": "github:JaimeStill/spike-html-apps-sdk#v0.2.0",
     "@nats-io/jetstream": "3.4.0",
     "@nats-io/nats-core": "3.4.0",

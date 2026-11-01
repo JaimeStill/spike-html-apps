@@ -126,3 +126,14 @@ export async function resize(page: Page, width: number, height = 800): Promise<v
     mobile: false,
   });
 }
+
+/** The accessible name the browser computes for the element `expression` finds, as a screen
+ * reader is told it: Chrome's accessibility tree, read through the DevTools Protocol. */
+export async function accessibleName(page: Page, expression: string): Promise<string> {
+  const { result } = await page.cdp("Runtime.evaluate", { expression });
+  const { nodes } = await page.cdp("Accessibility.getPartialAXTree", {
+    objectId: result.objectId,
+    fetchRelatives: false,
+  });
+  return nodes[0]?.name?.value ?? "";
+}

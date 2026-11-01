@@ -34,15 +34,15 @@ interface View {
 }
 
 /** The frame is in place: the header's title, search field, documents, help, and theme buttons,
- * and the theme menu; the side pane's navigation, and its drawer's upload and documents; and the
- * main pane, the outlet. */
+ * and the theme menu; the side pane's navigation, and its drawer's upload and document list; and
+ * the main pane, the outlet. */
 const FRAMED = `(() => {
   const ws = document.querySelector("pipeline-workspace");
   return !!ws && [
     "header .workspace-title", "header input[type=search][name=q][data-keys='/']",
     "header button[commandfor=help][data-keys='?']", "header button[commandfor=theme][data-keys=t]",
     "header sl-theme-menu#theme", "header button[data-keys=d]", ".workspace-side nav",
-    ".workspace-side sl-drawer #upload-heading", ".workspace-side sl-drawer #documents-heading",
+    ".workspace-side sl-drawer #upload-heading", ".workspace-side sl-drawer sl-document-list",
     "main.workspace-main",
   ].every((selector) => ws.querySelector(selector));
 })()`;

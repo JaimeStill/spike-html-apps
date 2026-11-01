@@ -1,6 +1,9 @@
 // The side pane's documents, <pipeline-documents>: the upload dropzone and the document list, the
 // two composed from the components layer's sl-upload-dropzone and sl-document-list. It renders
-// into light DOM, as the workspace does, so the page's sheets style its frame.
+// into light DOM, as the workspace does, so the page's sheets style its frame. The drawer holding
+// it names it: the drawer's own h2, "Documents", in either mode, so the element adds no heading of
+// its own for the whole. Under it the upload is a section with an h3, and the list follows without
+// one, its own list of entries named "Documents" by the list element.
 //
 // Files chosen or dropped upload at once, side by side, each with its progress and a cancel; a
 // finished upload refreshes the page shown, so the new document joins the list when it falls on
@@ -186,15 +189,14 @@ export class PipelineDocuments extends LitElement {
   render() {
     return html`
       <section class="workspace-pane" aria-labelledby="upload-heading">
-        <h2 id="upload-heading">Upload</h2>
+        <h3 id="upload-heading">Upload</h3>
         <sl-upload-dropzone
           .uploads=${this.uploads}
           @files-select=${(e: CustomEvent<FilesSelectDetail>) => this.#select(e.detail.files)}
           @upload-cancel=${(e: CustomEvent<UploadCancelDetail>) => this.#cancel(e.detail.id)}
         ></sl-upload-dropzone>
       </section>
-      <section class="workspace-pane" aria-labelledby="documents-heading">
-        <h2 id="documents-heading">Documents</h2>
+      <div class="workspace-pane">
         ${
           this.live
             ? html`<p class="documents-live" role="status">
@@ -223,7 +225,7 @@ export class PipelineDocuments extends LitElement {
             </button>`
             : nothing
         }
-      </section>
+      </div>
     `;
   }
 

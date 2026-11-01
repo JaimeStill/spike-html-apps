@@ -1,12 +1,17 @@
-// The side pane's documents in the drawer, in the binary's build. At 375px and 480px, at or below
-// the app's stacking width, the drawer is closed as the page loads; the header's documents button
-// opens it modally, focus on its Close, and Close and Escape close it, focus back on the button;
-// d toggles it, and types itself in the search field; choosing an entry navigates and closes it;
-// an upload carries on with the drawer closed, the button's badge counting it while in flight, and
-// one refused marks the badge until the drawer opens; files dragged onto the window open it. At
-// 768px and 1280px it is docked in the side pane: no button, and d does nothing. An upload keeps
-// going as the viewport crosses the width back and forth. Each case boots its own emulator and
-// opens its own page, with reduced motion, so the drawer opens and closes without its slide.
+// The side pane's documents in the drawer, in the binary's build. At 375px and 480px, below the
+// app's stacking width, 48rem, the drawer is closed as the page loads; the header's documents
+// button opens it modally, focus on its Close, and Close and Escape close it, focus back on the
+// button; d opens it, and is quiet while it is open, the page's bindings resting under a modal
+// dialog, and types itself in the search field; choosing an entry navigates and closes it; an
+// upload carries on with the drawer closed, the button's badge counting it while in flight, in the
+// accent, and one refused marks the badge until the drawer opens; files dragged onto the window
+// open it. At 768px and 1280px it is docked in the side pane: no button, and d does nothing. The
+// width itself: 767px is a drawer and 768px docked; in either mode the drawer's heading is the one
+// that names the documents, and the search field's hint is "Search" below the width and "Search
+// documents" at it, its accessible name "Search documents" throughout. The current view's link
+// takes the accent too. An upload keeps going as the viewport crosses the width back and forth.
+// Each case boots its own emulator and opens its own page, with reduced motion, so the drawer
+// opens and closes without its slide.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
@@ -14,7 +19,7 @@ import { after, afterEach, before, describe, test } from "node:test";
 import { launch, until } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-import { mounted, openWith, resize, route } from "./support/app.ts";
+import { accessibleName, mounted, openWith, resize, route } from "./support/app.ts";
 import {
   choose,
   clickAt,
@@ -75,6 +80,12 @@ const modal = (page: Page, open = true): Promise<unknown> =>
       : `!${DRAWER}.open && !(${DRAWER}.shadowRoot.querySelector("dialog")?.matches(":modal") ?? false)`,
   );
 
+/** Resolves after two animation frames, time for a key's binding or a media query to act. */
+const frames = (page: Page): Promise<unknown> =>
+  page.evaluate(
+    "new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+  );
+
 /** The rows the help dialog lists, by their controls' names, with the dialog closed again. */
 async function helpRows(page: Page): Promise<string[]> {
   await pressHelp(page);
@@ -128,13 +139,23 @@ for (const width of [375, 480]) {
       }
     });
 
-    test("toggles on d, which the help dialog lists, and which types itself in the search field", async () => {
+    test("opens on d, which the help dialog lists and which is quiet while it is open, and types itself in the search field", async () => {
       const page = await open(width);
       assert.deepEqual(await helpRows(page), ["Search documents", "Documents", "Help", "Theme"]);
-      await press(page, "d");
-      await modal(page);
-      await press(page, "d");
-      await modal(page, false);
+      for (const closeBy of ["Close", "Escape"]) {
+        await press(page, "d");
+        await modal(page);
+        // The page's bindings rest while a modal dialog is open: d leaves the drawer open, and so
+        // does ?, the help dialog staying shut. Two frames give a binding time to act.
+        await press(page, "d");
+        await pressHelp(page);
+        await frames(page);
+        assert.equal((await shown(page)).modal, true, `d again leaves it open, before ${closeBy}`);
+        assert.equal(await page.evaluate("document.querySelector('#help').open"), false);
+        if (closeBy === "Close") await clickAt(page, CLOSE);
+        else await pressEscape(page);
+        await modal(page, false);
+      }
 
       await pressSlash(page);
       await press(page, "d");
@@ -249,6 +270,128 @@ for (const width of [768, 1280]) {
     });
   });
 }
+
+/** The drawer's headings and the documents' own, in the composed tree: each heading's level and
+ * text in the drawer's shadow root, and in <pipeline-documents>, its light DOM; and the name the
+ * drawer's wrapper, the docked aside or the dialog, takes from its aria-labelledby. */
+const HEADINGS = `(() => {
+  const root = ${DRAWER}.shadowRoot;
+  const read = (scope) =>
+    [...scope.querySelectorAll("h1, h2, h3, h4, h5, h6")].map((h) => \`\${h.localName} \${h.textContent.trim()}\`);
+  const wrapper = root.querySelector("aside, dialog");
+  return {
+    wrapper: wrapper.localName,
+    names: root.getElementById(wrapper.getAttribute("aria-labelledby"))?.textContent.trim(),
+    drawer: read(root),
+    documents: read(document.querySelector("pipeline-documents")),
+  };
+})()`;
+
+/** The search field, as a page expression. */
+const SEARCH = "document.querySelector('input[name=q]')";
+
+describe("at the stacking width, 48rem", () => {
+  for (const [width, mode] of [
+    [767, "drawer"],
+    [768, "docked"],
+    [375, "drawer"],
+    [1280, "docked"],
+  ] as const) {
+    test(`${width}px is ${mode === "drawer" ? "a drawer" : "docked"}, its one heading naming the documents, the search hint ${mode === "drawer" ? "short" : "full"}`, async () => {
+      const page = await open(width);
+      const now = await shown(page);
+      assert.equal(now.mode, mode);
+      assert.equal(now.button, mode === "drawer", "the documents button only as a drawer");
+      // Open, as a drawer, so its dialog shows the heading as a reader meets it.
+      if (mode === "drawer") {
+        await clickAt(page, BUTTON);
+        await modal(page);
+      }
+      assert.deepEqual(await page.evaluate(HEADINGS), {
+        wrapper: mode === "drawer" ? "dialog" : "aside",
+        names: "Documents",
+        drawer: ["h2 Documents"],
+        // Under the drawer's h2: the upload's h3, and no heading of the app's naming the whole.
+        documents: ["h3 Upload"],
+      });
+      if (mode === "drawer") {
+        await pressEscape(page);
+        await modal(page, false);
+      }
+      assert.equal(
+        await page.evaluate(`${SEARCH}.placeholder`),
+        mode === "drawer" ? "Search" : "Search documents",
+      );
+      assert.equal(await accessibleName(page, SEARCH), "Search documents");
+    });
+  }
+
+  test("the search hint follows the viewport across it, its accessible name unchanged", async () => {
+    const page = await open(1280);
+    for (const [width, hint] of [
+      [767, "Search"],
+      [768, "Search documents"],
+      [375, "Search"],
+      [1280, "Search documents"],
+    ] as const) {
+      await resize(page, width);
+      await until(page, `${SEARCH}.placeholder === ${JSON.stringify(hint)}`);
+      assert.equal(await accessibleName(page, SEARCH), "Search documents", `${width}: the name`);
+    }
+  });
+});
+
+/** The color the accent's default resolves to in the workspace, --magenta, and the colors the
+ * badge and the current view's link compute: the badge's background, the link's border, its inset
+ * line, and its text, with the text's own --fg beside it. */
+const ACCENTS = `(() => {
+  const ws = document.querySelector("pipeline-workspace");
+  const probe = (value) => {
+    const el = document.createElement("span");
+    el.style.color = value;
+    ws.append(el);
+    const color = getComputedStyle(el).color;
+    el.remove();
+    return color;
+  };
+  const badge = document.querySelector(".workspace-badge:not(.workspace-failed)");
+  const link = getComputedStyle(document.querySelector('nav a[aria-current="page"]'));
+  return {
+    magenta: probe("var(--magenta)"),
+    fg: probe("var(--fg)"),
+    badge: badge && getComputedStyle(badge).backgroundColor,
+    border: link.borderTopColor,
+    inset: link.boxShadow,
+    text: link.color,
+  };
+})()`;
+
+describe("the accent", () => {
+  test("marks the uploads in flight and the current view's link, and follows --accent-color on the workspace", async () => {
+    const page = await open(375);
+    // Paced as a 16 kB/s link would, so the upload is in flight for about twelve seconds.
+    await throttle(page, 16_000);
+    await choose(page, [{ name: "accent.txt", size: 192_000 }]);
+    await until(page, `${BUTTON}.querySelector(".workspace-badge")`);
+    const before = await page.evaluate(ACCENTS);
+    assert.equal(before.badge, before.magenta, "the badge in the accent's default, --magenta");
+    assert.equal(before.border, before.magenta, "the link's border in the accent");
+    assert.ok(
+      before.inset.startsWith(`${before.magenta} 0px 0px 0px `) && before.inset.endsWith(" inset"),
+      `the link's inset line in the accent: ${before.inset}`,
+    );
+    assert.equal(before.text, before.fg, "the link's text in --fg");
+
+    await page.evaluate(
+      "document.querySelector('pipeline-workspace').style.setProperty('--accent-color', 'rgb(0, 128, 96)')",
+    );
+    const after = await page.evaluate(ACCENTS);
+    assert.equal(after.badge, "rgb(0, 128, 96)", "the badge follows the hook");
+    assert.equal(after.border, "rgb(0, 128, 96)", "the link's border follows the hook");
+    assert.match(after.inset, /^rgb\(0, 128, 96\) /, "the link's inset line follows the hook");
+    assert.equal((await uploads(page))[0].state, "uploading", "measured while in flight");
+  });
+});
 
 describe("an upload", () => {
   test("keeps going as the viewport crosses the stacking width, the documents never re-created", async () => {

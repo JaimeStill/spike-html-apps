@@ -10,17 +10,23 @@
 // and on the documents (d), help (?), and theme (t) buttons, which it clicks; the help button
 // opens the dialog by the invoker command show-modal, and keys.js fills its [data-keys-list] with
 // every binding as it opens; the theme button sends <sl-theme-menu> its --open command. Escape
-// closes either modal dialog natively. keys.js fires none of them while a key is typed in a text
-// field.
+// closes any of the modal dialogs natively. keys.js fires none of them while a key is typed in a
+// text field, nor while a modal dialog is open, the drawer's in its shadow root among them: d
+// opens the drawer, and its Close button or Escape closes it.
 //
-// The drawer docks wider than the app's stacking width, DOCK: its documents sit in the side pane,
-// below the navigation, and the documents button is hidden, so keys.js, which acts only on a
-// rendered control, neither lists d nor fires it. At or below DOCK the drawer is a modal dialog,
-// closed until the documents button, d, or files dragged onto the window open it; choosing an
-// entry there navigates and closes it. The button counts the uploads in flight and marks an upload
-// that failed while the drawer was closed, until it next opens, and says both through a polite
-// live region. <pipeline-documents> is never moved: the drawer swaps only its own wrapper, so its
+// At the app's stacking width, DOCK, and wider, the drawer is docked: its documents sit in the
+// side pane, below the navigation, and the documents button is hidden, so keys.js, which acts
+// only on a rendered control, neither lists d nor fires it. Below DOCK the drawer is a modal
+// dialog, closed until the documents button, d, or files dragged onto the window open it;
+// choosing an entry there navigates and closes it. Its heading, the drawer's own, names the
+// documents in either mode. The button counts the uploads in flight and marks an upload that
+// failed while the drawer was closed, until it next opens, and says both through a polite live
+// region. <pipeline-documents> is never moved: the drawer swaps only its own wrapper, so its
 // uploads and its live statuses carry on while the drawer is closed and across a resize.
+//
+// The search field's hint is the shorter "Search" below DOCK, where the documents button shares
+// its row, and "Search documents" at DOCK and wider; its accessible name is "Search documents" at
+// every width, its aria-label, so the help dialog's row and a screen reader's name never change.
 
 import { html, LitElement, nothing } from "lit";
 import { live } from "lit/directives/live.js";
@@ -42,11 +48,14 @@ const VIEWS = [
 ] as const;
 
 /**
- * The app's stacking width, at or below which the drawer is a modal dialog and the header shows
- * its button. The drawer reads it in `(max-width: …)`, so it is a hair under 48rem: 768px, 48rem,
- * stays docked, as the app's layout below 48rem stacks; workspace.css's narrow query is the same.
+ * The app's stacking width, below which the drawer is a modal dialog, the header shows its
+ * button, and the search field's hint is the shorter one. The drawer reads it in `(width < …)`,
+ * so 768px, 48rem, docks; workspace.css's narrow query is the same.
  */
-export const DOCK = "47.99rem";
+export const DOCK = "48rem";
+
+/** The viewport below DOCK, the drawer's own query. */
+const narrowQuery = `(width < ${DOCK})`;
 
 /** What the documents button's live region says: the uploads in flight, and a failure. */
 export function announcement(uploading: number, failed: boolean): string {
@@ -64,6 +73,7 @@ export class PipelineWorkspace extends LitElement {
     drawerOpen: { state: true },
     uploading: { state: true },
     failed: { state: true },
+    narrow: { state: true },
   };
 
   /** The route the router mounted, which marks the current view's link and fills the search
@@ -75,6 +85,8 @@ export class PipelineWorkspace extends LitElement {
   declare uploading: number;
   /** Whether an upload failed while the modal drawer was closed, since it last opened. */
   declare failed: boolean;
+  /** Whether the viewport is below DOCK, which shortens the search field's hint. */
+  declare narrow: boolean;
 
   /** The uploads seen failed, so each marks the button once. */
   readonly #failures = new Set<string>();
@@ -85,6 +97,7 @@ export class PipelineWorkspace extends LitElement {
     this.drawerOpen = false;
     this.uploading = 0;
     this.failed = false;
+    this.narrow = false;
   }
 
   protected createRenderRoot() {
@@ -94,6 +107,16 @@ export class PipelineWorkspace extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.#disconnect = new AbortController();
+    const { signal } = this.#disconnect;
+    const narrow = matchMedia(narrowQuery);
+    this.narrow = narrow.matches;
+    narrow.addEventListener(
+      "change",
+      () => {
+        this.narrow = narrow.matches;
+      },
+      { signal },
+    );
     // Files dragged onto the window while the drawer is closed open it, so its dropzone is there
     // to drop them on; a drag of anything but files, text or a link, leaves it be.
     window.addEventListener(
@@ -101,7 +124,7 @@ export class PipelineWorkspace extends LitElement {
       (e) => {
         if (e.dataTransfer?.types.includes("Files")) this.#drawer?.show();
       },
-      { signal: this.#disconnect.signal },
+      { signal },
     );
   }
 
@@ -114,7 +137,7 @@ export class PipelineWorkspace extends LitElement {
     return this.querySelector("sl-drawer");
   }
 
-  /** Whether the drawer is a modal dialog, at or below DOCK, rather than docked. */
+  /** Whether the drawer is a modal dialog, below DOCK, rather than docked. */
   get #modal(): boolean {
     return this.#drawer?.matches(":state(drawer)") ?? false;
   }
@@ -158,7 +181,7 @@ export class PipelineWorkspace extends LitElement {
               type="search"
               name="q"
               aria-label="Search documents"
-              placeholder="Search documents"
+              placeholder=${this.narrow ? "Search" : "Search documents"}
               autocomplete="off"
               data-keys="/"
               .value=${live(query)}
@@ -172,7 +195,7 @@ export class PipelineWorkspace extends LitElement {
                 aria-expanded=${this.drawerOpen ? "true" : "false"}
                 aria-describedby="documents-said"
                 data-keys="d"
-                @click=${() => this.#drawer?.toggle()}
+                @click=${() => this.#drawer?.show()}
               >
                 Documents <kbd>D</kbd>${
                   this.uploading > 0
