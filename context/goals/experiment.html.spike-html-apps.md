@@ -974,6 +974,10 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   visible header becomes optional, its name kept as the region's accessible name (components
   v0.6.2); the emulator gains a failure trigger for a run, a test seam rather than a client API,
   an exception to the brief's "no emulator API changes".
+- pipeline: sdk v0.3.0 (a call reads a body as text, `{ as: "text" }`; PR #6, 34cd8b9) and
+  components v0.7.0 (the artifact viewer's `no-header` and every state named; a failed stage's
+  `failedAt` and `reason`; the entry's `status-tone`; PR #11, adbec2f) released (architect). The
+  Release line grows by both. "accept" covers every checkpoint brief open at the time (architect).
 
 ## Pending edits
 
