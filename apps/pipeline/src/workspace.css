@@ -131,11 +131,16 @@
     white-space: nowrap;
   }
 
+  /* Each pane scrolls inside itself, and focusing a control scrolls it into view; scroll padding
+     equal to the pane's padding keeps it that far from the edge, so its focus outline, --line-m
+     outside a 2px offset, ~4px, stays inside the clip the overflow draws. --space-xs is 9px at its
+     least, in the compact profile on the narrowest display. */
   .workspace-side {
     grid-area: side;
     overflow-y: auto;
     scrollbar-gutter: stable;
     padding: var(--space-xs);
+    scroll-padding: var(--space-xs);
     border-inline-end: var(--line-s) solid var(--border);
     background-color: var(--bg);
 
@@ -217,6 +222,7 @@
     overflow-y: auto;
     scrollbar-gutter: stable;
     padding: var(--space-m) var(--space-l);
+    scroll-padding: var(--space-m) var(--space-l);
   }
 
   .workspace-help {

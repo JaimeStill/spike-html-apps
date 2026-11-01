@@ -21,7 +21,9 @@ export async function press(
     key,
     code: code ?? (letter ? `Key${key.toUpperCase()}` : ""),
     modifiers: shift ? SHIFT : 0,
-    windowsVirtualKeyCode: letter ? key.toUpperCase().charCodeAt(0) : key === "Escape" ? 27 : 0,
+    windowsVirtualKeyCode: letter
+      ? key.toUpperCase().charCodeAt(0)
+      : (({ Escape: 27, Tab: 9 } as Record<string, number>)[key] ?? 0),
   };
   const text = [...key].length === 1 ? { text: key } : {};
   await page.cdp("Input.dispatchKeyEvent", { type: "keyDown", ...event, ...text });
@@ -36,3 +38,7 @@ export const pressHelp = (page: Page) => press(page, "?", { code: "Slash", shift
 
 /** Presses Escape. */
 export const pressEscape = (page: Page) => press(page, "Escape", { code: "Escape" });
+
+/** Presses Tab, or with `shift` Shift+Tab: the browser moves focus to the next control, or the
+ * previous one. */
+export const pressTab = (page: Page, shift = false) => press(page, "Tab", { code: "Tab", shift });
