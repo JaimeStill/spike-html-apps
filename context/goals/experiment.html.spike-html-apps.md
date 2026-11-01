@@ -1008,6 +1008,12 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   before "can't be shown", formatJson with its depth limit, the budget check removed (architect).
 - pipeline: slice 14, the document view, accepted at its design review, including a real PDF
   rendered by Chrome's own viewer from a Blob (architect).
+- pipeline: slice 15 review (architect): sl-chat-thread follows its newest item from the end,
+  released when the reader scrolls up and resumed at the end, so the app drops its own scroll
+  logic; sl-composer keeps keyboard focus off a disabled control after Stop (both a components
+  release); the emulator's scripted reply can carry reasoning, a function call with its output,
+  and Markdown, a test seam like the failure trigger, and the app folds those events; the flaky
+  upload-progress test is fixed at its race.
 
 ## Pending edits
 
