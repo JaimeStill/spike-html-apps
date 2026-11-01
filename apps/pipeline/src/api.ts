@@ -1,9 +1,9 @@
 // The emulator's API as the app calls it: the client main makes from the shell's config, which
 // every view reaches through apiClient, and the domain services over it, each a stateless object
 // of endpoints over the client (the sdk's Service pattern), with the entities they answer as the
-// emulator's domain packages write them (domain/document and domain/run).
+// emulator's domain packages write them (domain/document, domain/run, and domain/conversation).
 
-import type { Client, Page, Result } from "@jaimestill/spike-html-apps-sdk/api.js";
+import type { Client, Page, Result, ServerSentEvent } from "@jaimestill/spike-html-apps-sdk/api.js";
 import type { Service } from "@jaimestill/spike-html-apps-sdk/service.js";
 
 /** A document, as domain/document's Document writes it. */
@@ -98,17 +98,66 @@ export const runService = (client: Client) =>
       client.get(`runs/${encodeURIComponent(id)}`, { signal }),
   }) satisfies Service;
 
+/** A message content part, as domain/conversation's Part writes it: a user's input_text, or an
+ * assistant's output_text. */
+export interface Part {
+  type: "input_text" | "output_text";
+  text: string;
+}
+
+/** An Open Responses message item, as domain/conversation's Item writes it: a user's input item,
+ * with no id or status, or an assistant's output item. */
+export interface Item {
+  type: "message";
+  id?: string;
+  role: "user" | "assistant";
+  status?: "in_progress" | "completed" | "incomplete";
+  content: Part[];
+}
+
+/** A conversation, as domain/conversation's Conversation writes it: its history oldest first, the
+ * user's messages and every reply that streamed whole; a reply cut off, or one that failed, never
+ * joins it. */
+export interface Conversation {
+  id: string;
+  created_at: string;
+  history: Item[];
+}
+
+/** The conversations domain, /conversations: a new conversation, which takes no body, one by its
+ * id with its history, and a message, answered by the scripted reply as an Open Responses event
+ * stream, which the stream's signal cuts off. The emulator keeps every conversation in memory, so
+ * one outlives a reload but not the emulator. */
+export const conversationService = (client: Client) =>
+  ({
+    create: (signal?: AbortSignal): Promise<Result<Conversation>> =>
+      client.post("conversations", undefined, { signal }),
+    conversation: (id: string, signal?: AbortSignal): Promise<Result<Conversation>> =>
+      client.get(`conversations/${encodeURIComponent(id)}`, { signal }),
+    message: (
+      id: string,
+      text: string,
+      signal?: AbortSignal,
+    ): Promise<Result<AsyncIterable<ServerSentEvent>>> =>
+      client.stream(`conversations/${encodeURIComponent(id)}/messages`, { text }, { signal }),
+  }) satisfies Service;
+
 /** The services the app calls, over the one client. */
 export interface Api {
   documents: ReturnType<typeof documentService>;
   runs: ReturnType<typeof runService>;
+  conversations: ReturnType<typeof conversationService>;
 }
 
 let api: Api | undefined;
 
 /** Sets the client every view calls through; main calls it before the workspace renders. */
 export function useClient(client: Client) {
-  api = { documents: documentService(client), runs: runService(client) };
+  api = {
+    documents: documentService(client),
+    runs: runService(client),
+    conversations: conversationService(client),
+  };
 }
 
 /** The services over the client main set; throws when a view calls before useClient was. */

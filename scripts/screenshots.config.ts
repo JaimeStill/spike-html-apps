@@ -3,7 +3,9 @@
 // the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
 // Markdown artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't
 // know, a run failed, and not found, docked at 1280×1200 and at 375px, full-page (--page
-// document); light and dark, over an emulator the start function boots for the run. Headless
+// document); and the chat, empty, a reply mid-stream, two finished, one stopped, one failed, and
+// a send the network failed, at the same two sizes (--page chat); light and dark, over an
+// emulator the start function boots for the run. Headless
 // Chrome has no PDF viewer, so the PDF state's frame is blank there; a real Chrome renders its
 // one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
 // (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
@@ -14,7 +16,8 @@
 // The start function builds cmd/server, embedding the app's build, into a temporary directory and
 // boots it on free loopback ports, as test/browser/support/emulator.ts does, its stages a second
 // apart so a capture finds runs mid-way, its upload limit 2 MB so a larger file is refused, and
-// its fail rule failing a document named fail-at-… at extraction, so a capture shows a failed run.
+// its fail rule failing a document named fail-at-… at extraction, so a capture shows a failed run,
+// and its replies a word every 150 ms, so a capture finds one mid-stream.
 // The states run in order, each in a fresh tab, light then dark, against the one emulator: the
 // empty state first, before any upload, and each later state adding the documents it shows, so
 // a dark capture lists the documents its light one uploaded too.
@@ -416,6 +419,106 @@ const documentStates = [
   },
 ]);
 
+/** The chat view, its composer, and its thread's shadow root, as page expressions. */
+const CHAT = "document.querySelector('pipeline-chat')";
+const COMPOSER = `${CHAT}?.querySelector('sl-composer')`;
+const THREAD = `${CHAT}?.querySelector('sl-chat-thread')?.shadowRoot`;
+
+/** The thread's last item's text, as a page expression. */
+const LAST_TEXT = `([...(${THREAD}?.querySelectorAll(".thread > li") ?? [])].at(-1)?.querySelector(".content")?.textContent.trim() ?? "")`;
+
+/** Waits for the composer, then sends the text through it, as Enter does. */
+async function chatSend(page: Page, text: string) {
+  await until(page, `${COMPOSER}?.shadowRoot?.querySelector("textarea")`);
+  await page.evaluate(`(() => {
+    const composer = ${COMPOSER};
+    composer.value = ${JSON.stringify(text)};
+    composer.send();
+  })()`);
+  await until(page, `${COMPOSER}.busy`);
+}
+
+/** Waits until the reply streaming has `words` words. */
+const chatWords = (page: Page, words: number) =>
+  until(page, `${LAST_TEXT}.split(/\\s+/).filter(Boolean).length >= ${words}`, 15_000);
+
+/** Waits until the composer is idle again, the reply ended. */
+const chatIdle = (page: Page) => until(page, `!${COMPOSER}.busy`, 15_000);
+
+/** The empty conversation, before anything is sent. */
+const chatEmpty: Step = async (page) => {
+  await until(page, `${COMPOSER}?.shadowRoot?.querySelector("textarea")`);
+};
+
+/** A reply mid-stream, the composer busy with its Stop. */
+const chatStreaming: Step = async (page) => {
+  await chatSend(page, "What does the onboarding guide cover?");
+  await chatWords(page, 12);
+};
+
+/** Two replies finished, the composer's field focused with a draft. */
+const chatFinished: Step = async (page) => {
+  await chatSend(page, "What does the onboarding guide cover?");
+  await chatIdle(page);
+  await chatSend(page, "And how long does a run take,\nfrom upload to embeddings?");
+  await chatIdle(page);
+  await focus(page, `${COMPOSER}.shadowRoot.querySelector("textarea")`);
+  await page.cdp("Input.insertText", { text: "Which documents failed?" });
+};
+
+/** A reply the reader stopped part way. */
+const chatStopped: Step = async (page) => {
+  await chatSend(page, "List every document in the workspace.");
+  await chatWords(page, 8);
+  await page.evaluate(`${COMPOSER}.shadowRoot.querySelector("button.action").click()`);
+  await chatIdle(page);
+};
+
+/** A reply the emulator's failure trigger failed. */
+const chatFailed: Step = async (page) => {
+  await chatSend(page, "/fail");
+  await chatIdle(page);
+};
+
+/** A send the network failed, its Try again shown: the message's request fails as a lost network
+ * does. */
+const chatTrouble: Step = async (page) => {
+  page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) => {
+    void page.cdp("Fetch.failRequest", { requestId, errorReason: "InternetDisconnected" });
+    void page.cdp("Fetch.disable");
+  });
+  await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/messages" }] });
+  await chatSend(page, "Are you there?");
+  await until(page, `${CHAT}.querySelector(".chat-trouble")`);
+};
+
+/** The chat view's states, each docked at 1280×1200 and at 375×667, captured full-page. The
+ * emulator's scripted reply is plain prose, with no Markdown, reasoning, or function call, so the
+ * states show none. */
+const chatStates = [
+  { name: "empty", caption: "empty", open: chatEmpty },
+  { name: "streaming", caption: "a reply mid-stream", open: chatStreaming },
+  { name: "finished", caption: "two replies finished, a draft", open: chatFinished },
+  { name: "stopped", caption: "a reply stopped", open: chatStopped },
+  { name: "failed", caption: "a reply failed by /fail", open: chatFailed },
+  { name: "trouble", caption: "a send the network failed", open: chatTrouble },
+].flatMap(({ name, caption, open }) => [
+  {
+    name: `docked-${name}`,
+    caption: `Chat, docked at 1280×1200, ${caption}`,
+    viewport: { width: 1280, height: 1200 },
+    full: true,
+    open,
+  },
+  {
+    name: `narrow-${name}`,
+    caption: `Chat at 375px, ${caption}`,
+    viewport: phone,
+    full: true,
+    open,
+  },
+]);
+
 const description: Description = {
   pages: [
     {
@@ -470,6 +573,12 @@ const description: Description = {
       path: "chat",
       states: documentStates,
     },
+    {
+      name: "chat",
+      caption: "Chat",
+      path: "chat",
+      states: chatStates,
+    },
   ],
   server: async () => {
     const bin = mkdtempSync(join(tmpdir(), "screenshots-emulator."));
@@ -498,6 +607,7 @@ const description: Description = {
           EMULATOR_RUNS_STAGE_INTERVAL: "1s",
           EMULATOR_DOCUMENTS_MAX_SIZE: "2000000",
           EMULATOR_RUNS_FAIL: "fail-at-*:extraction",
+          EMULATOR_CONVERSATIONS_DELTA_INTERVAL: "150ms",
         },
       });
       return {

@@ -316,7 +316,7 @@ describe("the workspace's text", () => {
       samples: {
         nav: family(document.querySelector(".workspace-side nav a")),
         heading: family(document.querySelector("#upload-heading")),
-        prose: family(document.querySelector("pipeline-chat .view-placeholder")),
+        prose: family(document.querySelector("pipeline-chat .chat-status")),
         prompt: family(zone.querySelector(".prompt")),
         upload: family(zone.querySelector("li.upload .name")),
       },

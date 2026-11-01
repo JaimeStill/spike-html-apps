@@ -1,5 +1,6 @@
 // The browser tier's keyboard: real key presses through the DevTools Protocol, so the foundation's
-// keys module, a field's typing, and a modal dialog's Escape each see what a keyboard sends.
+// keys module, a field's typing, a text field's Enter, and a modal dialog's Escape each see what a
+// keyboard sends.
 // Adapted from spike-html-apps-foundation (8b12185): test/browser/keys.test.ts, its press helper.
 
 import type { Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
@@ -23,9 +24,10 @@ export async function press(
     modifiers: shift ? SHIFT : 0,
     windowsVirtualKeyCode: letter
       ? key.toUpperCase().charCodeAt(0)
-      : (({ Escape: 27, Tab: 9 } as Record<string, number>)[key] ?? 0),
+      : (({ Escape: 27, Tab: 9, Enter: 13 } as Record<string, number>)[key] ?? 0),
   };
-  const text = [...key].length === 1 ? { text: key } : {};
+  // Enter types a carriage return, which a text field takes as a line break.
+  const text = [...key].length === 1 ? { text: key } : key === "Enter" ? { text: "\r" } : {};
   await page.cdp("Input.dispatchKeyEvent", { type: "keyDown", ...event, ...text });
   await page.cdp("Input.dispatchKeyEvent", { type: "keyUp", ...event });
 }
@@ -38,6 +40,10 @@ export const pressHelp = (page: Page) => press(page, "?", { code: "Slash", shift
 
 /** Presses Escape. */
 export const pressEscape = (page: Page) => press(page, "Escape", { code: "Escape" });
+
+/** Presses Enter, or with `shift` Shift+Enter. */
+export const pressEnter = (page: Page, shift = false) =>
+  press(page, "Enter", { code: "Enter", shift });
 
 /** Presses Tab, or with `shift` Shift+Tab: the browser moves focus to the next control, or the
  * previous one. */
