@@ -967,6 +967,8 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   and sl-upload-dropzone gives an upload row's Cancel button room for its focus ring, whose outline
   reached into the progress line below; both released as components v0.6.1. The docked heading
   scrolls with the pane (its stable gutter kept), and the list needs no heading of its own.
+- pipeline: components v0.6.1 released (PR #10, cc7fca1): the drawer's heading at --text-l, its
+  scrolling body's scroll padding, the dropzone's Cancel focus room (architect).
 
 ## Pending edits
 
