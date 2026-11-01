@@ -963,6 +963,10 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   cyan would only even out catppuccin (architect).
 - pipeline: the Release line grows by foundation v0.2.3 and v0.3.0, components v0.6.0, and noctis
   v0.1.1, each accepted at its own checkpoint (architect).
+- pipeline: root review (architect): sl-drawer's heading drops from page scale to a section size,
+  and sl-upload-dropzone gives an upload row's Cancel button room for its focus ring, whose outline
+  reached into the progress line below; both released as components v0.6.1. The docked heading
+  scrolls with the pane (its stable gutter kept), and the list needs no heading of its own.
 
 ## Pending edits
 
