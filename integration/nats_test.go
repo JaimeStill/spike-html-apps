@@ -5,10 +5,12 @@ package integration_test
 import (
 	"bufio"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"regexp"
+	"syscall"
 	"testing"
 	"time"
 
@@ -26,19 +28,51 @@ const allowedOrigin = "http://localhost:5173"
 // record in the text log format.
 var storeRecord = regexp.MustCompile(`msg="nats started" .*store=(\S+)`)
 
-// connect dials url with the nats.go client, presenting tok when it is set,
-// and closes the connection on success.
-func connect(url, tok string) error {
+// dial connects to url with the nats.go client, presenting tok when it is
+// set; the connection is nil when err isn't.
+func dial(url, tok string) (*natsgo.Conn, error) {
 	opts := []natsgo.Option{natsgo.Timeout(2 * time.Second), natsgo.NoReconnect()}
 	if tok != "" {
 		opts = append(opts, natsgo.Token(tok))
 	}
-	nc, err := natsgo.Connect(url, opts...)
+	return natsgo.Connect(url, opts...)
+}
+
+// connect dials url presenting tok, and closes the connection on success.
+func connect(url, tok string) error {
+	nc, err := dial(url, tok)
 	if err != nil {
 		return err
 	}
 	nc.Close()
 	return nil
+}
+
+// refusal says how the server refused a connection whose CONNECT carried a
+// missing or wrong token, or why err is no refusal. The client writes
+// CONNECT and then PING, each a write of its own (over WebSocket, a frame of
+// its own), and reads the server's answer to them. The server answers the
+// CONNECT with -ERR 'Authorization Violation' and closes the connection, so
+// the client sees one of two things, by the race between that close and its
+// PING:
+//
+//   - the -ERR, read before the close lands: nats.ErrAuthorization;
+//   - the close, which lands first: the PING's write fails with EPIPE, or the
+//     read fails with ECONNRESET (the PING arriving at a closed socket resets
+//     it, discarding the -ERR unread) or with io.EOF (the end of the stream,
+//     or over WebSocket the server's close frame).
+//
+// Both are the server ending the connection before the client could use it.
+// Anything else, a timeout, a refused dial, another protocol error, is no
+// refusal: the server never answered the CONNECT, or didn't end it.
+func refusal(err error) (string, bool) {
+	switch {
+	case errors.Is(err, natsgo.ErrAuthorization):
+		return "authorization violation", true
+	case errors.Is(err, syscall.EPIPE), errors.Is(err, syscall.ECONNRESET), errors.Is(err, io.EOF):
+		return "connection closed before the handshake completed", true
+	}
+	return "", false
 }
 
 // upgrade sends a WebSocket upgrade from origin to addr and returns the
@@ -94,7 +128,10 @@ func TestNATS_ReadinessListsServerAndBroker(t *testing.T) {
 }
 
 // A WebSocket client with the configured token connects; one with no
-// token, or another, is refused. The client listener holds the same line.
+// token, or another, is refused: the server ends the connection before the
+// handshake completes, so the client never holds a connection to publish or
+// subscribe on (refusal names the two ways the client sees it). The client
+// listener holds the same line.
 func TestNATS_TokenRequired(t *testing.T) {
 	s := integration.Start(t, integration.Options{})
 
@@ -103,8 +140,17 @@ func TestNATS_TokenRequired(t *testing.T) {
 			t.Errorf("%s: connect with the token: %v", listener, err)
 		}
 		for name, tok := range map[string]string{"no token": "", "wrong token": "not-the-token"} {
-			if err := connect(url, tok); !errors.Is(err, natsgo.ErrAuthorization) {
-				t.Errorf("%s: connect with %s = %v, want an authorization violation", listener, name, err)
+			nc, err := dial(url, tok)
+			if nc != nil {
+				// Connected: a publish would land, the server having authenticated it.
+				nc.Close()
+				t.Errorf("%s: connect with %s succeeded, want it refused", listener, name)
+				continue
+			}
+			if how, ok := refusal(err); !ok {
+				t.Errorf("%s: connect with %s = %v, want an authorization violation or the server closing the connection", listener, name, err)
+			} else {
+				t.Logf("%s: connect with %s refused: %s (%v)", listener, name, how, err)
 			}
 		}
 	}
