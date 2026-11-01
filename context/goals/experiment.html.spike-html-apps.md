@@ -995,6 +995,12 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   gzip for all.js, with Lit), rather than enforced per commit (architect). Measured before
   v0.8.0: components 36.9 kB gzip / 31.5 kB brotli whole, Lit's core 6.2 / 5.6, the foundation
   38.3 / 32.6, the pipeline app's build 112.8 / 93.6.
+- pipeline: formatJson formats to a depth of 64 and leaves deeper subtrees as written, so output
+  stays near the input's size at any depth; a lazily expanded JSON tree is a component candidate
+  for the answer task, not built now (architect). sl-artifact-viewer shows text before it gives
+  up: native types first, then any text (malformed text/* types, textual application types, SVG
+  and XML as source, unknown types whose bytes are UTF-8 text), and "can't be shown" only for
+  binary content; the MIME-token rule governs only what gets an object URL (architect).
 
 ## Pending edits
 
