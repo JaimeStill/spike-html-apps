@@ -303,8 +303,7 @@
     font-size: var(--text-s);
   }
 
-  /* A failed run's status, the stage it failed at and why, and a load that failed, in the failure's
-     hue. */
+  /* A failed run's status, the stage it failed at, and a load that failed, in the failure's hue. */
   .document-run.failed,
   .document-error {
     color: var(--red);

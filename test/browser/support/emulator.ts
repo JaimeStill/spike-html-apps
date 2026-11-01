@@ -63,7 +63,7 @@ export interface UploadedDocument {
 /** A run, as the API answers it: the fields the tier reads. */
 export interface Run {
   status: string;
-  stages: { name: string; state: string }[];
+  stages: { name: string; state: string; failed_at: string | null; reason: string | null }[];
 }
 
 /** An upload's body and the Content-Type it declares. */

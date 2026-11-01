@@ -10,13 +10,16 @@
 // time of the stage event that completed it. So a deep link or a reload shows the run as it stands
 // at once, and the stages advance with no reload as the events arrive. A run that fails, by its
 // failure event or by its answer, whichever the feed heard first, shows its failed stage failed,
-// at the time it failed, the stages after it pending, and its status line names the stage and
-// says why; the timeline carries no reason of its own, so the status line is where the reason
-// shows.
+// at the time it failed and with why, read with the stage, the stages after it pending; its status
+// line names the stage, and leaves the reason to the timeline, so the view says it once.
 //
 // The content is fetched only when the viewer can show its type: Markdown, JSON, or text; any
-// other type, a PDF or an image, shows the viewer's unsupported note with no request made. A
-// content fetch that fails shows its problem's title in the viewer, with a Try again below it. A
+// other type, a PDF or an image, shows the viewer's unsupported note with no request made. It is
+// fetched as text, the body as stored, and handed to the viewer as it came: the viewer shows JSON
+// by its own reading, its invalid-JSON note for a body that doesn't parse. The viewer shows no
+// header of its own, the view's header naming the document and its type above it; its name still
+// names its region. A content fetch that fails shows its problem's title in the viewer, with a Try
+// again below it. A
 // document the API doesn't know (404), or an id that is no document's (the API's 400 for an id
 // that isn't a UUID), shows the view's own not-found state, not the app's.
 //
@@ -72,14 +75,6 @@ type Shown =
  * replacement has taken it, or at the next microtask when no document view replaces it. */
 let handoff: Shown | undefined;
 
-/** The content as the viewer takes it, text: the client decodes text/ types to a string, JSON to
- * its value, which prints back as JSON for the viewer to indent, and an empty body to undefined. */
-function textOf(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (content === undefined) return "";
-  return JSON.stringify(content);
-}
-
 /** Each stage's completion time, by its position, from the feed's stage events for the run. */
 function eventTimes(deliveries: readonly Delivery<RunData>[], run: string): Map<number, string> {
   const times = new Map<number, string>();
@@ -96,7 +91,7 @@ function eventTimes(deliveries: readonly Delivery<RunData>[], run: string): Map<
  * the active one, once the run has started; before its first stage completes, every stage is
  * pending. A failed run's failed stage is failed, the stages before it complete and those after it
  * pending, none active. A stage's time is the answer's, else its event's; the failed stage's is
- * the time it failed, which the timeline shows in its time's place.
+ * the time it failed, and its reason why, the answer's, else the failure event's.
  */
 export function timelineOf(
   run: Run,
@@ -112,11 +107,20 @@ export function timelineOf(
           : stage.position === failure.position
             ? "failed"
             : "pending";
-      const at =
-        state === "failed"
-          ? (stage.failed_at ?? failure.time)
-          : (stage.completed_at ?? times.get(stage.position) ?? null);
-      return { name: stage.name, position: stage.position, state, completedAt: at };
+      if (state === "failed")
+        return {
+          name: stage.name,
+          position: stage.position,
+          state,
+          failedAt: stage.failed_at ?? failure.time,
+          reason: stage.reason ?? failure.reason,
+        };
+      return {
+        name: stage.name,
+        position: stage.position,
+        state,
+        completedAt: stage.completed_at ?? times.get(stage.position) ?? null,
+      };
     }
     return {
       name: stage.name,
@@ -133,13 +137,10 @@ export function timelineOf(
 }
 
 /** The run's status in one line: not started, the stage in progress, complete, or failed at its
- * stage, with why. */
+ * stage. Why it failed is the timeline's, under the failed stage, so the line doesn't repeat it. */
 export function runStatus(stages: readonly TimelineStage[], failure?: Failure): string {
   const count = stages.length;
-  if (failure) {
-    const at = `Failed at stage ${failure.position} of ${count}, ${failure.stage}`;
-    return failure.reason ? `${at}: ${failure.reason}` : at;
-  }
+  if (failure) return `Failed at stage ${failure.position} of ${count}, ${failure.stage}`;
   const done = stages.filter((stage) => stage.state === "complete").length;
   if (done === 0) return "Not started";
   if (done >= count) return `Complete: all ${count} stages`;
@@ -274,7 +275,7 @@ class PipelineDocument extends LitElement {
   async #content(id: string, signal: AbortSignal): Promise<Artifact> {
     const fetched = await appApi().documents.content(id, signal);
     return fetched.ok
-      ? { state: "ready", text: textOf(fetched.data) }
+      ? { state: "ready", text: fetched.data }
       : { state: "error", message: fetched.problem.title };
   }
 
@@ -364,6 +365,7 @@ class PipelineDocument extends LitElement {
         <section class="document-section" aria-labelledby="document-content">
           <h2 id="document-content">Content</h2>
           <sl-artifact-viewer
+            no-header
             name=${document.name}
             content-type=${document.content_type}
             .content=${artifact.state === "ready" ? artifact.text : ""}

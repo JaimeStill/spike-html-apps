@@ -2,9 +2,10 @@
 // (EMULATOR_RUNS_FAIL, fail-at-*:extraction), so a document named fail-at-extraction.txt runs
 // its upload and metadata stages and fails at extraction, its third. Uploaded through the
 // dropzone beside a document no rule matches, its list entry and its document view reach failed
-// live, with no reload, the view's status line naming the stage and why, while the other run
-// completes; the event log shows the failure as a line of its own. A deep link to the failed
-// document, and a reload of it, show the same at once. Each case boots its own emulator, so its
+// live, with no reload, the view's status line naming the stage and its timeline's failed stage
+// showing when and why, while the other run completes; the list's entries take their states' tones,
+// red failed and green complete; the event log shows the failure as a line of its own. A deep link
+// to the failed document, and a reload of it, show the same at once, the failure's time the run's. Each case boots its own emulator, so its
 // store starts empty, and opens its own page, so its sessionStorage starts empty.
 
 import assert from "node:assert/strict";
@@ -53,8 +54,8 @@ const passing = "notes.txt";
 /** The reason the emulator gives a run its rule failed. */
 const reason = `emulated failure: the document's name matches the fail rule "${rule}"`;
 
-/** The status line the document view shows for the failed run. */
-const failedStatus = `Failed at stage 3 of 5, extraction: ${reason}`;
+/** The status line the document view shows for the failed run; the reason is the timeline's. */
+const failedStatus = "Failed at stage 3 of 5, extraction";
 
 /** Starts the case's emulator with the fail rule, its stages `interval` apart. */
 async function boot(interval = "100ms"): Promise<Emulator> {
@@ -123,9 +124,9 @@ async function failedRun(runId: string): Promise<Run> {
 }
 
 /** Asserts the view shows the failed run: the timeline failed at extraction, its failed stage's
- * label in the failure's hue and its time shown, and the status line naming the stage and why, in
- * the same hue. */
-async function assertFailedView(page: Page) {
+ * label in the failure's hue, its failure time shown (the run's `failedAt`, when given) and its
+ * reason under it, and the status line naming the stage, in the same hue, the reason not repeated. */
+async function assertFailedView(page: Page, failedAt?: string) {
   assert.equal(await page.evaluate(SHOWN), FAILED);
   const red = await colorOf(page, "var(--red)");
   assert.equal(
@@ -137,9 +138,15 @@ async function assertFailedView(page: Page) {
     await page.evaluate(`${TIMELINE}.querySelector("li.failed .label .shown").textContent`),
     "Failed",
   );
-  assert.ok(
-    await page.evaluate(`${TIMELINE}.querySelector("li.failed time") !== null`),
-    "the failed stage shows when it failed",
+  const time: string | null = await page.evaluate(
+    `${TIMELINE}.querySelector("li.failed time")?.getAttribute("datetime") ?? null`,
+  );
+  assert.ok(time !== null, "the failed stage shows when it failed");
+  if (failedAt) assert.equal(time, new Date(failedAt).toISOString(), "the run's failure time");
+  assert.equal(
+    await page.evaluate(`${TIMELINE}.querySelector("li.failed .reason")?.textContent ?? null`),
+    reason,
+    "the failed stage shows why",
   );
   assert.equal(await runStatus(page), failedStatus);
   assert.equal(
@@ -148,6 +155,14 @@ async function assertFailedView(page: Page) {
     "the status line in the failure's hue",
   );
 }
+
+/** The color the list's entry for the document named shows its status in. */
+const toneOf = (page: Page, name: string): Promise<string> =>
+  page.evaluate(`(() => {
+    const entry = [...document.querySelector("pipeline-documents sl-document-list").shadowRoot.querySelectorAll("sl-entry")]
+      .find((e) => e.item?.name === ${JSON.stringify(name)});
+    return getComputedStyle(entry.shadowRoot.querySelector(".status")).color;
+  })()`);
 
 /** The status the list shows for the document named. */
 const statusOf = async (page: Page, name: string) =>
@@ -199,6 +214,12 @@ describe("a run that fails", () => {
     await listed(page, failing, "failed 3/5");
     await listed(page, passing, "complete 5/5", 10_000);
     assert.equal(await statusOf(page, failing), "failed 3/5", "nothing un-fails it");
+    assert.equal(await toneOf(page, failing), await colorOf(page, "var(--red)"), "failed in red");
+    assert.equal(
+      await toneOf(page, passing),
+      await colorOf(page, "var(--green)"),
+      "complete in green",
+    );
     assert.equal(await runStatus(page), failedStatus);
     assert.equal(await page.evaluate("window.unreloaded"), true, "the page never reloaded");
 
@@ -237,15 +258,18 @@ describe("a run that fails", () => {
       run.stages.map(({ state }) => state),
       ["complete", "complete", "failed", "pending", "pending"],
     );
+    const failedAt = run.stages[2].failed_at!;
+    assert.equal(run.stages[2].reason, reason);
     const page = await open(`documents/${doc.id}`);
     await until(page, `(${SHOWN}) === ${JSON.stringify(FAILED)}`);
-    await assertFailedView(page);
+    await assertFailedView(page, failedAt);
     await listed(page, failing, "failed 3/5");
+    assert.equal(await toneOf(page, failing), await colorOf(page, "var(--red)"));
 
     await reload(page);
     await listReady(page);
     await until(page, `(${SHOWN}) === ${JSON.stringify(FAILED)}`);
-    await assertFailedView(page);
+    await assertFailedView(page, failedAt);
     assert.equal(await statusOf(page, failing), "failed 3/5");
   });
 });

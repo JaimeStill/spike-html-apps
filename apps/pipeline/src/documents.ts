@@ -14,7 +14,8 @@
 // The list shows a page of the documents, each with its run's progress as its status: read from the
 // API for the page's runs as the page loads, then raised live by the app's one stage feed
 // (live.ts), each run's entry changing in place; a run that fails shows failed, at its failed
-// stage, by its failure event live or by its answer on a load. The page and its size are kept in
+// stage, by its failure event live or by its answer on a load. The status takes its state's tone,
+// red failed, green complete, the accent under way. The page and its size are kept in
 // sessionStorage, so a reload shows the same page. Activating an entry navigates to its document's
 // view, whose entry is then the selected one.
 //
@@ -30,7 +31,7 @@ import { emit } from "@jaimestill/spike-html-apps-foundation/dom.js";
 
 import "@jaimestill/spike-html-apps-components/document-list.js";
 import type { DocumentItem } from "@jaimestill/spike-html-apps-components/document-list.js";
-import type { OpenDetail } from "@jaimestill/spike-html-apps-components/entry.js";
+import type { OpenDetail, StatusTone } from "@jaimestill/spike-html-apps-components/entry.js";
 import type {
   PageChangeDetail,
   PageSizeChangeDetail,
@@ -74,6 +75,16 @@ export function statusOf(progress: Progress | undefined, failure?: Failure): str
   if (!progress) return "pending";
   const { completed, count } = progress;
   return `${completed >= count ? "complete" : "underway"} ${completed}/${count}`;
+}
+
+/**
+ * A run's status as its entry's tone: a failed run's red, a complete one's green, and one under
+ * way the accent; a run nothing has told of yet stays muted.
+ */
+export function toneOf(progress: Progress | undefined, failure?: Failure): StatusTone | null {
+  if (failure) return "failed";
+  if (!progress) return null;
+  return progress.completed >= progress.count ? "complete" : "active";
 }
 
 /** The stored page and size, or the first page at the smallest size when there are none, they
@@ -254,8 +265,11 @@ export class PipelineDocuments extends LitElement {
     }
     const feed = appFeed();
     const status = statusOf(feed.progress(run), feed.failed(run));
+    const status_tone = toneOf(feed.progress(run), feed.failed(run));
     this.items = this.items.map((item) =>
-      item.run_id === run && item.status !== status ? { ...item, status } : item,
+      item.run_id === run && (item.status !== status || item.status_tone !== status_tone)
+        ? { ...item, status, status_tone }
+        : item,
     );
   }
 
@@ -326,6 +340,7 @@ export class PipelineDocuments extends LitElement {
     this.items = page.items.map((doc) => ({
       ...doc,
       status: statusOf(feed.progress(doc.run_id), feed.failed(doc.run_id)),
+      status_tone: toneOf(feed.progress(doc.run_id), feed.failed(doc.run_id)),
     }));
     this.total = total;
     this.more = page.more;

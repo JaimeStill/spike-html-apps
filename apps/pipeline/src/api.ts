@@ -53,22 +53,18 @@ export interface UploadControl {
   progress?: (sent: number, total: number) => void;
 }
 
-/**
- * A document's content as the client decodes it by the content type it was uploaded with: JSON
- * (application/json or a +json type) parsed, any text/ type a string, and anything else a Blob.
- */
-export type Content = unknown;
-
 /** The documents domain, /documents: a page of the listing, oldest first, one document, its
- * content, and an upload. */
+ * content, and an upload. The content is read as text, the body exactly as stored whatever its
+ * content type, so a JSON document keeps its whitespace and key order, and one that doesn't parse
+ * is still its text, for the viewer to show as invalid; an empty body is "". */
 export const documentService = (client: Client) =>
   ({
     list: (query: PageQuery, signal?: AbortSignal): Promise<Result<Page<Document>>> =>
       client.get("documents", { query: { ...query }, signal }),
     document: (id: string, signal?: AbortSignal): Promise<Result<Document>> =>
       client.get(`documents/${encodeURIComponent(id)}`, { signal }),
-    content: (id: string, signal?: AbortSignal): Promise<Result<Content>> =>
-      client.get(`documents/${encodeURIComponent(id)}/content`, { signal }),
+    content: (id: string, signal?: AbortSignal): Promise<Result<string>> =>
+      client.get(`documents/${encodeURIComponent(id)}/content`, { as: "text", signal }),
     // The body is the file itself, its bytes as they are. The emulator requires a Content-Type, and
     // a browser gives a file it can't type none, so such a file goes as octet-stream.
     upload: (file: File, { signal, progress }: UploadControl = {}): Promise<Result<Document>> =>

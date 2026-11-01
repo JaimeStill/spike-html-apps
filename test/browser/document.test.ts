@@ -1,7 +1,9 @@
 // The document view in the binary's build: a deep link to a document mid-run shows its stages as
 // they stand at once, then advances them live to complete with no reload, and a reload mid-run
 // does the same; its content shows in the artifact viewer by its type, Markdown, JSON, and text,
-// and a PDF as unsupported, never fetched; a content fetch that fails shows its problem's title,
+// and a PDF as unsupported, never fetched, the viewer without a header of its own and its region
+// named; JSON reaches the viewer exactly as stored, and a .json that doesn't parse shows the
+// viewer's invalid-JSON note over its text; a content fetch that fails shows its problem's title,
 // and Try again loads it; an id no document has shows the view's own not-found state; and moving
 // between documents, by the list and by back and forward, swaps the view's document with no
 // loading state between, the list's entry following. Each case boots its own emulator, so its
@@ -176,6 +178,14 @@ const ARTIFACTS = {
     type: "application/json",
     body: '{"name":"pipeline","stages":[1,2]}',
   },
+  // Odd whitespace and integer-like keys, which a parse and a print would change: the key order
+  // (integer-like keys first) and the spacing.
+  stored: {
+    name: "stored.json",
+    type: "application/json",
+    body: '{ "b" : 1,\n\t"10": [ 2 ,3 ],   "2":"two" }\n',
+  },
+  invalid: { name: "broken.json", type: "application/json", body: '{"name": "pipeline",' },
   text: { name: "notes.txt", type: "text/plain", body: "plain notes\nsecond line" },
   pdf: {
     name: "report.pdf",
@@ -203,6 +213,20 @@ const viewer = (
       text: root.querySelector("pre.body")?.textContent ?? null,
       label: root.querySelector(".note .label")?.textContent ?? null,
       detail: root.querySelector(".note .detail")?.textContent ?? null,
+    };
+  })()`);
+
+/** The viewer's frame as the view sets it: the content the view handed it, whether it shows a
+ * header of its own, and the names of the regions in its shadow root. */
+const viewerFrame = (
+  page: Page,
+): Promise<{ content: string; header: boolean; regions: string[] }> =>
+  page.evaluate(`(() => {
+    const viewer = ${VIEW}.querySelector("sl-artifact-viewer");
+    return {
+      content: viewer.content,
+      header: viewer.shadowRoot.querySelector("header") !== null,
+      regions: [...viewer.shadowRoot.querySelectorAll("[role=region]")].map((r) => r.getAttribute("aria-label")),
     };
   })()`);
 
@@ -238,12 +262,35 @@ describe("a document's content", () => {
       label: null,
       detail: null,
     });
+    // The view's header names the document, so the viewer shows none; its region is still named.
+    assert.deepEqual(await viewerFrame(page), {
+      content: ARTIFACTS.markdown.body,
+      header: false,
+      regions: ["guide.md content"],
+    });
 
     await shows(ids.json, ready);
     assert.equal(
       (await viewer(page)).text,
       JSON.stringify({ name: "pipeline", stages: [1, 2] }, null, 2),
     );
+
+    // JSON reaches the viewer as stored, its whitespace and key order as the upload sent them.
+    await shows(ids.stored, ready);
+    assert.equal((await viewerFrame(page)).content, ARTIFACTS.stored.body);
+    assert.equal((await viewer(page)).label, null, "valid JSON shows no note");
+
+    // A .json that doesn't parse shows the viewer's invalid-JSON note over its text as stored,
+    // not a problem of the client's decode.
+    await shows(ids.invalid, ready);
+    const invalid = await viewer(page);
+    assert.equal(invalid.label, "Invalid JSON, shown as text.");
+    assert.equal(invalid.text, ARTIFACTS.invalid.body);
+    assert.deepEqual(await viewerFrame(page), {
+      content: ARTIFACTS.invalid.body,
+      header: false,
+      regions: ["broken.json content"],
+    });
 
     await shows(ids.text, ready);
     assert.equal((await viewer(page)).text, "plain notes\nsecond line");
@@ -256,6 +303,11 @@ describe("a document's content", () => {
       label: "This content type can't be shown.",
       detail: "application/pdf isn't text.",
     });
+    assert.deepEqual(await viewerFrame(page), {
+      content: "",
+      header: false,
+      regions: ["report.pdf content"],
+    });
     // The header names the document, its size, type, and upload time.
     const meta: string[] = await page.evaluate(
       `[...${VIEW}.querySelectorAll(".document-meta > span")].map((s) => s.textContent.replace(/\\s+/g, " ").trim())`,
@@ -264,7 +316,7 @@ describe("a document's content", () => {
     assert.equal(meta[1], "application/pdf");
     assert.match(meta[2], /^Uploaded \w+ \d+, \d{4}/);
 
-    for (const kind of ["markdown", "json", "text"])
+    for (const kind of ["markdown", "json", "stored", "invalid", "text"])
       assert.ok(
         requested.some((url) => url.endsWith(`/api/documents/${ids[kind]}/content`)),
         `${kind}'s content fetched`,
