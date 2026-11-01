@@ -983,6 +983,13 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   reordered integer-like keys, rewrote numbers (1.0, 1e3, integers past 2^53), and dropped
   duplicates. Released as components v0.7.1 (architect, slice 14 escalation). globals 17.14.0
   waits out pnpm's minimum release age; no cooldown exclusion.
+- pipeline: sl-artifact-viewer renders natively what the browser can: application/pdf in an iframe
+  (the browser's PDF viewer), image/* in an img, audio/* and video/* in native controls; text/html
+  stays text (it would run in the app's origin); anything else keeps "can't be shown" and offers
+  its download. The viewer takes a Blob and owns its object URL (created, revoked on change and
+  removal), so no server endpoint changes and the external client's tokens still work. Every
+  component that shows JSON uses formatJson. Released as components v0.8.0 (architect). The
+  document view's status line and the list's status tones are accepted as built (architect).
 
 ## Pending edits
 
