@@ -1,6 +1,6 @@
 // The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
-// side pane's documents in each state, docked at 1280px and in the drawer at 375px, light and
-// dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
+// side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
+// the drawer at 375px, light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
 // app (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
@@ -119,7 +119,8 @@ const failure: Step = async (page) => {
 };
 
 /** The docked pane at its full width: an upload from the page under way above the list, and on
- * the list's last page, the newest documents, runs a second apart advancing live. */
+ * the list's last page, the newest documents, runs a second apart advancing live, the first of
+ * them chosen, its entry the selected one and its view in the main pane. */
 const docked: Step = async (page) => {
   await listReady(page);
   await throttle(page, 150_000);
@@ -140,6 +141,14 @@ const docked: Step = async (page) => {
     await wait(200);
     await listReady(page);
   }
+  await page.evaluate(`[
+    ...document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelectorAll('sl-entry'),
+  ].find((entry) => entry.shadowRoot.querySelector('.name').textContent === 'vendor-agreement.txt')
+    .shadowRoot.querySelector('button').click()`);
+  await until(
+    page,
+    `document.querySelector('main')?.firstElementChild?.localName === 'pipeline-document'`,
+  );
   await until(page, `document.querySelector("pipeline-documents").uploads[0].sent > 400000`);
 };
 
@@ -199,6 +208,13 @@ const description: Description = {
           caption: "Side pane, docked at 1280px, live and uploading",
           full: false,
           open: docked,
+        },
+        {
+          name: "boundary",
+          caption: "Side pane, docked at 768px, the stacking width",
+          viewport: { width: 768, height: 1024 },
+          full: false,
+          open: ready,
         },
         {
           name: "narrow-badge",
