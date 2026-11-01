@@ -969,6 +969,11 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   scrolls with the pane (its stable gutter kept), and the list needs no heading of its own.
 - pipeline: components v0.6.1 released (PR #10, cc7fca1): the drawer's heading at --text-l, its
   scrolling body's scroll padding, the dropzone's Cancel focus room (architect).
+- pipeline: slice 14 review (architect): the sdk's client reads a body as text on request, so a
+  content view gets the bytes as stored (the sdk joins the task and releases); sl-artifact-viewer's
+  visible header becomes optional, its name kept as the region's accessible name (components
+  v0.6.2); the emulator gains a failure trigger for a run, a test seam rather than a client API,
+  an exception to the brief's "no emulator API changes".
 
 ## Pending edits
 
@@ -1058,3 +1063,5 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   manifest modules.
 - standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
   `spike-html-apps-noctis` (its peer range moves to foundation ^0.3.0 in this task).
+- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
+  `spike-html-apps-sdk` (its client reads a body as text, released in this task).
