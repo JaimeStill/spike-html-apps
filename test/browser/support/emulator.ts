@@ -60,10 +60,20 @@ export interface UploadedDocument {
   run_id: string;
 }
 
-/** A run, as the API answers it: the field the tier reads. */
+/** A run, as the API answers it: the fields the tier reads. */
 export interface Run {
   status: string;
+  stages: { name: string; state: string }[];
 }
+
+/** An upload's body and the Content-Type it declares. */
+export interface Content {
+  type: string;
+  body: string | Uint8Array;
+}
+
+/** The text document upload sends by default. */
+const brief: Content = { type: "text/plain", body: "the capstone's brief" };
 
 /** An emulator start booted, ready; start's comment and the members' describe each. */
 export interface Emulator {
@@ -74,7 +84,8 @@ export interface Emulator {
   wsURL: string;
   output(): string;
   store(): string | undefined;
-  upload(name?: string): Promise<UploadedDocument>;
+  upload(name?: string, content?: Content): Promise<UploadedDocument>;
+  run(runId: string): Promise<Run>;
   complete(runId: string): Promise<Run>;
   stop(): Promise<void>;
 }
@@ -197,13 +208,16 @@ async function launch(
     output,
     /** The embedded NATS server's store, as its start record logs it. */
     store: () => output().match(/msg="nats started".* store=(\S+)/)?.[1],
-    /** Uploads a text document, resolving to the document, its run_id the run it started. */
-    upload: (name = "brief.txt") =>
+    /** Uploads a document, a text one by default, resolving to the document, its run_id the run
+     * it started. */
+    upload: (name = "brief.txt", { type, body }: Content = brief) =>
       api<UploadedDocument>(
         `/api/documents?name=${encodeURIComponent(name)}`,
-        { method: "POST", headers: { "content-type": "text/plain" }, body: "the capstone's brief" },
+        { method: "POST", headers: { "content-type": type }, body },
         201,
       ),
+    /** The run's API answer. */
+    run: (runId) => api<Run>(`/api/runs/${runId}`),
     /** Resolves to the run once its status is complete. */
     complete: (runId) =>
       until(`run ${runId}`, async () => {

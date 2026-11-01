@@ -260,6 +260,57 @@
     color: var(--fg-2);
   }
 
+  /* The document view: its header, the name over a meta line of size, type, and upload time, the
+     line held one line high while the document loads, so the name arriving moves nothing; then
+     its stages, and its content last, so content arriving grows the page below the rest. While
+     the view shows its predecessor's document, the next one loading, the view is aria-busy, the
+     list's own mark: nothing dims or moves, the swap is the change. */
+  .document-header h1 {
+    overflow-wrap: anywhere;
+  }
+
+  .document-pending {
+    color: var(--fg-2);
+  }
+
+  .document-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-s);
+    min-block-size: 1lh;
+    margin-block: 0;
+    color: var(--fg-2);
+    font-size: var(--text-s);
+    overflow-wrap: anywhere;
+  }
+
+  .document-body {
+    display: grid;
+    gap: var(--space-l);
+    margin-block-start: var(--space-m);
+  }
+
+  .document-section h2 {
+    margin-block: 0 var(--space-2xs);
+    font-size: var(--text-l);
+  }
+
+  /* The run's status, one line above the timeline, and the paused feed's line above it. */
+  .document-run,
+  .document-live {
+    margin-block: 0 var(--space-s);
+    color: var(--fg-2);
+    font-size: var(--text-s);
+  }
+
+  .document-error {
+    color: var(--red);
+  }
+
+  .document-retry {
+    margin-block-start: var(--space-xs);
+  }
+
   .log {
     font-family: var(--font-code);
     font-size: var(--text-s);

@@ -70,14 +70,16 @@ const VIEWS: View[] = [
     path: "documents/doc-1",
     tag: "pipeline-document",
     shows:
-      "document.querySelector('pipeline-document')?.getAttribute('document') === 'doc-1' && document.querySelector('pipeline-document code')?.textContent === 'doc-1'",
+      "document.querySelector('pipeline-document')?.getAttribute('document') === 'doc-1' && document.querySelector('pipeline-document h1')?.textContent === 'Document not found' && document.querySelector('pipeline-document code')?.textContent === 'doc-1'",
   },
 ];
 
 /** Resolves once the router has mounted the view's tag and the view shows its state, failing
- * naming the view otherwise; asserts the location's path and query and the frame. */
+ * naming the view when it doesn't within the wait; asserts the location's path and query and the frame. */
 async function reached(page: Page, base: string, view: View): Promise<void> {
   await mounted(page, view.tag);
+  // A view that asks the API as it mounts, the document view, shows its state once it answers.
+  await until(page, view.shows).catch(() => undefined);
   const [path, search = ""] = view.path.split("?");
   assert.deepEqual(await route(page), { path: `${base}${path}`, tag: view.tag });
   assert.equal(await page.evaluate("location.search"), search && `?${search}`);

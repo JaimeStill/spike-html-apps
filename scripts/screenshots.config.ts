@@ -1,6 +1,8 @@
 // The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
 // side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
-// the drawer at 375px, light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
+// the drawer at 375px; and the document view, a run under way, complete with a Markdown artifact,
+// a JSON artifact, a PDF unsupported, and not found, docked at 1280px and at 375px (--page
+// document); light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
 // app (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
@@ -37,11 +39,11 @@ const root = join(import.meta.dirname, "..");
 /** The emulator's origin once start has booted it. */
 let origin = "";
 
-/** Uploads a text document through the API, as another client would. */
-async function upload(name: string, text = "a document's text") {
+/** Uploads a document through the API, as another client would, a text one by default. */
+async function upload(name: string, text = "a document's text", type = "text/plain") {
   const response = await fetch(`${origin}/api/documents?name=${encodeURIComponent(name)}`, {
     method: "POST",
-    headers: { "content-type": "text/plain" },
+    headers: { "content-type": type },
     body: text,
   });
   if (response.status !== 201) throw new Error(`upload ${name}: ${response.status}`);
@@ -192,6 +194,113 @@ const narrowUploading: Step = async (page) => {
 /** A phone's viewport. */
 const phone = { width: 375, height: 667 };
 
+/** The Markdown document the complete state shows. */
+const GUIDE = `# Onboarding guide
+
+Welcome to the pipeline. Each document you upload passes through **five stages**, and its
+content shows here once it is stored.
+
+## Before you start
+
+- Read the [style notes](https://example.com/style) once.
+- Keep each upload under *32 MB*.
+- Name files so the list sorts them: \`2026-q3-report.md\`.
+
+## Stages
+
+| Stage | What it does |
+| --- | --- |
+| upload | stores the bytes |
+| metadata | reads the name and type |
+| extraction | pulls out the text |
+
+\`\`\`sh
+curl -X POST "$API/documents?name=notes.txt" --data-binary @notes.txt
+\`\`\`
+
+> A run that stalls shows its last stage in progress until it moves again.
+`;
+
+/** The JSON document the JSON state shows. */
+const SETTINGS = JSON.stringify({
+  pipeline: {
+    name: "intake",
+    stages: ["upload", "metadata", "extraction", "chunks", "embeddings"],
+  },
+  limits: { max_size: 33554432, page_size: 20 },
+  retention: { days: 30, archive: true },
+});
+
+/** The complete states' documents, each one's id by its key: uploaded by the document view's
+ * first state, after the side pane's states, whose lists they would join, and waited on until
+ * their runs, a second a stage, are done. */
+let seeding: Promise<Record<string, string>> | undefined;
+const seeded = () =>
+  (seeding ??= (async () => {
+    const ids = {
+      guide: (await upload("onboarding-guide.md", GUIDE, "text/markdown")).id,
+      settings: (await upload("pipeline-settings.json", SETTINGS, "application/json")).id,
+      scan: (await upload("signed-contract.pdf", "%PDF-1.7", "application/pdf")).id,
+    };
+    await wait(5_500);
+    return ids;
+  })());
+
+/** Navigates the page to the document's view and waits for its stages and its content. */
+async function showDocument(page: Page, id: string) {
+  await listReady(page);
+  await page.evaluate(`navigation.navigate("documents/${id}").finished.then(() => true)`);
+  await until(
+    page,
+    `(() => {
+      const view = document.querySelector("pipeline-document");
+      return view?.getAttribute("document") === ${JSON.stringify(id)} && !view.hasAttribute("aria-busy") &&
+        (view.querySelector("h1")?.textContent === "Document not found" ||
+          view.querySelector("sl-artifact-viewer")?.state === "ready");
+    })()`,
+  );
+  await wait(200);
+}
+
+/** A run under way: a document uploaded as the state opens, shown with its third stage active. */
+const documentLive: Step = async (page) => {
+  void seeded();
+  const { id } = await upload(
+    "field-report.md",
+    "# Field report\n\nNotes from the site visit.",
+    "text/markdown",
+  );
+  await showDocument(page, id);
+  await until(
+    page,
+    `document.querySelector("pipeline-document sl-stage-timeline")?.shadowRoot.querySelector("li.active[data-name=extraction]")`,
+  );
+  await wait(300);
+};
+
+const documentMarkdown: Step = async (page) => showDocument(page, (await seeded()).guide);
+const documentJson: Step = async (page) => showDocument(page, (await seeded()).settings);
+const documentUnsupported: Step = async (page) => showDocument(page, (await seeded()).scan);
+const documentMissing: Step = (page) => showDocument(page, "01900000-0000-7000-8000-000000000000");
+
+/** The document view's states, each docked at 1280×800 and at 375×667. */
+const documentStates = [
+  { name: "live", caption: "a run under way", open: documentLive },
+  { name: "markdown", caption: "complete, a Markdown artifact", open: documentMarkdown },
+  { name: "json", caption: "a JSON artifact", open: documentJson },
+  { name: "unsupported", caption: "a PDF, unsupported", open: documentUnsupported },
+  { name: "missing", caption: "not found", open: documentMissing },
+].flatMap(({ name, caption, open }) => [
+  { name: `docked-${name}`, caption: `Document view, docked, ${caption}`, full: false, open },
+  {
+    name: `narrow-${name}`,
+    caption: `Document view at 375px, ${caption}`,
+    viewport: phone,
+    full: false,
+    open,
+  },
+]);
+
 const description: Description = {
   pages: [
     {
@@ -238,6 +347,12 @@ const description: Description = {
           open: narrowUploading,
         },
       ],
+    },
+    {
+      name: "document",
+      caption: "Document view",
+      path: "chat",
+      states: documentStates,
     },
   ],
   server: async () => {
