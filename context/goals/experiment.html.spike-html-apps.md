@@ -1001,6 +1001,9 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   up: native types first, then any text (malformed text/* types, textual application types, SVG
   and XML as source, unknown types whose bytes are UTF-8 text), and "can't be shown" only for
   binary content; the MIME-token rule governs only what gets an object URL (architect).
+- pipeline: held globals at 17.13.0 in the root and components: 17.14.0 (published
+  2026-11-01T11:01Z) is inside pnpm's minimum release age until about 2026-11-02T11:01Z; no cooldown
+  exclusion.
 
 ## Pending edits
 
