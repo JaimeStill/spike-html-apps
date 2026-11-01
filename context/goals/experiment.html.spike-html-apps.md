@@ -978,6 +978,11 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   components v0.7.0 (the artifact viewer's `no-header` and every state named; a failed stage's
   `failedAt` and `reason`; the entry's `status-tone`; PR #11, adbec2f) released (architect). The
   Release line grows by both. "accept" covers every checkpoint brief open at the time (architect).
+- pipeline: sl-artifact-viewer formats valid JSON from the text's own tokens: re-indented, keys in
+  their order, number literals as written, duplicate keys kept; never parsed and re-printed, which
+  reordered integer-like keys, rewrote numbers (1.0, 1e3, integers past 2^53), and dropped
+  duplicates. Released as components v0.7.1 (architect, slice 14 escalation). globals 17.14.0
+  waits out pnpm's minimum release age; no cooldown exclusion.
 
 ## Pending edits
 
