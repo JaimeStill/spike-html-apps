@@ -1004,6 +1004,8 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
 - pipeline: held globals at 17.13.0 in the root and components: 17.14.0 (published
   2026-11-01T11:01Z) is inside pnpm's minimum release age until about 2026-11-02T11:01Z; no cooldown
   exclusion.
+- pipeline: components v0.8.0 released (PR #12, 125e3ce): native rendering from a Blob, text
+  before "can't be shown", formatJson with its depth limit, the budget check removed (architect).
 
 ## Pending edits
 
