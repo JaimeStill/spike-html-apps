@@ -19,7 +19,7 @@
  * Wide, the workspace fills the viewport: the header across the top, the side pane and the main
  * pane beside it below, each scrolling inside itself, its gutter kept so content arriving never
  * shifts it sideways. The side pane is wide enough for a document's entry to take two lines, its
- * name and status, then its size, type, and date: 26rem, or a third of the viewport where that is
+ * name and status, then its size, type, and date: 30rem, or 38% of the viewport where that is
  * less, never below 20rem, so the main pane keeps at least 28rem at 48rem. Below 48rem, the
  * drawer's dock, workspace.ts's DOCK, read the same way, `(width < 48rem)`, the documents leave
  * the side pane for the drawer's modal dialog, the header shows the button that opens it, the
