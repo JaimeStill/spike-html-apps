@@ -2,11 +2,11 @@
 // side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
 // the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
 // Markdown artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't
-// know, a run failed, and not found, docked at 1280px and at 375px (--page document); light and
-// dark, over an emulator the start function boots for the run. Headless Chrome has no PDF viewer,
-// so the PDF state's frame is blank there. A first cut, which slice 18's mise run screenshots
-// extends: until then, build the app (mise run build:app) and run the bin with BROWSER_EXECUTABLE
-// naming chrome-headless-shell:
+// know, a run failed, and not found, docked at 1280×1200 and at 375px, full-page (--page
+// document); light and dark, over an emulator the start function boots for the run. Headless
+// Chrome has no PDF viewer, so the PDF state's frame is blank there; a real Chrome renders its
+// one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
+// (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
 //     pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts --output directory
@@ -37,6 +37,7 @@ import {
   PAGINATION,
   throttle,
 } from "../test/browser/support/documents.ts";
+import { summaryPdf } from "../test/browser/support/media.ts";
 
 /** The repository root, where the emulator reads config.json. */
 const root = join(import.meta.dirname, "..");
@@ -326,7 +327,7 @@ const seeded = () =>
     const ids = {
       guide: (await upload("onboarding-guide.md", GUIDE, "text/markdown")).id,
       settings: (await upload("pipeline-settings.json", SETTINGS, "application/json")).id,
-      scan: (await upload("signed-contract.pdf", "%PDF-1.7", "application/pdf")).id,
+      scan: (await upload("signed-contract.pdf", summaryPdf(), "application/pdf")).id,
       photo: (await upload("site-photo.png", gradientPng(480, 320), "image/png")).id,
       archive: (
         await upload(
@@ -385,7 +386,10 @@ const documentBinary: Step = async (page) => showDocument(page, (await seeded())
 const documentFailed: Step = async (page) => showDocument(page, await failedDocument());
 const documentMissing: Step = (page) => showDocument(page, "01900000-0000-7000-8000-000000000000");
 
-/** The document view's states, each docked at 1280×800 and at 375×667. */
+/** The document view's states, each docked at 1280×1200 and at 375×667, captured full-page, so the
+ * content below the fold shows too. Docked, the workspace's panes scroll inside a frame the
+ * viewport's height, so a full-page capture is only the viewport: the docked states take a taller
+ * one, which shows a short artifact whole and a long one's start. */
 const documentStates = [
   { name: "live", caption: "a run under way", open: documentLive },
   { name: "markdown", caption: "complete, a Markdown artifact", open: documentMarkdown },
@@ -396,12 +400,18 @@ const documentStates = [
   { name: "failed", caption: "a run failed at extraction", open: documentFailed },
   { name: "missing", caption: "not found", open: documentMissing },
 ].flatMap(({ name, caption, open }) => [
-  { name: `docked-${name}`, caption: `Document view, docked, ${caption}`, full: false, open },
+  {
+    name: `docked-${name}`,
+    caption: `Document view, docked at 1280×1200, ${caption}`,
+    viewport: { width: 1280, height: 1200 },
+    full: true,
+    open,
+  },
   {
     name: `narrow-${name}`,
     caption: `Document view at 375px, ${caption}`,
     viewport: phone,
-    full: false,
+    full: true,
     open,
   },
 ]);

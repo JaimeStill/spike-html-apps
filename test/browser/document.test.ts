@@ -20,6 +20,7 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 import { mounted, openWith, reload, route, traverse } from "./support/app.ts";
 import { clickAt, entries, entriesShown, entryOf, listReady } from "./support/documents.ts";
 import { stageNames, start } from "./support/emulator.ts";
+import { summaryPdf } from "./support/media.ts";
 import type { Emulator, StartOptions } from "./support/emulator.ts";
 
 let browser: Browser;
@@ -192,7 +193,7 @@ const ARTIFACTS = {
   pdf: {
     name: "report.pdf",
     type: "application/pdf",
-    body: new TextEncoder().encode("%PDF-1.7 not text"),
+    body: summaryPdf(),
   },
   // A 1x1 PNG, opaque red.
   png: {
@@ -322,7 +323,7 @@ describe("a document's content", () => {
     // named by the document; headless Chrome has no PDF viewer, so its pages aren't asserted.
     await shows(ids.pdf, `${ready} && ${VIEW}.querySelector("h1")?.textContent === "report.pdf"`);
     assert.deepEqual(await viewerFrame(page), {
-      content: { blob: 17 },
+      content: { blob: ARTIFACTS.pdf.body.length },
       header: false,
       regions: ["report.pdf content"],
     });
@@ -336,7 +337,7 @@ describe("a document's content", () => {
     const meta: string[] = await page.evaluate(
       `[...${VIEW}.querySelectorAll(".document-meta > span")].map((s) => s.textContent.replace(/\\s+/g, " ").trim())`,
     );
-    assert.equal(meta[0], "17 bytes");
+    assert.equal(meta[0], "549 bytes");
     assert.equal(meta[1], "application/pdf");
     assert.match(meta[2], /^Uploaded \w+ \d+, \d{4}/);
 
