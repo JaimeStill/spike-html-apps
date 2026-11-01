@@ -1006,6 +1006,8 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   exclusion.
 - pipeline: components v0.8.0 released (PR #12, 125e3ce): native rendering from a Blob, text
   before "can't be shown", formatJson with its depth limit, the budget check removed (architect).
+- pipeline: slice 14, the document view, accepted at its design review, including a real PDF
+  rendered by Chrome's own viewer from a Blob (architect).
 
 ## Pending edits
 
