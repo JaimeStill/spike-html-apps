@@ -90,6 +90,16 @@
     gap: var(--space-2xs);
   }
 
+  /* The header's buttons, Help, Theme, and the documents button, each its label, its key hint,
+     and the documents button's badge too: one row of parts, centered on the label's line, one gap
+     apart, so the three read alike and the badge sits as the key hint does. The whitespace between
+     the parts in the markup, a flex container's, takes no room. */
+  .workspace-header button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+  }
+
   /* The documents button, with its live region: the drawer docks wide, so only narrow, where it
      follows the search field. */
   .workspace-documents {
@@ -105,7 +115,6 @@
   .workspace-badge {
     display: inline-block;
     min-inline-size: 1.5em;
-    margin-inline-start: var(--space-3xs);
     padding-inline: var(--space-3xs);
     border-radius: var(--radius-full);
     background-color: var(--accent-color, var(--magenta));

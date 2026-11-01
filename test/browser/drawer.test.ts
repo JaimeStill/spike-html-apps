@@ -10,6 +10,8 @@
 // that names the documents, and the search field's hint is "Search" below the width and "Search
 // documents" at it, its accessible name "Search documents" throughout. The current view's link
 // takes the accent too. An upload keeps going as the viewport crosses the width back and forth.
+// At 375px the documents button's badge sits centered on its label's line, as far from its key
+// hint as the hint is from the label, the button as tall as Help with and without it.
 // Each case boots its own emulator and opens its own page, with reduced motion, so the drawer
 // opens and closes without its slide.
 
@@ -365,6 +367,63 @@ const ACCENTS = `(() => {
     text: link.color,
   };
 })()`;
+
+/** The header's buttons as laid out: the documents button's label text, key hint, and badge, each
+ * one's vertical center and inline edges, its height, and the help button's height. The label is
+ * the word alone, by a range over its text, without the whitespace around it. */
+const BUTTON_PARTS = `(() => {
+  const button = ${BUTTON};
+  const text = [...button.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.includes("Documents"));
+  const range = document.createRange();
+  const at = text.textContent.indexOf("Documents");
+  range.setStart(text, at);
+  range.setEnd(text, at + "Documents".length);
+  const box = (rect) => ({ center: rect.top + rect.height / 2, start: rect.left, end: rect.right });
+  const badge = button.querySelector(".workspace-badge");
+  return {
+    label: box(range.getBoundingClientRect()),
+    kbd: box(button.querySelector("kbd").getBoundingClientRect()),
+    badge: badge ? box(badge.getBoundingClientRect()) : null,
+    height: button.getBoundingClientRect().height,
+    help: document.querySelector("button[commandfor=help]").getBoundingClientRect().height,
+  };
+})()`;
+
+interface Box {
+  center: number;
+  start: number;
+  end: number;
+}
+
+describe("at 375px, the documents button", () => {
+  test("centers its badge on the label's line, spaced as its key hint is, its height Help's", async (t) => {
+    const page = await open(375);
+    const bare: { height: number; help: number } = await page.evaluate(BUTTON_PARTS);
+    assert.equal(bare.height, bare.help, "without the badge, as tall as Help");
+
+    await throttle(page, 64_000);
+    await choose(page, [{ name: "brief.txt", size: 192_000 }]);
+    await until(page, `${BUTTON}.querySelector(".workspace-badge")`);
+    const parts: { label: Box; kbd: Box; badge: Box; height: number; help: number } =
+      await page.evaluate(BUTTON_PARTS);
+    t.diagnostic(JSON.stringify(parts));
+    assert.ok(
+      Math.abs(parts.badge.center - parts.label.center) <= 0.5,
+      `the badge's center ${parts.badge.center} on the label's ${parts.label.center}`,
+    );
+    assert.ok(
+      Math.abs(parts.badge.center - parts.kbd.center) <= 0.5,
+      `the badge's center ${parts.badge.center} on the key hint's ${parts.kbd.center}`,
+    );
+    const hint = parts.kbd.start - parts.label.end;
+    const badge = parts.badge.start - parts.kbd.end;
+    assert.ok(
+      Math.abs(hint - badge) <= 0.5,
+      `label to key hint ${hint}, key hint to badge ${badge}`,
+    );
+    assert.equal(parts.height, parts.help, "with the badge, as tall as Help");
+  });
+});
 
 describe("the accent", () => {
   test("marks the uploads in flight and the current view's link, and follows --accent-color on the workspace", async () => {
