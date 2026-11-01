@@ -1,7 +1,9 @@
 // The document view in the binary's build: a deep link to a document mid-run shows its stages as
 // they stand at once, then advances them live to complete with no reload, and a reload mid-run
-// does the same; its content shows in the artifact viewer by its type, Markdown, JSON, and text,
-// and a PDF as unsupported, never fetched, the viewer without a header of its own and its region
+// does the same; its content shows in the artifact viewer by its type, Markdown, JSON, and text
+// fetched as text, a PDF and an image fetched as a Blob and shown natively, and a type the viewer
+// doesn't know fetched as a Blob, shown as text when its bytes are and as the can't-be-shown note
+// with a download link when they aren't, the viewer without a header of its own and its region
 // named; JSON reaches the viewer exactly as stored, and a .json that doesn't parse shows the
 // viewer's invalid-JSON note over its text; a content fetch that fails shows its problem's title,
 // and Try again loads it; an id no document has shows the view's own not-found state; and moving
@@ -192,6 +194,27 @@ const ARTIFACTS = {
     type: "application/pdf",
     body: new TextEncoder().encode("%PDF-1.7 not text"),
   },
+  // A 1x1 PNG, opaque red.
+  png: {
+    name: "pixel.png",
+    type: "image/png",
+    body: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+      "base64",
+    ),
+  },
+  // Every byte value, NUL among them, under a type the viewer doesn't know: binary.
+  binary: {
+    name: "data.bin",
+    type: "application/octet-stream",
+    body: Uint8Array.from({ length: 256 }, (_, i) => i),
+  },
+  // Text under a type the viewer doesn't know: its bytes decide.
+  octetText: {
+    name: "notes.dat",
+    type: "application/octet-stream",
+    body: new TextEncoder().encode("text, typed as bytes\nsecond line"),
+  },
 };
 
 /** What the viewer shows: its state, its rendered Markdown's heading, its region's text, and its
@@ -216,22 +239,22 @@ const viewer = (
     };
   })()`);
 
-/** The viewer's frame as the view sets it: the content the view handed it, whether it shows a
- * header of its own, and the names of the regions in its shadow root. */
+/** The viewer's frame as the view sets it: the content the view handed it, a Blob's size in
+ * bytes, whether it shows a header of its own, and the names of the regions in its shadow root. */
 const viewerFrame = (
   page: Page,
-): Promise<{ content: string; header: boolean; regions: string[] }> =>
+): Promise<{ content: string | { blob: number }; header: boolean; regions: string[] }> =>
   page.evaluate(`(() => {
     const viewer = ${VIEW}.querySelector("sl-artifact-viewer");
     return {
-      content: viewer.content,
+      content: viewer.content instanceof Blob ? { blob: viewer.content.size } : viewer.content,
       header: viewer.shadowRoot.querySelector("header") !== null,
       regions: [...viewer.shadowRoot.querySelectorAll("[role=region]")].map((r) => r.getAttribute("aria-label")),
     };
   })()`);
 
 describe("a document's content", () => {
-  test("shows Markdown, JSON, and text by its type, and a PDF as unsupported, never fetched", async () => {
+  test("shows Markdown, JSON, and text as text, and a PDF, an image, and unknown bytes from a Blob", async () => {
     await boot();
     const ids: Record<string, string> = {};
     for (const [kind, { name, type, body }] of Object.entries(ARTIFACTS))
@@ -295,19 +318,20 @@ describe("a document's content", () => {
     await shows(ids.text, ready);
     assert.equal((await viewer(page)).text, "plain notes\nsecond line");
 
+    // A PDF reaches the viewer as a Blob of its bytes, shown in an iframe from its object URL,
+    // named by the document; headless Chrome has no PDF viewer, so its pages aren't asserted.
     await shows(ids.pdf, `${ready} && ${VIEW}.querySelector("h1")?.textContent === "report.pdf"`);
-    assert.deepEqual(await viewer(page), {
-      state: "ready",
-      heading: null,
-      text: null,
-      label: "This content type can't be shown.",
-      detail: "application/pdf isn't text.",
-    });
     assert.deepEqual(await viewerFrame(page), {
-      content: "",
+      content: { blob: 17 },
       header: false,
       regions: ["report.pdf content"],
     });
+    const pdf: { src: string; title: string } | null = await page.evaluate(`(() => {
+      const frame = ${VIEWER}.querySelector("iframe");
+      return frame && { src: frame.src, title: frame.title };
+    })()`);
+    assert.ok(pdf?.src.startsWith("blob:"), `the PDF's iframe shows an object URL: ${pdf?.src}`);
+    assert.equal(pdf?.title, "report.pdf");
     // The header names the document, its size, type, and upload time.
     const meta: string[] = await page.evaluate(
       `[...${VIEW}.querySelectorAll(".document-meta > span")].map((s) => s.textContent.replace(/\\s+/g, " ").trim())`,
@@ -316,15 +340,61 @@ describe("a document's content", () => {
     assert.equal(meta[1], "application/pdf");
     assert.match(meta[2], /^Uploaded \w+ \d+, \d{4}/);
 
-    for (const kind of ["markdown", "json", "stored", "invalid", "text"])
+    // A PNG shows in an img from its object URL, which decodes to its one pixel.
+    await shows(ids.png, `${ready} && ${VIEWER}.querySelector("img") !== null`);
+    assert.deepEqual((await viewerFrame(page)).content, { blob: ARTIFACTS.png.body.length });
+    const image: { src: string; alt: string; width: number; height: number } = await page.evaluate(
+      `(async () => {
+        const img = ${VIEWER}.querySelector("img");
+        await img.decode();
+        return { src: img.src, alt: img.alt, width: img.naturalWidth, height: img.naturalHeight };
+      })()`,
+    );
+    assert.ok(image.src.startsWith("blob:"), `the image shows an object URL: ${image.src}`);
+    assert.deepEqual(
+      { alt: image.alt, width: image.width, height: image.height },
+      {
+        alt: "pixel.png",
+        width: 1,
+        height: 1,
+      },
+    );
+
+    // Bytes of a type the viewer doesn't know, which aren't text, show its note with a link that
+    // downloads them under the document's name.
+    await shows(ids.binary, `${ready} && ${VIEWER}.querySelector(".note .label") !== null`);
+    assert.deepEqual((await viewerFrame(page)).content, { blob: 256 });
+    assert.deepEqual(await viewer(page), {
+      state: "ready",
+      heading: null,
+      text: null,
+      label: "This content type can't be shown.",
+      detail: "application/octet-stream isn't text.",
+    });
+    const download: { href: string; download: string; text: string } | null =
+      await page.evaluate(`(() => {
+        const link = ${VIEWER}.querySelector("a.download");
+        return link && { href: link.href, download: link.download, text: link.textContent.trim() };
+      })()`);
+    assert.ok(
+      download?.href.startsWith("blob:"),
+      `the download is an object URL: ${download?.href}`,
+    );
+    assert.equal(download?.download, "data.bin");
+    assert.equal(download?.text, "Download data.bin");
+
+    // Text under a type the viewer doesn't know shows as text, its bytes deciding.
+    await shows(ids.octetText, `${ready} && ${VIEWER}.querySelector("pre.body") !== null`);
+    assert.deepEqual((await viewerFrame(page)).content, {
+      blob: ARTIFACTS.octetText.body.length,
+    });
+    assert.equal((await viewer(page)).text, "text, typed as bytes\nsecond line");
+
+    for (const kind of Object.keys(ARTIFACTS))
       assert.ok(
         requested.some((url) => url.endsWith(`/api/documents/${ids[kind]}/content`)),
         `${kind}'s content fetched`,
       );
-    assert.ok(
-      !requested.some((url) => url.endsWith(`/api/documents/${ids.pdf}/content`)),
-      "the PDF's content never fetched",
-    );
   });
 
   test("that fails to load shows its problem's title, and loads on Try again", async () => {

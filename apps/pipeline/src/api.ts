@@ -54,9 +54,11 @@ export interface UploadControl {
 }
 
 /** The documents domain, /documents: a page of the listing, oldest first, one document, its
- * content, and an upload. The content is read as text, the body exactly as stored whatever its
- * content type, so a JSON document keeps its whitespace and key order, and one that doesn't parse
- * is still its text, for the viewer to show as invalid; an empty body is "". */
+ * content as text or as its bytes, and an upload. The content is served under the type it was
+ * uploaded with. As text, it is the body exactly as stored whatever its content type, so a JSON
+ * document keeps its whitespace and key order, and one that doesn't parse is still its text, for
+ * the viewer to show as invalid; an empty body is "". As bytes, it is a Blob, an empty body an
+ * empty Blob. */
 export const documentService = (client: Client) =>
   ({
     list: (query: PageQuery, signal?: AbortSignal): Promise<Result<Page<Document>>> =>
@@ -65,6 +67,19 @@ export const documentService = (client: Client) =>
       client.get(`documents/${encodeURIComponent(id)}`, { signal }),
     content: (id: string, signal?: AbortSignal): Promise<Result<string>> =>
       client.get(`documents/${encodeURIComponent(id)}/content`, { as: "text", signal }),
+    bytes: async (id: string, signal?: AbortSignal): Promise<Result<Blob>> => {
+      // The client decodes a body by its type: JSON parsed, text/* a string, and any other type,
+      // octet-stream included, a Blob; no body is undefined. The emulator accepts only a
+      // well-formed type, so a type the viewer takes as bytes is never JSON or text/*, and the
+      // body is a Blob or none; a string, should one come, is still its bytes as UTF-8.
+      const fetched = await client.get<Blob | string | undefined>(
+        `documents/${encodeURIComponent(id)}/content`,
+        { signal },
+      );
+      if (!fetched.ok) return fetched;
+      const { data } = fetched;
+      return { ok: true, data: data instanceof Blob ? data : new Blob(data ? [data] : []) };
+    },
     // The body is the file itself, its bytes as they are. The emulator requires a Content-Type, and
     // a browser gives a file it can't type none, so such a file goes as octet-stream.
     upload: (file: File, { signal, progress }: UploadControl = {}): Promise<Result<Document>> =>

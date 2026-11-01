@@ -13,15 +13,17 @@
 // at the time it failed and with why, read with the stage, the stages after it pending; its status
 // line names the stage, and leaves the reason to the timeline, so the view says it once.
 //
-// The content is fetched only when the viewer can show its type: Markdown, JSON, or text; any
-// other type, a PDF or an image, shows the viewer's unsupported note with no request made. It is
-// fetched as text, the body as stored, and handed to the viewer as it came: the viewer shows JSON
-// by its own reading, its invalid-JSON note for a body that doesn't parse. The viewer shows no
+// The content is fetched as the viewer takes its type, by viewOf: a type it shows as text,
+// Markdown, JSON, or any text or textual type, as text, the body as stored; any other, a PDF, an
+// image, audio, video, or a type it doesn't know, as a Blob. Either is handed to the viewer as it
+// came: the viewer shows JSON by its own reading, its invalid-JSON note for a body that doesn't
+// parse; a native type from the Blob, in its own element; and a type it doesn't know as text when
+// its bytes are, else its note that it can't be shown, with a download link. The viewer shows no
 // header of its own, the view's header naming the document and its type above it; its name still
-// names its region. A content fetch that fails shows its problem's title in the viewer, with a Try
-// again below it. A
-// document the API doesn't know (404), or an id that is no document's (the API's 400 for an id
-// that isn't a UUID), shows the view's own not-found state, not the app's.
+// names its region and its media. A content fetch that fails shows its problem's title in the
+// viewer, with a Try again below it. A document the API doesn't know (404), or an id that is no
+// document's (the API's 400 for an id that isn't a UUID), shows the view's own not-found state,
+// not the app's.
 //
 // The router mounts a new element for every document, so moving from one document to another
 // (an entry of the list, back, forward) would blank the view while the next loads. Instead, the
@@ -56,9 +58,11 @@ export const documentTag = "pipeline-document";
 const uploadedFormat: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" };
 
 /** The document's content, as the viewer shows it: loading, failed with the problem's title, or
- * its text; the text is empty for a type the viewer can't show, which it never fetches. */
+ * its body, as text or as a Blob by the viewer's reading of its type. */
 type Artifact =
-  { state: "loading" } | { state: "error"; message: string } | { state: "ready"; text: string };
+  | { state: "loading" }
+  | { state: "error"; message: string }
+  | { state: "ready"; body: string | Blob };
 
 /** The document's run: its answer, or the problem's title when the API gave none. */
 type RunAnswer = { ok: true; run: Run } | { ok: false; message: string };
@@ -252,10 +256,7 @@ class PipelineDocument extends LitElement {
     const document = answered.data;
 
     let artifact: Artifact = { state: "loading" };
-    const content =
-      viewOf(document.content_type) === "unsupported"
-        ? Promise.resolve<Artifact>({ state: "ready", text: "" })
-        : this.#content(id, signal);
+    const content = this.#content(document, signal);
     void content.then((settled) => {
       artifact = settled;
     });
@@ -272,10 +273,15 @@ class PipelineDocument extends LitElement {
     if (artifact.state === "loading") this.#artifact(await content);
   }
 
-  async #content(id: string, signal: AbortSignal): Promise<Artifact> {
-    const fetched = await appApi().documents.content(id, signal);
+  /** Fetches the document's content as the viewer takes its type: as text, or as a Blob. */
+  async #content({ id, content_type }: Document, signal: AbortSignal): Promise<Artifact> {
+    const { documents } = appApi();
+    const fetched =
+      viewOf(content_type).content === "text"
+        ? await documents.content(id, signal)
+        : await documents.bytes(id, signal);
     return fetched.ok
-      ? { state: "ready", text: fetched.data }
+      ? { state: "ready", body: fetched.data }
       : { state: "error", message: fetched.problem.title };
   }
 
@@ -301,7 +307,7 @@ class PipelineDocument extends LitElement {
     const { document } = this.shown;
     this.#artifact({ state: "loading" });
     const signal = this.#load?.signal ?? new AbortController().signal;
-    const artifact = await this.#content(document.id, signal);
+    const artifact = await this.#content(document, signal);
     if (!signal.aborted && this.shown.state === "ready" && this.shown.document.id === document.id)
       this.#artifact(artifact);
   }
@@ -368,7 +374,7 @@ class PipelineDocument extends LitElement {
             no-header
             name=${document.name}
             content-type=${document.content_type}
-            .content=${artifact.state === "ready" ? artifact.text : ""}
+            .content=${artifact.state === "ready" ? artifact.body : ""}
             .state=${artifact.state}
             .message=${artifact.state === "error" ? artifact.message : ""}
           ></sl-artifact-viewer>

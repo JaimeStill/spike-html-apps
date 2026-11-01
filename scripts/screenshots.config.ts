@@ -1,9 +1,12 @@
 // The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
 // side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
 // the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
-// Markdown artifact, a JSON artifact, a PDF unsupported, a run failed, and not found, docked at
-// 1280px and at 375px (--page document); light and dark, over an emulator the start function boots for the run. A first cut, which slice 18's mise run screenshots extends: until then, build the
-// app (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
+// Markdown artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't
+// know, a run failed, and not found, docked at 1280px and at 375px (--page document); light and
+// dark, over an emulator the start function boots for the run. Headless Chrome has no PDF viewer,
+// so the PDF state's frame is blank there. A first cut, which slice 18's mise run screenshots
+// extends: until then, build the app (mise run build:app) and run the bin with BROWSER_EXECUTABLE
+// naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
 //     pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts --output directory
@@ -20,6 +23,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { crc32, deflateSync } from "node:zlib";
 
 import { until } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import type { Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
@@ -41,7 +45,11 @@ const root = join(import.meta.dirname, "..");
 let origin = "";
 
 /** Uploads a document through the API, as another client would, a text one by default. */
-async function upload(name: string, text = "a document's text", type = "text/plain") {
+async function upload(
+  name: string,
+  text: string | Uint8Array<ArrayBuffer> = "a document's text",
+  type = "text/plain",
+) {
   const response = await fetch(`${origin}/api/documents?name=${encodeURIComponent(name)}`, {
     method: "POST",
     headers: { "content-type": type },
@@ -275,6 +283,40 @@ const SETTINGS = JSON.stringify({
   retention: { days: 30, archive: true },
 });
 
+/** A PNG, `width` by `height`, of a diagonal gradient from teal to violet, made here so the
+ * image state needs no file. */
+function gradientPng(width: number, height: number): Uint8Array<ArrayBuffer> {
+  const chunk = (type: string, data: Buffer) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32BE(data.length, 0);
+    head.write(type, 4, "latin1");
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(Buffer.concat([head.subarray(4), data])), 0);
+    return Buffer.concat([head, data, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8); // 8-bit RGB, no interlace.
+  const rows = Buffer.alloc(height * (1 + width * 3));
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const t = (x / width + y / height) / 2;
+      rows.set(
+        [Math.round(20 + 120 * t), Math.round(160 - 100 * t), Math.round(150 + 90 * t)],
+        y * (1 + width * 3) + 1 + x * 3,
+      );
+    }
+  return new Uint8Array(
+    Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      chunk("IHDR", header),
+      chunk("IDAT", deflateSync(rows)),
+      chunk("IEND", Buffer.alloc(0)),
+    ]),
+  );
+}
+
 /** The complete states' documents, each one's id by its key: uploaded by the document view's
  * first state, after the side pane's states, whose lists they would join, and waited on until
  * their runs, a second a stage, are done. */
@@ -285,6 +327,14 @@ const seeded = () =>
       guide: (await upload("onboarding-guide.md", GUIDE, "text/markdown")).id,
       settings: (await upload("pipeline-settings.json", SETTINGS, "application/json")).id,
       scan: (await upload("signed-contract.pdf", "%PDF-1.7", "application/pdf")).id,
+      photo: (await upload("site-photo.png", gradientPng(480, 320), "image/png")).id,
+      archive: (
+        await upload(
+          "sensor-dump.bin",
+          Uint8Array.from({ length: 512 }, (_, i) => (i * 37) % 256),
+          "application/octet-stream",
+        )
+      ).id,
     };
     await wait(5_500);
     return ids;
@@ -324,7 +374,14 @@ const documentLive: Step = async (page) => {
 
 const documentMarkdown: Step = async (page) => showDocument(page, (await seeded()).guide);
 const documentJson: Step = async (page) => showDocument(page, (await seeded()).settings);
-const documentUnsupported: Step = async (page) => showDocument(page, (await seeded()).scan);
+const documentPdf: Step = async (page) => showDocument(page, (await seeded()).scan);
+const documentImage: Step = async (page) => {
+  await showDocument(page, (await seeded()).photo);
+  await page.evaluate(
+    `document.querySelector("pipeline-document sl-artifact-viewer").shadowRoot.querySelector("img").decode().then(() => true)`,
+  );
+};
+const documentBinary: Step = async (page) => showDocument(page, (await seeded()).archive);
 const documentFailed: Step = async (page) => showDocument(page, await failedDocument());
 const documentMissing: Step = (page) => showDocument(page, "01900000-0000-7000-8000-000000000000");
 
@@ -333,7 +390,9 @@ const documentStates = [
   { name: "live", caption: "a run under way", open: documentLive },
   { name: "markdown", caption: "complete, a Markdown artifact", open: documentMarkdown },
   { name: "json", caption: "a JSON artifact", open: documentJson },
-  { name: "unsupported", caption: "a PDF, unsupported", open: documentUnsupported },
+  { name: "pdf", caption: "a PDF, blank in headless Chrome", open: documentPdf },
+  { name: "image", caption: "a PNG image", open: documentImage },
+  { name: "binary", caption: "a binary it can't show", open: documentBinary },
   { name: "failed", caption: "a run failed at extraction", open: documentFailed },
   { name: "missing", caption: "not found", open: documentMissing },
 ].flatMap(({ name, caption, open }) => [
