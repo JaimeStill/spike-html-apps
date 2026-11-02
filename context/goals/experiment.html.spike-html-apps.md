@@ -136,15 +136,16 @@ Root: review
       demo.
 
 Layers: amended at resume (architect)
-23. Foundation v0.3.1 and sdk v0.3.1: each unit tier's brotli budget check is removed, with
-    `test/unit/budget.ts` and its cases, and the README no longer names a budget. CHANGELOG
-    `[0.3.1]` lists the removal under Removed, worded as components v0.8.0's. A patch.
+23. Foundation and sdk: each unit tier's brotli budget check is removed, with
+    `test/unit/budget.ts` and its cases, and no prose names a budget. No release: a test-only
+    change gets no CHANGELOG entry and no tag (checkpoint Q1, architect).
 24. Components v0.9.1: while sl-chat-thread's constrained frame is at its end, it keeps following
-    when an item at its end grows without a Lit update (a `<details>` opening, an image loading),
+    when its last item grows without a Lit update; growth above the last item is left native
+    (checkpoint Q2, architect) (a `<details>` opening, an image loading),
     keeping the frame's end in view under every motion preference, as it does for new content. A
     reader scrolled up keeps their place. A browser-tier case fails on v0.9.0 and passes on the
     fix. CHANGELOG `[0.9.1]` lists it under Fixed.
-25. Root: foundation `#v0.3.1`, components `#v0.9.1`, sdk `#v0.3.1`, its currency silent; the
+25. Root: components `#v0.9.1`, its currency silent; the
     narrow streaming capture shows the whole opened function call. Evidence 7 in
     `context/README.md` and the conventions note's "Measure size at the end" say no layer
     enforces a budget.
@@ -185,13 +186,12 @@ fields and composer send(). In the root:
 13. Documents pane (11, 12): upload, list, live status. Design-review stop on screenshots.
 14. Document view (12, 15): timeline live, artifact. Design-review stop.
 15. Chat (13). Design-review stop.
-15a. foundation: remove the budget (23). Demo: check. **Checkpoint: foundation v0.3.1**, as
-    slice 3's.
-15b. sdk: remove the budget (23). Demo: check. **Checkpoint: sdk v0.3.1.**
-15c. components: foundation devDependency `#v0.3.1` (peer unchanged) and the following fix (24).
+15a. foundation: remove the budget (23). Demo: check. Merged with no tag.
+15b. sdk: remove the budget (23). Demo: check. Merged with no tag.
+15c. components: the following fix (24).
     Demo: the browser-tier case red then green, the chat thread's screenshots unchanged.
     **Checkpoint: components v0.9.1.**
-15d. root onto the three tags (25). Demo: check, currency silent, the narrow streaming capture.
+15d. root onto components v0.9.1 (25). Demo: check, currency silent, the narrow streaming capture.
 16. Search and events (12, 14). Design-review stop.
 17. External client (19–21) and its demo task. Demo: the browser tier over two emulators, and
     the demo task.
@@ -228,8 +228,7 @@ checkpoint. Two-way: the root's work, which merges with no tag and can be revert
 
 **Release.** spike-html-apps-tooling `v0.3.0`, spike-html-apps-foundation `v0.2.1`,
 spike-html-apps-components `v0.4.0`, in that order; the root consumes all three. Amended at
-resume: spike-html-apps-foundation `v0.3.1`, spike-html-apps-sdk `v0.3.1`,
-spike-html-apps-components `v0.9.1`, in that order.
+resume: spike-html-apps-components `v0.9.1`.
 
 **Sequencing note.** The tooling releases first, because every layer takes it as a
 devDependency. With that order, each layer's currency is silent at its own checkpoint, and the
@@ -260,9 +259,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slices 15a–15d (the amended brief: budgets removed, foundation v0.3.1 and sdk
-  v0.3.1; the chat thread's following, components v0.9.1; the root onto the three tags), then
-  slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
+- Next move: merge foundation PR #9 and sdk PR #7 (budget removals, green, no tag); finish slice
+  15c (components `pipeline`: the last-item rule and reattach fix, then its checkpoint v0.9.1);
+  slice 15d (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
   matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
   shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
   second read of the stream; then its design review. Then slice 17 (the external client, behaviors
@@ -1070,12 +1069,17 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   page, checked by screenshot in the v0.8.0 standards review), and its object URL can only carry
   `application/pdf`.
 - pipeline: the foundation's and the sdk's brotli budget checks are removed to match the
-  components', released as v0.3.1 each; the whole-bundle size is evaluated at the experiment's
+  components', merged with no release (a test-only change gets no CHANGELOG entry or tag, as
+  f50a62a ruled for the budget's addition; checkpoint Q1); the whole-bundle size is evaluated at the experiment's
   final review and optimization just before intake, which sets the resulting budget (architect,
   resume of slice 16).
 - pipeline: scope widened by the architect: sl-chat-thread keeps following when an item at its
   end grows, fixed at its source as components v0.9.1 (`context/conventions.md`, "Fix a defect at
   its source").
+- pipeline: sl-chat-thread follows only its last item's growth; a fold opened above the end keeps
+  the reader's place, natively (checkpoint Q2). A reattached thread measures against its current
+  height; a frame resized by its consumer keeps the browser's own scroll handling.
+- pipeline: release CHANGELOG sections are dated in UTC.
 - pipeline: globals 17.13.0 stays held until pnpm's release age clears (architect).
 
 ## Pending edits
