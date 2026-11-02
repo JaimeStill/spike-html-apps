@@ -259,10 +259,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: the flaky "moving between documents … swaps the view's document with no loading
-  between" (history held 2 entries, not 4, once in a red run of 73edfff), fixed at its race; then
-  slices 17 and 18. The root is on components v0.10.0 and sdk v0.4.0 (73edfff): the search view
-  passes `total`, the log tests UnknownCursorError; captures under the scratchpad's review-16c/.
+- Next move: slice 17 (the external client, behaviors 19–21), then slice 18. The flaky
+  document-history case was a test race, its rAF sampler behind the CDP waits (bdae1db; 9/40 to
+  0/40 under load). For the closing standards review: the same file's `WATCH` timeline sampler
+  (a 5 ms interval) has the same shape, unstressed.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
