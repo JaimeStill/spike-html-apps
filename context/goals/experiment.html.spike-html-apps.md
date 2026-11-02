@@ -259,12 +259,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: once the architect's screenshot runs finish, the root onto components v0.10.1, and
-  slice 18's defect: each `--page` must stand alone (the log's live state waited for runs earlier
-  pages uploaded; the search page likewise reads them). Then the emulator's hold rule and the
-  stage tests on it (Q16), the spec review, the editor, validation, and the session brief; the
-  walkthrough awaits the architect's acceptance. The closing standards review is done (dd85c7b,
-  ec7522a, 789b5d6; the WATCH sampler's race fixed, 2/64 to 0/64).
+- Next move: the emulator's hold rule and the stage tests on it (Q16), once the architect's
+  screenshot runs finish; then the spec review, the editor, validation, and the session brief.
+  The root is on components v0.10.1 (cd505c8) and every screenshot page stands alone (5ac876c);
+  the walkthrough awaits the architect's acceptance.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1111,6 +1109,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - pipeline: Q16 (architect): the emulator gains a configured hold rule beside its fail rule
   (`EMULATOR_RUNS_HOLD`, a document name pattern and a stage), so the stage tests that leaned on
   its fixed timing hold a run where they read it, fixed at the race's cause; no client API.
+- pipeline: Q17 (architect): a screenshot page that needs documents ensures them by name through
+  the emulator's search API and uploads only those missing, so every `--page` stands alone, a
+  full run uploads what it did, and the empty states stay empty (5ac876c).
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
