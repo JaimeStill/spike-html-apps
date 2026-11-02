@@ -259,10 +259,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 17 (the external client, behaviors 19–21), then slice 18. The flaky
-  document-history case was a test race, its rAF sampler behind the CDP waits (bdae1db; 9/40 to
-  0/40 under load). For the closing standards review: the same file's `WATCH` timeline sampler
-  (a 5 ms interval) has the same shape, unstressed.
+- Next move: slice 18 (the walkthrough, behaviors 18 and 22). Slice 17 committed (087557d) and
+  its review accepted; `mise run demo` hosts the client beside two emulators. For the closing
+  standards review: document.test.ts's `WATCH` timeline sampler has the race shape bdae1db fixed.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1090,6 +1089,16 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   past the stream's last event); a recreated stream isn't detected, and a stored cursor at or below
   its last event resumes partway in. A gap for the answer task, beside real auth and persistence;
   the capstone's backend decides it.
+- pipeline: slice 17's review (architect): the external client validates that the web client
+  architecture connects to several services without being embedded in any; the spike records its
+  details as evidence, with no implementation outstanding beyond it (Q12). The wiring both apps
+  hold (the domain services, the run feed, the status wording, the upload lifecycle, the timeline
+  mapping) is recorded as it is, not as a layer candidate. The walkthrough covers the pipeline app
+  only; the client's capture description stays a manual command (Q13).
+- pipeline: slice 17 decided without the architect: services.json is `{ services: [{ name,
+  apiBase, nats: { url, stream, token } }] }`; each panel sends its token as `Authorization` on
+  API calls too, so every cross-origin call is preflighted; a panel's feed reads from the oldest
+  on every load, with no cursor; an entry or a match selected follows its stages.
 - pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
   cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
   reads the first page of 96; search has no nav link, the header field is its way in.
