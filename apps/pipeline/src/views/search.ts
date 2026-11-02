@@ -45,6 +45,7 @@ class PipelineSearch extends LitElement {
   declare query: string;
   /** The matches shown, the first page's. */
   declare items: readonly SearchMatch[];
+  /** Whether the matches are shown, the search in flight, or failed. */
   declare state: SearchState;
   /** Why the search failed: the problem's title. */
   declare message: string;
@@ -53,10 +54,7 @@ class PipelineSearch extends LitElement {
 
   /** Aborts the search in flight when another replaces it or the view leaves. */
   #search: AbortController | undefined;
-
-  #follow = () => {
-    this.query = queryParam("q").trim();
-  };
+  #disconnect: AbortController | undefined;
 
   constructor() {
     super();
@@ -73,13 +71,17 @@ class PipelineSearch extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.#follow();
-    appRouter().addEventListener("change", this.#follow);
+    this.#disconnect = new AbortController();
+    const follow = () => {
+      this.query = queryParam("q").trim();
+    };
+    follow();
+    appRouter().addEventListener("change", follow, { signal: this.#disconnect.signal });
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    appRouter().removeEventListener("change", this.#follow);
+    this.#disconnect?.abort();
     this.#search?.abort();
   }
 
