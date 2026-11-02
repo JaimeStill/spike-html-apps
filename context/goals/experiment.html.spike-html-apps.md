@@ -259,25 +259,13 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 16's design review (committed ab6fad4, check green; captures under the
-  scratchpad's review-16/, states 1–2 and 41–56). Then the components fixes, as one v0.9.2 at a
-  checkpoint: the call id's clip, and slice 16's findings, pending the architect's decision:
-  sl-search-results counts only the items it's given (no total) and marks the previous query's
-  matches with the new query while loading; LogEvent.time is required where CloudEvents make it
-  optional. Slices 15a–15d are done. (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
-  matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
-  shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
-  second read of the stream; then its design review. Then slice 17 (the external client, behaviors
-  19–21; services.json beside its build), slice 18 (the walkthrough and the root's `mise run
-  screenshots` task, behavior 22), then the closing loop: standards and spec reviews over the
-  root's whole diff, the editor, validation with the end-of-task size measurement (whole-bundle
-  gzip and brotli, compared with Material Web's 72.1 kB gzip all.js), the session brief, and SHIP
-  (the root merges with no tag; its Release line is all already released).
+- Next move: slice 16's review accepted with Q3 (architect). In progress: components v0.10.0
+  (the call id's clip at 375px; sl-search-results' total, and its marks kept to the query its
+  items answered while loading; LogEvent.time optional) at a checkpoint; the root's Q3 fix (an
+  unknown stored cursor is forgotten and the one read restarts from the oldest, no reload). Then
+  the root onto v0.10.0, dropping its own total note; then slices 17 and 18.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
-- Open, decided (architect): sl-chat-thread's function-call id (`call_…`, unbroken) runs past the
-  thread's edge at 375px (review-15d, 30-narrow-streaming); fix it at its source as components
-  v0.9.2 at a checkpoint, then the root onto it. Next, after slice 16's design review.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
   release age clears; a plain bump at the next change.
 - Held: globals 17.13.0 in the root and components until pnpm's release age clears (about
@@ -1088,6 +1076,13 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   the reader's place, natively (checkpoint Q2). A reattached thread measures against its current
   height; a frame resized by its consumer keeps the browser's own scroll handling.
 - pipeline: release CHANGELOG sections are dated in UTC.
+- pipeline: slice 16 design review (architect): Q3, a stored cursor the stream never gave out is
+  forgotten and the one read restarts from the oldest at once, with no reload, since nothing has
+  shown and nothing can duplicate; Q4, the components' four defects found by slices 15d and 16
+  release together as v0.10.0 (a minor: the search results' total is Added).
+- pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
+  cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
+  reads the first page of 96; search has no nav link, the header field is its way in.
 - pipeline: globals 17.13.0 stays held until pnpm's release age clears (architect).
 
 ## Pending edits
