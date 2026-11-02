@@ -449,7 +449,9 @@ describe("a document id no document has", () => {
 });
 
 /** Records, inside the page, each heading the view shows as it changes, every animation frame, into
- * `window.headings`; "" when the main pane shows no view's heading. */
+ * `window.headings`; "" when the main pane shows no view's heading. It samples frames, not the DOM:
+ * a move replaces the view's element, and the new one is empty until its first render, a microtask
+ * later and before any frame, so only a frame tells what a person sees. */
 const HEADINGS = `void (window.headings = [], (function sample() {
   const shown = document.querySelector("main h1")?.textContent ?? "";
   if (window.headings.at(-1) !== shown) window.headings.push(shown);
@@ -473,19 +475,28 @@ describe("moving between documents", () => {
       (await entries(page)).filter((entry) => entry.current).map((entry) => entry.name);
     await shows("first.md");
     await page.evaluate(HEADINGS);
+    // shows reads the DOM, ahead of the frames: on a loaded machine the test reached a document and
+    // moved on, or read the record, before a frame had sampled it, and the record came up a heading
+    // short. So each move waits as well for a frame to have shown the document it reached.
+    const framed = (name: string) =>
+      until(page, `window.headings.at(-1) === ${JSON.stringify(name)}`);
+    await framed("first.md");
 
     await clickAt(page, entryOf("second.txt"));
     await shows("second.txt");
+    await framed("second.txt");
     assert.equal((await viewer(page)).text, "plain notes\nsecond line");
     assert.deepEqual(await current(), ["second.txt"]);
 
     await traverse(page, -1);
     await shows("first.md");
+    await framed("first.md");
     assert.equal((await viewer(page)).heading, "Guide");
     assert.deepEqual(await current(), ["first.md"]);
 
     await traverse(page, 1);
     await shows("second.txt");
+    await framed("second.txt");
     assert.deepEqual(await current(), ["second.txt"]);
     assert.equal(
       await page.evaluate(`location.pathname.endsWith(${JSON.stringify(second.id)})`),
