@@ -37,8 +37,12 @@
 // next, against the one emulator: the empty log and the empty side pane first, before any upload,
 // and each later state adding the documents it shows, so a later capture lists the documents the
 // earlier ones uploaded too, and --all's twelve passes of a state upload twelve times over; the
-// states that show the newest documents turn the list to its last page to find them. The search's
-// states search the documents the earlier pages uploaded.
+// states that show the newest documents turn the list to its last page to find them. Each page
+// stands alone, as --page runs it: a state that shows documents an earlier page uploads in a full
+// run ensures them, found by name through the emulator's search and uploaded only when absent, so
+// the search's states find the documents the side pane's uploaded, or upload the two they show,
+// and a full run's later pages upload none of what its earlier ones did. The failed run and the document view's complete documents
+// are uploaded once a run, by the first state that shows them, whichever page it is on.
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -73,6 +77,24 @@ async function upload(
   });
   if (response.status !== 201) throw new Error(`upload ${name}: ${response.status}`);
   return (await response.json()) as { id: string; run_id: string };
+}
+
+/** Uploads the document named `name` through the API unless the emulator holds one by that name
+ * already, as a run that met it on an earlier page does: found by the search, which matches names,
+ * every page of its matches read for one named exactly so. A page run alone so uploads the
+ * documents it shows, and a full run, which uploaded them earlier, uploads nothing again. */
+async function ensure(...args: Parameters<typeof upload>) {
+  const [name] = args;
+  for (let page = 1; ; page++) {
+    const response = await fetch(
+      `${origin}/api/search?q=${encodeURIComponent(name)}&size=100&page=${page}`,
+    );
+    if (response.status !== 200) throw new Error(`search ${name}: ${response.status}`);
+    const found = (await response.json()) as { items: { name: string }[]; more: boolean };
+    if (found.items.some((match) => match.name === name)) return;
+    if (!found.more) break;
+  }
+  await upload(...args);
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -579,17 +601,28 @@ const logEmpty: Step = async (page) => {
   await until(page, `${LOG_ROOT}?.querySelector(".empty")`);
 };
 
+/** The number of events the log shows whose subject is one of the runs, as a page expression. */
+const RUN_EVENTS = (runs: string[]) =>
+  `document.querySelector("pipeline-log").events.filter((event) => ${JSON.stringify(runs)}.includes(event.subject)).length`;
+
 /** Two runs uploaded a second apart by another client, their stage events arriving live at the
- * log's end, the newest's data opened as a reader opens it. */
+ * log's end, after whatever events it shows already, none when the page runs alone; the newest's
+ * data opened as a reader opens it. The runs are new each pass, by design: the state is events
+ * arriving. */
 const logLive: Step = async (page) => {
-  await logShows(page, 1);
+  await until(page, `${LOG_ROOT}?.querySelector(".empty, li.event")`);
   await wait(500);
   await logToEnd(page);
-  const shown: number = await page.evaluate(`${LOG_ROOT}.querySelectorAll("li.event").length`);
-  await upload("weekly-summary.txt");
+  const runs = [(await upload("weekly-summary.txt")).run_id];
   await wait(1_200);
-  await upload("meeting-minutes.txt");
-  await logShows(page, shown + 4);
+  runs.push((await upload("meeting-minutes.txt")).run_id);
+  // Their own events, four of them, both runs' among them: other runs, under way when a full run
+  // reaches this state, add events of their own too.
+  await until(
+    page,
+    `${RUN_EVENTS(runs)} >= 4 && ${runs.map((run) => RUN_EVENTS([run]) + " > 0").join(" && ")}`,
+    15_000,
+  );
   await wait(300);
   await page.evaluate(`void (${LOG_ROOT}.querySelectorAll("li.event details.data") ?? []).forEach(
     (details, i, all) => { details.open = i === all.length - 1; })`);
@@ -615,9 +648,10 @@ const logFailed: Step = async (page) => {
 
 /** The feed restarted: the tab's stored cursor is one the stream never gave out, as after the
  * emulator restarted with a new store, so the feed reads from the oldest event at once and the
- * log's status line says so, quietly. The cursor is stored as the reloaded document starts, ahead
- * of the app's modules: stored any sooner, the log, showing the events of runs the earlier states
- * left under way, would store its own over it before the reload. */
+ * log's status line says so, quietly, beside the events of the runs the log's earlier states
+ * uploaded, however the page runs. The cursor is stored as the reloaded document starts, ahead of
+ * the app's modules: stored any sooner, the log, showing the events of those runs, some still under
+ * way, would store its own over it before the reload. */
 const logRestarted: Step = async (page) => {
   await page.cdp("Page.addScriptToEvaluateOnNewDocument", {
     source: `sessionStorage.setItem("pipeline-log.cursor", "999999")`,
@@ -670,8 +704,17 @@ const searchPrompt: Step = async (page) => {
   await until(page, `${RESULTS}?.shadowRoot?.querySelector(".status .prompt")`);
 };
 
+/** The documents the search for "notes" matches, ensured in the order the side pane's states upload
+ * them: notes.txt, in its name and its content, as the uploading state chooses it, and
+ * release-notes.md, in its name, as the docked state uploads it. */
+async function notes() {
+  await ensure("notes.txt", "meeting notes");
+  await ensure("release-notes.md");
+}
+
 /** The matches for "notes", in names and in content, the second match focused. */
 const searchMatches: Step = async (page) => {
+  await notes();
   await search(page, "notes");
   await focus(page, `${RESULTS}.shadowRoot.querySelectorAll("button.match")[1]`);
 };
@@ -682,6 +725,7 @@ const searchNone: Step = (page) => search(page, "zebra crossing");
 /** The matches for "notes" kept, busy, while the search for "onboarding" is under way: its
  * request held, as a slow link holds it. */
 const searchLoading: Step = async (page) => {
+  await notes();
   await search(page, "notes");
   await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/api/search*" }] });
   await page.evaluate(`void navigation.navigate("search?q=onboarding")`);
