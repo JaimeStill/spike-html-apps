@@ -39,9 +39,10 @@ when they compose the capstone's UI primitives, live over a backend?
    upload dropzone with progress, stage timeline, event log, search results, artifact viewer
    (text, JSON, Markdown), and document list; carried over: status badge, entry, and pagination.
 6. A pipeline app composing them live over the emulator, embedded in its binary.
-7. The layers clean at scale: zero direction violations; the foundation and the SDK within the
-   brotli budgets their own checks enforce; the components measured as a whole bundle against
-   peer libraries' published sizes at the end of the task, their budget removed (architect).
+7. The layers clean at scale: zero direction violations, and no layer enforcing a budget. The
+   layers are measured as a whole bundle, gzip and brotli, against peer libraries' published
+   sizes at the experiment's final review before intake, which sets the resulting budget
+   (architect).
 8. An external client hosted apart, calling two emulator instances cross-origin under CORS the
    spike owns, with a base and token provider for each.
 9. Consumption by tag from outside the spike, and the gaps: Firefox and WebKit, real auth, real
@@ -89,11 +90,9 @@ client, not the capstone's backend.
 
 - **Layers:** the foundation, components, and SDK repositories, each with its own check and
   released by tag.
-- **Budgets:** the foundation's and the SDK's unit tiers fail when the brotli size of the pack's
-  runtime `.js` and `.css`, each file compressed alone and dependencies not counted, exceeds the
-  budget: the baseline plus 10%, rounded up to whole KB of 1,000 B. The foundation's is 48 KB
-  (baseline 43,595 B) and the SDK's 13 KB (11,669 B). The components have no budget; their size is
-  measured as a whole bundle (`conventions.md`).
+- **Size:** no layer enforces a budget. The layers are measured as a whole bundle, gzip and
+  brotli, at the experiment's final review before intake, which sets the resulting budget
+  (`conventions.md`).
 - **Foundation:** the Intl formatters; spike-html-design's profiles, each a unit of a sheet and a
   registration module that a page or an outside package adds; the stored preference and the theme
   menu; and the conformance check for color, space, and type profiles.

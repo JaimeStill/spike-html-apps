@@ -47,7 +47,8 @@ it holds, and the release or commit area that proves it.
   session, comparable to peer libraries' published sizes (Material Web's 72.1 kB gzip for
   `all.js` with Lit), rather than failing commits on a budget. A whole-bundle figure compares
   with what peers publish; a per-file budget doesn't. *Proven:* components v0.8.0 removed its budget
-  check; the foundation and the sdk keep theirs.
+  check, and the foundation and the sdk removed theirs (their PRs #9 and #7), with no release for a
+  test-only change.
 - **Keep palettes as published.** Make no contrast adjustments to a recorded palette. The
   palettes are proven usable as terminal themes, where every hue is text on the backgrounds.
   *Proven:* foundation v0.3.0.
