@@ -239,7 +239,7 @@ session confirms each tag rather than pushing it.
 
 slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
   and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
-  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1); sdk v0.3.0
+  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a); sdk v0.3.0
   (PR #6), v0.4.0 (PR #8, c36dc72); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
   review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
   NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
@@ -259,11 +259,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: components v0.10.1 (Q14, sl-pagination's page field) at a checkpoint, then the root
-  onto it; then the closing loop (standards review of the root's whole diff, with
-  document.test.ts's `WATCH` sampler; spec review; editor; validation with the bundle size; the
-  session brief, where accepting the walkthrough is its design review). Slice 18 committed
-  (9bbbde2, f955c01, 2bd4b92); `mise run screenshots` runs both ways.
+- Next move: once the architect's screenshot runs finish, the root onto components v0.10.1, and
+  slice 18's defect: each `--page` must stand alone (the log's live state waited for runs earlier
+  pages uploaded; the search page likewise reads them). Then Q16 (the stage tests' margin on the
+  emulator's timing), the spec review, the editor, validation, and the session brief; the
+  walkthrough awaits the architect's acceptance. The closing standards review is done (dd85c7b,
+  ec7522a, 789b5d6; the WATCH sampler's race fixed, 2/64 to 0/64).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1105,6 +1106,8 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   two-digit page at regular spacing ("1:" for "13"), so the layers task's "the 4ch stands" is
   revised: the field fits three digits and the input's padding at every spacing, released as
   components v0.10.1, the root onto it.
+- pipeline: Q15 (architect): at 20rem, four mono pagination states wrap their controls to a
+  second row with v0.10.1's field, the component's designed narrow layout; accepted.
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
