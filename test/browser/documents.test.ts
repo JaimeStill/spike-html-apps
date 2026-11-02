@@ -98,7 +98,7 @@ const WATCH = `void (window.statuses = {}, window.unreloaded = true, setInterval
 
 /** A run's statuses as its entry shows them, from its first stage complete to its last. */
 const RUN = stageNames.map((_, i) =>
-  i + 1 < stageNames.length ? `underway ${i + 1}/${stageNames.length}` : "complete 5/5",
+  i + 1 < stageNames.length ? `processing ${i + 1}/${stageNames.length}` : "complete 5/5",
 );
 
 /** A finished upload as the dropzone shows it. */

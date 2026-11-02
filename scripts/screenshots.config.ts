@@ -722,8 +722,8 @@ const searchMatches: Step = async (page) => {
 /** A query no document matches. */
 const searchNone: Step = (page) => search(page, "zebra crossing");
 
-/** The matches for "notes" kept, busy, while the search for "onboarding" is under way: its
- * request held, as a slow link holds it. */
+/** The search for "onboarding" under way after the matches for "notes", which it cleared at once:
+ * the results only its status line, searching, its request held, as a slow link holds it. */
 const searchLoading: Step = async (page) => {
   await notes();
   await search(page, "notes");
@@ -749,7 +749,7 @@ const searchStates = [
   { name: "prompt", caption: "no query yet", open: searchPrompt },
   { name: "matches", caption: "matches, the query marked, one focused", open: searchMatches },
   { name: "none", caption: "no matches", open: searchNone },
-  { name: "loading", caption: "searching, the last matches busy", open: searchLoading },
+  { name: "loading", caption: "searching, the last matches cleared", open: searchLoading },
   { name: "error", caption: "a search the network failed", open: searchError },
 ].flatMap(({ name, caption, open }) => [
   {

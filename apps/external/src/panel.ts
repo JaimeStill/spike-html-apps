@@ -77,13 +77,14 @@ const tokenOf = (token: string): TokenProvider => ({
   refresh: async () => undefined,
 });
 
-/** A run's progress as an entry's status, each word one length, so the status keeps its width as
- * the run advances: "pending", "underway 2/5", "complete 5/5", or "failed 3/5". */
+/** A run's progress as an entry's status: "pending", "processing 2/5", "complete 5/5", or "failed
+ * 3/5". "processing" is the longest word, so a running status keeps one width through its stages,
+ * and completing or failing only shortens it: a status that grew could wrap below its name. */
 function statusOf(progress: Progress | undefined, failure?: Failure): string {
   if (failure) return `failed ${failure.position}/${failure.count}`;
   if (!progress) return "pending";
   const { completed, count } = progress;
-  return `${completed >= count ? "complete" : "underway"} ${completed}/${count}`;
+  return `${completed >= count ? "complete" : "processing"} ${completed}/${count}`;
 }
 
 /** A run's status as its entry's tone: failed red, complete green, under way the accent. */
@@ -578,8 +579,10 @@ export class ExternalPanel extends LitElement {
     void this.#find(query);
   }
 
-  /** Searches for the query, the matches shown kept, busy, until the answer replaces them; a blank
-   * query asks the API nothing, which refuses one, and shows the prompt. */
+  /** Searches for the query, the matches shown cleared until the answer replaces them, the state
+   * set to loading with them in one update, so the status line, the results' live region, goes
+   * straight to "Searching for" the query and never says there are none; a blank query asks the
+   * API nothing, which refuses one, and shows the prompt. */
   async #find(query: string): Promise<void> {
     this.#search?.abort();
     this.query = query;
@@ -593,6 +596,8 @@ export class ExternalPanel extends LitElement {
     this.#search = search;
     const { signal } = search;
     this.searchState = "loading";
+    this.found = [];
+    this.searchTotal = null;
     const found = await this.#api!.search.search(query, searchSize, signal);
     if (signal.aborted) return;
     if (!found.ok) {

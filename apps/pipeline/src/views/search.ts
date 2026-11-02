@@ -5,10 +5,11 @@
 // search in flight for the one that replaces it. Loaded on its first visit.
 //
 // The results' status line says where the search stands: the prompt with no query, searching, the
-// count of matches, none, or that the search failed and why, with Try again below it. While a new
-// query is searched, the last query's matches stay listed, marked busy, so the list doesn't empty
-// and refill. The view reads the first page of matches, at the largest page size the document list
-// offers; for a query that matches more, the status line counts the page's matches of the total,
+// count of matches, none, or that the search failed and why, with Try again below it. When a new
+// query is searched, the last query's matches clear at once, so the results show only the status
+// line's "Searching for" the new query until its answer arrives, and never matches the new query
+// doesn't answer. The view reads the first page of matches, at the largest page size the document
+// list offers; for a query that matches more, the status line counts the page's matches of the total,
 // and a narrower query reaches the rest. A blank query asks nothing of the API, which refuses one,
 // and shows the prompt.
 
@@ -89,7 +90,10 @@ class PipelineSearch extends LitElement {
     if (changed.has("query")) void this.#fetch();
   }
 
-  /** Searches for the query, the matches shown kept, busy, until the answer replaces them. */
+  /** Searches for the query, the matches shown cleared until the answer replaces them. The state
+   * is set to loading with the matches cleared, in the same update, so the results' status line,
+   * their live region, goes from where it stood straight to "Searching for" the query: matches
+   * cleared while still ready would say, for a moment, that there are none. */
   async #fetch(): Promise<void> {
     this.#search?.abort();
     const query = this.query;
@@ -103,6 +107,8 @@ class PipelineSearch extends LitElement {
     this.#search = search;
     const { signal } = search;
     this.state = "loading";
+    this.items = [];
+    this.total = null;
     const found = await appApi().search.search({ q: query, page: 1, size: searchSize }, signal);
     if (signal.aborted) return;
     if (!found.ok) {

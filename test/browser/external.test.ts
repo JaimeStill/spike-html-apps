@@ -169,6 +169,45 @@ describe("the external client's panels", () => {
       names: ["b-upload.txt"],
     });
 
+    // A new search clears the last matches at once: while its request is held, the results list
+    // nothing, and the status line, their live region, goes from the last count straight to
+    // searching for the new query, never saying there are none, until the answer lists its own.
+    const results = `document.querySelectorAll("external-panel")[0].querySelector("sl-search-results")`;
+    const statusLine = () =>
+      page.evaluate(`(() => {
+        const root = ${results}.shadowRoot;
+        return {
+          status: root.querySelector(".status").textContent.replace(/\\s+/g, " ").trim(),
+          names: [...root.querySelectorAll("button.match .name")].map((name) => name.textContent),
+        };
+      })()`);
+    await page.evaluate(`(() => {
+      const status = ${results}.shadowRoot.querySelector(".status");
+      window.statusLine = [];
+      new MutationObserver(() => {
+        window.statusLine.push(status.textContent.replace(/\\s+/g, " ").trim());
+      }).observe(status, { childList: true, subtree: true, characterData: true });
+    })()`);
+    const paused: string[] = [];
+    page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) =>
+      paused.push(requestId),
+    );
+    await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/api/search*" }] });
+    await search(page, 0, "alpha");
+    await until(page, `${results}.state === "loading"`);
+    assert.deepEqual(await statusLine(), { status: "Searching for “alpha”…", names: [] });
+    while (paused.length === 0) await new Promise((resolve) => setTimeout(resolve, 25));
+    await page.cdp("Fetch.continueRequest", { requestId: paused[0] });
+    await page.cdp("Fetch.disable");
+    assert.deepEqual(await searched(page, 0, "alpha"), {
+      status: "1 match for “alpha”",
+      names: ["alpha.txt"],
+    });
+    assert.deepEqual(await page.evaluate("[...new Set(window.statusLine)]"), [
+      "Searching for “alpha”…",
+      "1 match for “alpha”",
+    ]);
+
     // Each log holds its own two runs' events and nothing from the other service.
     const aUpload = await runOf(a, "a-upload.txt");
     const bUpload = await runOf(b, "b-upload.txt");

@@ -4,8 +4,9 @@
 // a reload, and back and forward reach it; and activating a match opens its document's view. Then,
 // once: a query no document matches, a query more documents match than the page the view reads,
 // its count of all of them, a blank one's prompt, which asks the API nothing, and a search in
-// flight, which keeps the last query's matches listed and busy, then fails as a lost network does,
-// saying why, and Try again finds the matches. Each mount, and the once, boots its own emulator
+// flight, which clears the last query's matches at once, its status line going straight to
+// searching for the new query, then fails as a lost network does, saying why, and Try again finds
+// the matches. Each mount, and the once, boots its own emulator
 // with the same three documents, the paged query's uploading its own beside them.
 
 import assert from "node:assert/strict";
@@ -273,9 +274,18 @@ describe("the search view's other states", () => {
     assert.deepEqual(asked, []);
   });
 
-  test("keeps the last matches busy while it searches, says why it failed, and tries again", async () => {
+  test("clears the last matches while it searches, says why it failed, and tries again", async () => {
     await page.goto(`${emulator.origin}${emulator.base}search?q=quarter`);
     assertQuarter(await searched(page, "quarter"));
+
+    // Every text the status line, the results' live region, takes from here on.
+    await page.evaluate(`(() => {
+      const status = ${RESULTS}.shadowRoot.querySelector(".status");
+      window.statusLine = [];
+      new MutationObserver(() => {
+        window.statusLine.push(status.textContent.replace(/\\s+/g, " ").trim());
+      }).observe(status, { childList: true, subtree: true, characterData: true });
+    })()`);
 
     // The next search's request held, then failed as a lost network fails it.
     const paused: string[] = [];
@@ -285,14 +295,17 @@ describe("the search view's other states", () => {
     await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/api/search*" }] });
     await page.evaluate(`navigation.navigate("search?q=notes").finished.then(() => true)`);
     await until(page, `${RESULTS}?.state === "loading"`);
-    const searching = await shown(page);
-    assert.equal(searching.status, "Searching for “notes”…");
-    assert.equal(searching.busy, true, "the last matches marked busy");
-    assert.deepEqual(
-      searching.matches.map(({ name }) => name),
-      QUARTER.map(({ name }) => name),
-    );
+    assert.deepEqual(await shown(page), {
+      state: "loading",
+      status: "Searching for “notes”…",
+      busy: false,
+      matches: [],
+    });
     assert.equal(await page.evaluate("document.querySelector('.search-retry')"), null);
+    // The line went from the last answer's count straight to searching: never "No matches".
+    assert.deepEqual(await page.evaluate("[...new Set(window.statusLine)]"), [
+      "Searching for “notes”…",
+    ]);
 
     while (paused.length === 0) await new Promise((resolve) => setTimeout(resolve, 25));
     await page.cdp("Fetch.failRequest", {

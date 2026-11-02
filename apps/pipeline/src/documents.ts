@@ -63,19 +63,19 @@ export const pagingKey = "pipeline-documents.paging";
 const pageSizes = [12, 24, 48, 96];
 
 /**
- * A run's progress as an entry's status: "underway 2/5" until its last stage completes, then
- * "complete 5/5"; "pending" before anything has told of the run. The two words are one length, so
- * the status keeps its width as the run advances: the entry wraps its status below a name the two
- * don't fit beside, and a status that grew would wrap there mid-run, the entry growing a line. A
- * failed run's status is "failed 3/5", the stage it failed at of its count, as the document view's
- * "Failed at stage 3 of 5" counts it; shorter than "underway", so a run that fails never grows its
- * status either.
+ * A run's progress as an entry's status: "processing 2/5" until its last stage completes, then
+ * "complete 5/5"; "pending" before anything has told of the run. A failed run's status is "failed
+ * 3/5", the stage it failed at of its count, as the document view's "Failed at stage 3 of 5"
+ * counts it. The entry wraps its status below a name the two don't fit beside, so a status that
+ * grew would wrap there, the entry growing a line. "processing" is the longest of the words: it
+ * keeps one width through every stage, and a run that completes or fails only shortens its
+ * status, never growing it once its first stage has told of it.
  */
 export function statusOf(progress: Progress | undefined, failure?: Failure): string {
   if (failure) return `failed ${failure.position}/${failure.count}`;
   if (!progress) return "pending";
   const { completed, count } = progress;
-  return `${completed >= count ? "complete" : "underway"} ${completed}/${count}`;
+  return `${completed >= count ? "complete" : "processing"} ${completed}/${count}`;
 }
 
 /**
