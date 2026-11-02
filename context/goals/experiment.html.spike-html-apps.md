@@ -259,10 +259,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: the emulator's hold rule and the stage tests on it (Q16), once the architect's
-  screenshot runs finish; then the spec review, the editor, validation, and the session brief.
-  The root is on components v0.10.1 (cd505c8) and every screenshot page stands alone (5ac876c);
-  the walkthrough awaits the architect's acceptance.
+- Next move: components v0.10.2 (sl-event-log's source, subject, id each on its own line) at a
+  checkpoint, and the root's walkthrough fixes (Q18, Q19); then the root onto v0.10.2 with the
+  affected states re-captured for the architect; then the emulator's hold rule (Q16), the spec
+  review, the editor, validation, and the session brief. The walkthrough's review is in progress:
+  its feedback is being fixed. The root is on components v0.10.1 (cd505c8); every screenshot page
+  stands alone (5ac876c).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1112,6 +1114,11 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - pipeline: Q17 (architect): a screenshot page that needs documents ensures them by name through
   the emulator's search API and uploads only those missing, so every `--page` stands alone, a
   full run uploads what it did, and the empty states stay empty (5ac876c).
+- pipeline: walkthrough feedback (architect): a run in progress reads "processing 3/5", not
+  "underway" (Q18, both apps); a new search clears the listed matches at once, the status
+  "Searching for …" alone until its answer (Q19 B, both apps; the component keeps its kept-while-
+  loading behavior for other consumers); sl-event-log puts an event's source, subject, and id each
+  on its own line, released as components v0.10.2.
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
