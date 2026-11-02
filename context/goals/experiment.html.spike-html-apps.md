@@ -259,8 +259,8 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 15d (slices 15a–15c done: the foundation's PR #9 and the sdk's PR #7 merged
-  with no tag; components v0.9.1 released) (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
+- Next move: slice 16 (slices 15a–15d done: the foundation's PR #9 and the sdk's PR #7 merged
+  with no tag; components v0.9.1 released; the root on it at 253cb8b) (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
   matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
   shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
   second read of the stream; then its design review. Then slice 17 (the external client, behaviors
@@ -271,6 +271,8 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   (the root merges with no tag; its Release line is all already released).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
+- Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
+  release age clears; a plain bump at the next change.
 - Held: globals 17.13.0 in the root and components until pnpm's release age clears (about
   2026-11-02T11:01Z); then a plain bump in each, and in the foundation, sdk, noctis, and tooling at
   their next change.
