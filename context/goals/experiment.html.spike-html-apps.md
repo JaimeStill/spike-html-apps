@@ -259,9 +259,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: the root onto components v0.10.0 and sdk v0.4.0 (both released): the search view
-  passes `total` and drops its own note; the log tests UnknownCursorError, not the message; the
-  root's Q3 fix (9f1d19d) through its standards review. Then slices 17 and 18.
+- Next move: the flaky "moving between documents … swaps the view's document with no loading
+  between" (history held 2 entries, not 4, once in a red run of 73edfff), fixed at its race; then
+  slices 17 and 18. The root is on components v0.10.0 and sdk v0.4.0 (73edfff): the search view
+  passes `total`, the log tests UnknownCursorError; captures under the scratchpad's review-16c/.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
