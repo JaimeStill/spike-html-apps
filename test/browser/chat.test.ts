@@ -5,9 +5,12 @@
 // composer keeping focus on Escape; Escape outside any field stops one too, and Escape in the
 // composer with nothing streaming leaves the field; /fail shows the failed item with the
 // failure's message; /rich streams reasoning, a function call, its output, then a Markdown
-// message, each growing in place, the JSON shown as written, and a reload shows the same items,
-// while Stop inside the function call leaves it incomplete and its output and message unsent; the thread survives leaving the chat and coming back, and a reload, which
-// reads the history back; the thread follows the newest item unless the reader has scrolled up;
+// message, each growing in place, the reasoning's summary on its collapsed line, the JSON shown as
+// written, and a reload shows the same items, while Stop inside the function call leaves it
+// incomplete and its output and message unsent; the thread survives leaving the chat and coming
+// back, and a reload, which reads the history back; the thread, held to the pane's height, follows
+// the newest item inside its own frame, docked and at 375px, unless the reader has scrolled up
+// with the wheel, and again once they are back at the end or send;
 // and a send the network fails shows its trouble with Try again, which sends it. Each case opens
 // its own tab, so its sessionStorage, and its conversation, start empty; the cases share one
 // emulator whose replies stream a word every 80 ms, so a reply takes about 3.5 s, and the rich
@@ -115,6 +118,16 @@ async function send(page: Page, text: string) {
   await pressEnter(page);
 }
 
+/** Turns the mouse wheel by `deltaY` px over the center of the element the expression names, as
+ * a reader scrolls: a real wheel event, which the browser scrolls by. */
+async function wheel(page: Page, element: string, deltaY: number) {
+  const { x, y }: { x: number; y: number } = await page.evaluate(`(() => {
+    const box = ${element}.getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  })()`);
+  await page.cdp("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY });
+}
+
 /** The deepest focused element's tag, through the shadow roots, or "body". */
 const FOCUSED = `(() => {
   let el = document.activeElement;
@@ -214,9 +227,14 @@ describe("a reply", () => {
     const page = await open();
     await send(page, "Stop me");
     await streamed(page, 3);
+    // Stop holds focus as it is clicked, the field empty: once the reply stops, Stop turns a
+    // disabled send, and focus moves to the field.
+    await page.evaluate(`${ACTION}.focus()`);
+    assert.equal(await page.evaluate(FOCUSED), "button");
     await clickAt(page, ACTION);
     await until(page, `!${COMPOSER}.busy`);
     assert.equal(await page.evaluate(LAST_STATUS), "Incomplete");
+    await until(page, `${FOCUSED} === "textarea"`);
     const stopped: string = await page.evaluate(LAST_TEXT);
     await new Promise((resolve) => setTimeout(resolve, 400));
     assert.equal(await page.evaluate(LAST_TEXT), stopped, "nothing more arrived");
@@ -308,7 +326,7 @@ describe("the rich reply", () => {
     await until(
       page,
       `${VERBOSE("reasoning")}?.querySelector(".status")?.textContent === "Streaming" &&
-        ${VERBOSE("reasoning")}.querySelector(".content").textContent.trim().split(" ").length >= 3`,
+        ${VERBOSE("reasoning")}.querySelector(".reasoning_text")?.textContent.trim().split(" ").length >= 3`,
       10_000,
     );
     const reasoning = await verbose(page, "reasoning");
@@ -351,8 +369,16 @@ describe("the rich reply", () => {
         ["Assistant", null],
       ],
     );
-    const done = await verbose(page, "reasoning");
-    assert.ok(done?.text.startsWith(RICH_SUMMARY) && done.text.endsWith(RICH_REASONING));
+    // The reasoning's summary on its collapsed line, its content inside, the summary not again.
+    const done: { open: boolean; line: string; text: string } = await page.evaluate(`(() => {
+      const details = ${VERBOSE("reasoning")};
+      return {
+        open: details.open,
+        line: details.querySelector("summary .summary-text")?.textContent ?? "",
+        text: details.querySelector(".content").textContent.trim(),
+      };
+    })()`);
+    assert.deepEqual(done, { open: false, line: RICH_SUMMARY, text: RICH_REASONING });
     const call: string = await page.evaluate(
       `${VERBOSE("function_call")}.querySelector("pre").textContent`,
     );
@@ -464,38 +490,73 @@ describe("the thread", () => {
     assert.deepEqual(await items(page), before);
   });
 
-  test("follows the newest item as a reply streams, unless the reader has scrolled up", async () => {
-    const page = await open(async (page) => resize(page, 1280, 420));
-    const MAIN = "document.querySelector('.workspace-main')";
-    const gap = `(${MAIN}.scrollHeight - ${MAIN}.scrollTop - ${MAIN}.clientHeight)`;
-    await send(page, "One");
-    await until(page, `!${COMPOSER}.busy`, 10_000);
-    await send(page, "Two");
-    await streamed(page, 10);
-    assert.ok(
-      await page.evaluate(`${MAIN}.scrollHeight > ${MAIN}.clientHeight`),
-      "the main pane scrolls",
-    );
-    assert.ok((await page.evaluate(gap)) <= 1, "at the end while it streams");
-    // The reader scrolls up: the reply grows below, and the pane stays where they put it.
-    await page.evaluate(`${MAIN}.scrollTop = 0`);
-    await streamed(page, 20);
-    assert.equal(await page.evaluate(`${MAIN}.scrollTop`), 0, "not yanked back");
-    // Back at the end, it follows again.
-    await page.evaluate(`${MAIN}.scrollTop = ${MAIN}.scrollHeight`);
-    await streamed(page, 30);
-    assert.ok((await page.evaluate(gap)) <= 1, "following again");
-    await until(page, `!${COMPOSER}.busy`, 10_000);
-    // The footer, the composer and its status line, meets the pane's bottom edge.
-    const edge: { footer: number; main: number } = await page.evaluate(`({
-      footer: ${VIEW}.querySelector(".chat-footer").getBoundingClientRect().bottom,
-      main: ${MAIN}.getBoundingClientRect().bottom,
-    })`);
-    assert.ok(
-      Math.abs(edge.main - edge.footer) <= 1,
-      `the footer at the bottom: ${JSON.stringify(edge)}`,
-    );
-  });
+  for (const [width, height] of [
+    [1280, 420],
+    [375, 667],
+  ]) {
+    test(`at ${width}×${height}, follows the newest item in its frame unless the reader scrolled up`, async () => {
+      const page = await open(async (page) => resize(page, width, height));
+      const FRAME = `${THREAD}.querySelector(".frame")`;
+      const MAIN = "document.querySelector('.workspace-main')";
+      const PAGE = "document.scrollingElement";
+      const gap = `(${FRAME}.scrollHeight - ${FRAME}.scrollTop - ${FRAME}.clientHeight)`;
+      const atEnd = `${gap} <= 2`;
+      await send(page, "One");
+      await until(page, `!${COMPOSER}.busy`, 10_000);
+      await send(page, "Two");
+      await streamed(page, 10);
+      assert.ok(
+        await page.evaluate(`${FRAME}.scrollHeight > ${FRAME}.clientHeight`),
+        "the thread's frame scrolls",
+      );
+      // The thread scrolls inside its frame: neither the pane nor the page scrolls its content.
+      for (const scroller of [MAIN, PAGE])
+        assert.ok(
+          await page.evaluate(`${scroller}.scrollHeight <= ${scroller}.clientHeight`),
+          `${scroller} doesn't scroll`,
+        );
+      assert.ok(await page.evaluate(atEnd), "at the end while it streams");
+
+      // The reader scrolls up with the wheel: the reply grows below, and they keep their place.
+      await wheel(page, FRAME, -200);
+      await until(page, `!(${atEnd})`);
+      const place: number = await page.evaluate(`${FRAME}.scrollTop`);
+      await streamed(page, 20);
+      assert.equal(await page.evaluate(`${FRAME}.scrollTop`), place, "not yanked back");
+      assert.ok(!(await page.evaluate(atEnd)), "the reply grew below the reader's place");
+
+      // Back at the end, it follows again.
+      await wheel(page, FRAME, 10_000);
+      await until(page, atEnd);
+      await streamed(page, 30);
+      assert.ok(await page.evaluate(atEnd), "following again");
+      await until(page, `!${COMPOSER}.busy`, 10_000);
+
+      // Scrolled up, sending brings the frame back to the end with the reader's message.
+      await wheel(page, FRAME, -200);
+      await until(page, `!(${atEnd})`);
+      await send(page, "Three");
+      await until(page, `${COMPOSER}.busy && ${atEnd}`);
+      await streamed(page, 10);
+      assert.ok(await page.evaluate(atEnd), "following the reply sent for");
+      await until(page, `!${COMPOSER}.busy`, 10_000);
+
+      // The footer, the composer and its status line, is pinned at the pane's bottom edge, the
+      // viewport's, and the composer's field inside it, in reach.
+      const edge: { footer: number; main: number; field: number; viewport: number } =
+        await page.evaluate(`({
+          footer: ${VIEW}.querySelector(".chat-footer").getBoundingClientRect().bottom,
+          main: ${MAIN}.getBoundingClientRect().bottom,
+          field: ${FIELD}.getBoundingClientRect().bottom,
+          viewport: innerHeight,
+        })`);
+      assert.ok(
+        Math.abs(edge.main - edge.footer) <= 1 && Math.abs(edge.viewport - edge.footer) <= 1,
+        `the footer at the bottom: ${JSON.stringify(edge)}`,
+      );
+      assert.ok(edge.field < edge.footer, `the field in reach: ${JSON.stringify(edge)}`);
+    });
+  }
 });
 
 describe("a send the network fails", () => {

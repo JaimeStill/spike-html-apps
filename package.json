@@ -20,7 +20,7 @@
     "vite-plugin-standard-css-modules": "0.3.0"
   },
   "dependencies": {
-    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.8.0",
+    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.9.0",
     "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.3.0",
     "@jaimestill/spike-html-apps-sdk": "github:JaimeStill/spike-html-apps-sdk#v0.3.0",
     "@nats-io/jetstream": "3.4.0",

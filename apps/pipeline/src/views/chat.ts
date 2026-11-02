@@ -20,19 +20,18 @@
 // and Escape elsewhere, while a reply streams, stops it, the registered binding. With nothing
 // streaming the view takes no Escape, so in the composer it leaves the field as in any other.
 //
-// The thread follows the newest item as a reply streams, unless the reader has scrolled up from
-// the end; scrolling back to the end follows again. sl-chat-thread doesn't follow by itself, and
-// its own frame scrolls only when it is held short, so the view leaves it at its content's height
-// and follows in the pane that scrolls: the main pane, docked, and the page below the dock. The
-// composer is sticky at the bottom of that same scroll, the main pane's or the viewport's, so it
-// stays in reach above the thread however long it grows, as a phone's keyboard expects; the view
-// fills the pane, so the composer sits at its bottom even while the thread is short.
+// The thread follows the newest item as a reply streams, opening at its end, releasing when the
+// reader scrolls up and resuming at the end or when they send: sl-chat-thread does this itself,
+// in its own frame, which it follows only when held to a height. So the view fills the main pane
+// and holds the thread to the height its header and footer leave, docked and narrow alike, where
+// the workspace takes the viewport's height while the chat shows (workspace.css): the thread
+// scrolls inside its frame, the page and the pane stay put, and the footer, the composer and its
+// status line, stays pinned below the thread, in reach as a phone's keyboard expects.
 
 import { html, LitElement, nothing } from "lit";
 import type { TemplateResult } from "lit";
 
 import "@jaimestill/spike-html-apps-components/chat-thread.js";
-import type { ChatThread } from "@jaimestill/spike-html-apps-components/chat-thread.js";
 import "@jaimestill/spike-html-apps-components/composer.js";
 import type { Composer, SendDetail } from "@jaimestill/spike-html-apps-components/composer.js";
 import { register } from "@jaimestill/spike-html-apps-foundation/keys.js";
@@ -41,9 +40,6 @@ import { chatSession } from "../conversation.ts";
 import type { ChatSession } from "../conversation.ts";
 
 export const chatTag = "pipeline-chat";
-
-/** How near its end, in px, a scroll counts as at the end: the reader hasn't scrolled up. */
-const END = 24;
 
 /** The status line's text for the session: what the reader waits on, or nothing. */
 export function statusOf(session: ChatSession): string {
@@ -75,8 +71,6 @@ class PipelineChat extends LitElement {
   #disconnect: AbortController | undefined;
   /** Removes the Escape binding registered while a reply streams. */
   #unbind: (() => void) | undefined;
-  /** Whether the scroll is at its end, so the thread follows the newest item. */
-  #following = true;
 
   protected createRenderRoot() {
     return this;
@@ -87,14 +81,6 @@ class PipelineChat extends LitElement {
     this.#disconnect = new AbortController();
     const { signal } = this.#disconnect;
     this.#session.addEventListener("change", () => this.#changed(), { signal });
-    // Scroll doesn't bubble: captured on the document, it is heard from the main pane too.
-    document.addEventListener(
-      "scroll",
-      () => {
-        this.#following = this.#atEnd();
-      },
-      { capture: true, passive: true, signal },
-    );
     this.#session.load();
     this.#bind();
   }
@@ -108,37 +94,13 @@ class PipelineChat extends LitElement {
     if (composer) this.#session.draft = composer.value;
   }
 
-  protected async firstUpdated() {
+  protected firstUpdated() {
     const composer = this.#composer;
     if (composer) composer.value = this.#session.draft;
-    this.#following = true;
-    await this.#follow();
   }
 
   get #composer(): Composer | null {
     return this.querySelector("sl-composer");
-  }
-
-  /** The element that scrolls the view: the main pane while it scrolls itself, docked, else the
-   * page's. */
-  get #scroller(): Element {
-    const main = this.closest(".workspace-main");
-    if (main && getComputedStyle(main).overflowY !== "visible") return main;
-    return document.scrollingElement ?? document.documentElement;
-  }
-
-  #atEnd(): boolean {
-    const { scrollTop, scrollHeight, clientHeight } = this.#scroller;
-    return scrollHeight - scrollTop - clientHeight <= END;
-  }
-
-  /** Scrolls to the newest item once the thread has rendered, unless the reader scrolled up. */
-  async #follow() {
-    await this.updateComplete;
-    await this.querySelector<ChatThread>("sl-chat-thread")?.updateComplete;
-    if (!this.#following) return;
-    const scroller = this.#scroller;
-    scroller.scrollTop = scroller.scrollHeight;
   }
 
   /** Registers Escape, which stops the reply, while one streams, and removes it after. */
@@ -154,12 +116,9 @@ class PipelineChat extends LitElement {
   #changed() {
     this.#bind();
     this.requestUpdate();
-    void this.#follow();
   }
 
   #send(e: CustomEvent<SendDetail>) {
-    // The reader just sent: the thread follows their message and its reply.
-    this.#following = true;
     this.#session.send(e.detail.text);
   }
 

@@ -313,29 +313,32 @@
     margin-block-start: var(--space-xs);
   }
 
-  /* The chat view fills the main pane, so its composer sits at the pane's bottom while the
-     thread is short: a column of the header, then the body, whose thread takes the room left,
-     its frame the component's, and whose footer, the reply's failure, a send's trouble with Try
-     again, the composer, and the status line, is sticky at the bottom of the scroll, the main
-     pane's docked and the page's narrow, on the page's surface so the thread scrolls under it.
-     The pane gives up its bottom padding to the footer's own, so at the scroll's end the footer
-     meets the pane's edge, as it does stuck. The scroll keeps a focused control in the thread clear of
-     the footer by a scroll padding about the footer's height. */
+  /* The chat view fills the main pane and holds its thread to a height: a column of the header,
+     then the body, whose thread takes the room the footer leaves, the reply's failure, a send's
+     trouble with Try again, the composer, and the status line, pinned below it. sl-chat-thread
+     follows its newest item only in its own frame, which scrolls only when held, so the thread's
+     basis is none and its height the column's remainder: its frame scrolls inside, and the pane
+     doesn't. The thread keeps at least 6rem, so a viewport too short for that scrolls the pane
+     instead; the footer, sticky at the pane's bottom on the page's surface, then stays in reach,
+     and a scroll padding about its height keeps a focused control clear of it. The pane gives up
+     its bottom padding to the footer's own, so the footer meets the pane's edge. */
   pipeline-chat {
     display: flex;
     flex-direction: column;
-    min-block-size: 100%;
+    block-size: 100%;
   }
 
   .chat-body {
-    flex: 1 0 auto;
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     gap: var(--space-s);
   }
 
   .chat-body sl-chat-thread {
-    flex: 1 0 auto;
+    flex: 1 1 0;
+    block-size: 0;
+    min-block-size: 6rem;
   }
 
   .chat-footer {
@@ -349,10 +352,6 @@
 
   .workspace-main:has(> pipeline-chat) {
     padding-block-end: 0;
-  }
-
-  .workspace-main:has(> pipeline-chat),
-  :root:has(pipeline-chat) {
     scroll-padding-block-end: 8rem;
   }
 
@@ -435,6 +434,22 @@
     .workspace-main {
       overflow-y: visible;
       padding: var(--space-m) var(--space-s);
+    }
+
+    /* While the chat shows, the workspace takes the viewport's height, as docked, and the main
+       pane the rows the header and the navigation leave, so the chat can hold its thread to a
+       height; the pane scrolls only on a viewport too short for the thread's least, and
+       reserves no gutter for it. */
+    pipeline-workspace:has(> .workspace-main > pipeline-chat) {
+      grid-template-rows: auto auto minmax(0, 1fr);
+      block-size: 100dvh;
+      min-block-size: 0;
+    }
+
+    .workspace-main:has(> pipeline-chat) {
+      overflow-y: auto;
+      scrollbar-gutter: auto;
+      padding-block-end: 0;
     }
   }
 }
