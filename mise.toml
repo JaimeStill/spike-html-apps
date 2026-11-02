@@ -123,10 +123,11 @@ dir = "{{config_root}}"
 # Adapted from spike-html-apps-sdk (be6341d): mise.toml, its test:browser task. The tier builds
 # cmd/server once, embedding the pipeline app's build, into a temporary directory the task removes,
 # and each file boots it on reserved loopback ports, under its own TMPDIR, as test/browser/support/
-# emulator.ts does.
+# emulator.ts does. The external client's file hosts the client's build (build:external) apart, on
+# a third origin, with the tooling's static server, as test/browser/support/external.ts does.
 [tasks."test:browser"]
-description = "Run the browser tier after build:app: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the workspace's views by deep link, reload, and history at each mount, its layout and its interface font, the documents drawer (docked at 48rem and wider; below it, its button, badge, d, and drag-open; its one heading, the search hint, and the accent), the shortcuts, the theme menu and its stored choice before first paint, the NATS adapter's live reads through the app's one feed (the event log in sl-event-log, events arriving live, its resume after a reload with no gap and no duplicate, a cursor the stream never gave out forgotten and the read restarted from the oldest event at once, and one consumer on the stream), the search view (by the header's field, deep link, reload, and history at each mount, its matches marked, a match opening its document, no matches, more matches than a page counted of them all, a blank query's prompt, and a search in flight, failed, and tried again), the side pane's uploads (progress, cancel, a refusal's title) and its document list (live run statuses, paging, entries reaching their view, reload), the document view (its stages live from a deep link and after a reload, its content by type, a content fetch's failure and Try again, an unknown id's not-found state, and moving between documents with no loading between), a run the emulator's fail rule fails (its list entry and document view failed live with its reason, beside a run that completes, the same by deep link and reload, and its failure event in the event log), each control's focus outline inside the side pane's scroll as Tab and Shift+Tab move through it docked, two instances side by side, and the harness relaunching a boot that lost a reserved port; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
-depends = ["preflight browser", "build:app"]
+description = "Run the browser tier after build:app and build:external: build cmd/server, embedding the pipeline app's build, boot it on reserved loopback ports, and load the app in the pinned chrome-headless-shell, through base agreement at each mount, the workspace's views by deep link, reload, and history at each mount, its layout and its interface font, the documents drawer (docked at 48rem and wider; below it, its button, badge, d, and drag-open; its one heading, the search hint, and the accent), the shortcuts, the theme menu and its stored choice before first paint, the NATS adapter's live reads through the app's one feed (the event log in sl-event-log, events arriving live, its resume after a reload with no gap and no duplicate, a cursor the stream never gave out forgotten and the read restarted from the oldest event at once, and one consumer on the stream), the search view (by the header's field, deep link, reload, and history at each mount, its matches marked, a match opening its document, no matches, more matches than a page counted of them all, a blank query's prompt, and a search in flight, failed, and tried again), the side pane's uploads (progress, cancel, a refusal's title) and its document list (live run statuses, paging, entries reaching their view, reload), the document view (its stages live from a deep link and after a reload, its content by type, a content fetch's failure and Try again, an unknown id's not-found state, and moving between documents with no loading between), a run the emulator's fail rule fails (its list entry and document view failed live with its reason, beside a run that completes, the same by deep link and reload, and its failure event in the event log), each control's focus outline inside the side pane's scroll as Tab and Shift+Tab move through it docked, two instances side by side, the harness relaunching a boot that lost a reserved port, and the external client hosted apart over two emulators (each panel's list, upload with progress through a preflighted cross-origin request, search, and live stage events from its own emulator; an upload's events in its own panel alone; a service not admitting the client's origin failing its own panel with the network problem beside one that works; and services.json missing, not JSON, or not a service list, the error naming it); reads no network, writes apps/pipeline/dist/ and apps/external/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+depends = ["preflight browser", "build:app", "build:external"]
 run = '''
 set -eu
 bin=$(mktemp -d)
@@ -152,8 +153,20 @@ depends = ["preflight"]
 run = ["pnpm exec vite build", "touch apps/pipeline/dist/.gitkeep"]
 dir = "{{config_root}}"
 
+[tasks."build:external"]
+description = "Build the external client with Vite (vite.external.config.ts): apps/external/'s index.html and src/ into apps/external/dist/, static files no binary embeds and any server hosts, services.json beside them the host's; reads no network, writes apps/external/dist/"
+depends = ["preflight"]
+run = "pnpm exec vite build -c vite.external.config.ts"
+dir = "{{config_root}}"
+
+[tasks.demo]
+description = "Build both apps, then host the external client with Vite's preview on 127.0.0.1:4180 beside two emulators under the local overlay, Service A on 127.0.0.1:8181 and Service B on 127.0.0.1:8182, each with NATS ports, a token, and a store of its own, admitting the client's origin; copies apps/external/demo/services.json beside the build (scripts/demo.sh); Ctrl-C stops all three"
+depends = ["build:app", "build:external"]
+run = "scripts/demo.sh"
+dir = "{{config_root}}"
+
 [tasks.check]
-description = "Run every check: lint, types, test:unit, the Go steps, test:integration, and test:browser, the last two after the pipeline app's build; reads no network, writes apps/pipeline/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
+description = "Run every check: lint, types, test:unit, the Go steps, test:integration, and test:browser, the last two after the pipeline app's build, and test:browser after the external client's too; reads no network, writes apps/pipeline/dist/ and apps/external/dist/ (gitignored) and nothing else outside TMPDIR and Go's caches"
 depends = ["lint", "types", "test:unit", "go", "test:integration", "test:browser"]
 
 # go mod download fetches go.mod's requirements, spike-ai-pipeline-client v0.4.0 among them, from

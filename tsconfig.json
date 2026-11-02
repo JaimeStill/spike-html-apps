@@ -1,4 +1,5 @@
-// mise run types:src: tsc type-checks eslint.config.js as JSDoc-checked JavaScript, vite.config.ts,
+// mise run types:src: tsc type-checks eslint.config.js as JSDoc-checked JavaScript, the two Vite
+// configs, the pipeline app's vite.config.ts and the external client's vite.external.config.ts,
 // and the apps in apps/, without their builds; the apps' types for the layers come from the
 // packages' declarations. The suite isn't included: it runs on node's APIs, and
 // tsconfig.test.json checks it against node's types (mise run types:test). skipLibCheck: the
@@ -24,6 +25,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["eslint.config.js", "vite.config.ts", "apps"],
+  "include": ["eslint.config.js", "vite.config.ts", "vite.external.config.ts", "apps"],
   "exclude": ["apps/*/dist"]
 }
