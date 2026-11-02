@@ -259,11 +259,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 16's review accepted with Q3 (architect). In progress: components v0.10.0
-  (the call id's clip at 375px; sl-search-results' total, and its marks kept to the query its
-  items answered while loading; LogEvent.time optional) at a checkpoint; the root's Q3 fix (an
-  unknown stored cursor is forgotten and the one read restarts from the oldest, no reload). Then
-  the root onto v0.10.0, dropping its own total note; then slices 17 and 18.
+- Next move: components v0.10.0 (7a9e6db and its review; Q6–Q8 in progress) and sdk v0.4.0 (a
+  typed unknown-cursor error, Q5), each at a checkpoint; the root's Q3 fix is committed (9f1d19d)
+  and matches the sdk's message text until then. Then the root onto both tags, testing the type
+  and dropping its own total note; then slices 17 and 18.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1080,6 +1079,11 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   forgotten and the one read restarts from the oldest at once, with no reload, since nothing has
   shown and nothing can duplicate; Q4, the components' four defects found by slices 15d and 16
   release together as v0.10.0 (a minor: the search results' total is Added).
+- pipeline: components v0.10.0 checkpoint (architect): Q6, a total counts only while matches are
+  shown, so an empty page reads "No matches"; Q7, the ready count names the query its matches
+  answered, while searching and none keep the current query; Q8, an in-page types module under
+  `types:browser` guards LogEvent.time's optionality. Q5: the sdk rejects a cursor the stream never
+  gave out with a typed error, released as sdk v0.4.0; the root tests the type, never the message.
 - pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
   cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
   reads the first page of 96; search has no nav link, the header field is its way in.
