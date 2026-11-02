@@ -83,8 +83,8 @@ const VIEWS: View[] = [
   },
 ];
 
-/** Resolves once the router has mounted the view's tag and the view shows its state, failing
- * naming the view when it doesn't within the wait; asserts the location's path and query and the frame. */
+/** Resolves once the router has mounted the view's tag and the view shows its state, failing naming
+ * the view when it doesn't within the wait; asserts the location's path and query and the frame. */
 async function reached(page: Page, base: string, view: View): Promise<void> {
   await mounted(page, view.tag);
   // A view that asks the API as it mounts, the document view, shows its state once it answers.

@@ -30,6 +30,7 @@ import type { Cursor, Delivery } from "@jaimestill/spike-html-apps-sdk/events.js
 import { appFeed } from "./live.ts";
 import type { RunData, StageFeed } from "./live.ts";
 
+/** The event log view's tag, which the router mounts. */
 export const logTag = "pipeline-log";
 
 /** The sessionStorage key of the last cursor the log showed. */

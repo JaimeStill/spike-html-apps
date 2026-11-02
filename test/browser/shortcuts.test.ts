@@ -1,7 +1,7 @@
-// The pipeline app's shortcuts, the foundation's keys module over the workspace's data-keys, pressed
-// as real keys: / focuses the search field, ? opens the help dialog listing every binding, t opens
-// the theme menu, and Escape closes either dialog; inside the search field each of them types
-// itself and fires nothing, and Escape leaves the field.
+// The pipeline app's shortcuts, the foundation's keys module over the workspace's data-keys,
+// pressed as real keys: / focuses the search field, ? opens the help dialog listing every binding,
+// t opens the theme menu, and Escape closes either dialog; inside the search field each of them
+// types itself and fires nothing, and Escape leaves the field.
 
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";

@@ -50,6 +50,7 @@ import { appFeed } from "./live.ts";
 import type { Failure, Progress, ProgressDetail } from "./live.ts";
 import { appRouter } from "./route.ts";
 
+/** The side pane's tag, which the workspace renders. */
 export const documentsTag = "pipeline-documents";
 
 /** The problem type the client gives a call its signal aborted: an upload's cancel. */
@@ -120,6 +121,7 @@ interface Upload extends UploadItem {
   abort?: AbortController;
 }
 
+/** The side pane: its uploads and its document list. */
 export class PipelineDocuments extends LitElement {
   static properties = {
     selected: { attribute: false },

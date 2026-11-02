@@ -73,7 +73,8 @@ async function open(width: number, options?: StartOptions): Promise<Page> {
 }
 
 /** Resolves once the drawer's dialog is open modally, or with `false` once it is closed and the
- * drawer has said so: Escape takes the dialog out of the top layer a task before its close event. */
+ * drawer has said so: Escape takes the dialog out of the top layer a task before its close
+ * event. */
 const modal = (page: Page, open = true): Promise<unknown> =>
   until(
     page,

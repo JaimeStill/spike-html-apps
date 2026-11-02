@@ -38,7 +38,8 @@ export interface ServiceList {
   services: Service[];
 }
 
-/** What reading the file came to: the services, or why there are none, a message naming the file. */
+/** What reading the file came to: the services, or why there are none, a message naming the
+ * file. */
 export type Loaded = { ok: true; services: Service[] } | { ok: false; message: string };
 
 /** Fetches the file relative to the page and reads it, resolving to its services or to why it

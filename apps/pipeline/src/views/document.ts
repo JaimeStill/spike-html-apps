@@ -52,6 +52,7 @@ import { stageType } from "../live.ts";
 import type { Failure, ProgressDetail, RunData } from "../live.ts";
 import { frame } from "./view.ts";
 
+/** The document view's tag, which the router mounts. */
 export const documentTag = "pipeline-document";
 
 /** The upload time's format: the date and the clock to the minute. */

@@ -3,9 +3,9 @@
 // shell's static token, and the event log shows its deliveries through sl-event-log, with no read
 // of its own: the stream holds one consumer, the feed's, however the views change. Each case boots
 // its own emulator, so its stream starts empty and its cursors at 1, and opens its own page, so its
-// sessionStorage starts empty; each event the log shows is printed. A page whose shell the test changes, or whose origin it varies, is
-// served through a proxy (support/proxy.ts), a real loopback answer the browser's Local Network
-// Access checks let reach the listener.
+// sessionStorage starts empty; each event the log shows is printed. A page whose shell the test
+// changes, or whose origin it varies, is served through a proxy (support/proxy.ts), a real loopback
+// answer the browser's Local Network Access checks let reach the listener.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";

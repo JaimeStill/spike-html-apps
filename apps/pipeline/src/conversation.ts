@@ -12,20 +12,20 @@
 //
 // The conversation is created on the first send, so the chat's empty state calls nothing. A reply
 // is read with the client's stream and folded into the thread event by event, the Open Responses
-// events the emulator writes: response.output_item.added starts an item, its parts and deltas
-// grow it, response.output_item.done replaces it whole, and response.completed ends the reply.
-// Every event names its item by item_id, so a reply of several items, the emulator's rich reply
-// (a message of exactly /rich), grows each in place: a reasoning item's reasoning_text part by
+// events the emulator writes: response.output_item.added starts an item, its parts and deltas grow
+// it, response.output_item.done replaces it whole, and response.completed ends the reply. Every
+// event names its item by item_id, so a reply of several items, the emulator's rich reply (a
+// message of exactly /rich), grows each in place: a reasoning item's reasoning_text part by
 // response.reasoning.delta and its summary_text part by response.reasoning_summary_text.delta, a
 // function call's arguments by response.function_call_arguments.delta, as the text streamed, which
-// the thread shows as it is until it parses and then formats from its own tokens, the call's
-// output whole at its done, and the message's Markdown by response.output_text.delta. Each .done
-// event's text replaces what its deltas made. The history read back holds the same items, so a
-// reload shows what the stream did. The failure path's error event and response.failed end it failed: its item, which the
-// emulator marks incomplete, is shown failed, the response's status, so a failure reads apart from
-// a reply the reader stopped, which is incomplete, and the error's message is the session's
-// failure. Stop aborts the stream's request, which the emulator sees as the client closing the
-// connection, and every item still in progress turns incomplete.
+// the thread shows as it is until it parses and then formats from its own tokens, the call's output
+// whole at its done, and the message's Markdown by response.output_text.delta. Each .done event's
+// text replaces what its deltas made. The history read back holds the same items, so a reload shows
+// what the stream did. The failure path's error event and response.failed end it failed: its item,
+// which the emulator marks incomplete, is shown failed, the response's status, so a failure reads
+// apart from a reply the reader stopped, which is incomplete, and the error's message is the
+// session's failure. Stop aborts the stream's request, which the emulator sees as the client
+// closing the connection, and every item still in progress turns incomplete.
 //
 // A send that fails before its reply begins (the network, a problem the API answers) is a trouble
 // with Try again, which sends the same text again; the user's message stays in the thread once.

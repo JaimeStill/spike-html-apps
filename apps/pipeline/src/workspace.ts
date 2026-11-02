@@ -38,6 +38,7 @@ import type { Match } from "@jaimestill/spike-html-apps-sdk/router.js";
 import "./documents.ts";
 import type { UploadsChangeDetail } from "./documents.ts";
 
+/** The workspace's tag, which main creates. */
 export const workspaceTag = "pipeline-workspace";
 
 /** The views the side pane's navigation links to: each one's route pattern, href relative to the
@@ -67,6 +68,7 @@ export function announcement(uploading: number, failed: boolean): string {
   return text && `${text[0].toUpperCase()}${text.slice(1)}.`;
 }
 
+/** The workspace: its header, the side pane, and the main pane the router mounts views in. */
 export class PipelineWorkspace extends LitElement {
   static properties = {
     route: { attribute: false },

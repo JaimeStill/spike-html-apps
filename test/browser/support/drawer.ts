@@ -27,6 +27,7 @@ export interface Shown {
   said: string;
 }
 
+/** The drawer and its button as the page shows them now. */
 export const shown = (page: Page): Promise<Shown> =>
   page.evaluate(`(() => {
     const drawer = ${DRAWER};

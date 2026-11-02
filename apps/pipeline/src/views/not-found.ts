@@ -5,6 +5,7 @@ import { html, LitElement } from "lit";
 
 import { frame } from "./view.ts";
 
+/** The not-found view's tag, which the router mounts. */
 export const notFoundTag = "pipeline-not-found";
 
 class PipelineNotFound extends LitElement {

@@ -39,8 +39,8 @@ export interface PubAck {
 
 /**
  * Sends one request to `subject` on the client listener at `port`, presenting `token`, with
- * `headers` (each a NATS header, sent in an HPUB) and `data` (a string), and resolves to the reply's
- * payload parsed as JSON; rejects on the server's -ERR, or after 5 s with no reply.
+ * `headers` (each a NATS header, sent in an HPUB) and `data` (a string), and resolves to the
+ * reply's payload parsed as JSON; rejects on the server's -ERR, or after 5 s with no reply.
  */
 export function request<T>({
   port,

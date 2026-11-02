@@ -39,6 +39,7 @@ import { register } from "@jaimestill/spike-html-apps-foundation/keys.js";
 import { chatSession } from "../conversation.ts";
 import type { ChatSession } from "../conversation.ts";
 
+/** The chat view's tag, which the router mounts. */
 export const chatTag = "pipeline-chat";
 
 /** The status line's text for the session: what the reader waits on, or nothing. */

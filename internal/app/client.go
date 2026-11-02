@@ -49,8 +49,8 @@ func defineClient(g *graph.Graph, n *Nodes) {
 // node: the API mount, and the nats block's public WebSocket URL, stream,
 // and token; the app's render-blocking modules load ahead of its entry. A
 // build with no manifest, or one without the app's entry or one of those
-// modules, fails here, so the Build fails and the service refuses to start, naming
-// the problem.
+// modules, fails here, so the Build fails and the service refuses to start,
+// naming the problem.
 func newClient(n *Nodes) func(*graph.Scope) (http.Handler, error) {
 	return func(s *graph.Scope) (http.Handler, error) {
 		cfg := s.Use(n.Config)

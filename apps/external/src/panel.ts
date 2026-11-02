@@ -58,6 +58,7 @@ import { RunFeed } from "./feed.ts";
 import type { Failure, Progress, RunData, RunDetail } from "./feed.ts";
 import type { Service } from "./services.ts";
 
+/** The panel's tag, which the client's frame renders once per service. */
 export const panelTag = "external-panel";
 
 /** The problem type the client gives a call its signal aborted: an upload's cancel. */
@@ -156,6 +157,7 @@ type Selection =
   | { state: "error"; id: string; name: string; message: string }
   | { state: "ready"; id: string; name: string; run: Run };
 
+/** One service's panel, over its own API and its own feed. */
 export class ExternalPanel extends LitElement {
   static properties = {
     service: { attribute: false },

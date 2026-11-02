@@ -11,8 +11,11 @@ import type { TemplateResult } from "lit";
 import "./panel.ts";
 import type { Loaded } from "./services.ts";
 
+/** The frame's tag, which main creates. */
 export const clientTag = "external-client";
 
+/** The client's frame: its header, then a panel per service, or what kept the services from
+ * loading. */
 export class ExternalClient extends LitElement {
   static properties = {
     loaded: { attribute: false },

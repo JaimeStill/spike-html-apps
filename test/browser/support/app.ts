@@ -1,6 +1,6 @@
 // The browser tier's reading of the pipeline app: which route a page shows, the events its log's
-// sl-event-log renders, read back from its shadow root, and the navigations a person makes,
-// through the DevTools Protocol, as the sdk's router tier makes them. Each wait is the tooling's page wait,
+// sl-event-log renders, read back from its shadow root, and the navigations a person makes, through
+// the DevTools Protocol, as the sdk's router tier makes them. Each wait is the tooling's page wait,
 // until, which polls an expression inside the page.
 
 import { until } from "@jaimestill/spike-html-apps-tooling/browser.js";

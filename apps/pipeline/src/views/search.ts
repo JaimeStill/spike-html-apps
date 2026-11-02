@@ -26,6 +26,7 @@ import { appApi } from "../api.ts";
 import { appRouter, queryParam } from "../route.ts";
 import { frame } from "./view.ts";
 
+/** The search view's tag, which the router mounts. */
 export const searchTag = "pipeline-search";
 
 /** The matches a search reads: the first page, at the document list's largest page size. */
