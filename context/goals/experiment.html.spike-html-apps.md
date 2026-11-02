@@ -981,7 +981,7 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
 - pipeline: sl-artifact-viewer formats valid JSON from the text's own tokens: re-indented, keys in
   their order, number literals as written, duplicate keys kept; never parsed and re-printed, which
   reordered integer-like keys, rewrote numbers (1.0, 1e3, integers past 2^53), and dropped
-  duplicates. Released as components v0.7.1 (architect, slice 14 escalation). globals 17.14.0
+  duplicates. Released in components v0.8.0 (architect, slice 14 escalation). globals 17.14.0
   waits out pnpm's minimum release age; no cooldown exclusion.
 - pipeline: sl-artifact-viewer renders natively what the browser can: application/pdf in an iframe
   (the browser's PDF viewer), image/* in an img, audio/* and video/* in native controls; text/html
@@ -1017,6 +1017,10 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
 - pipeline: components v0.9.0 released (PR #13, a45eccc): the thread follows its newest item, the
   composer keeps focus off a disabled control, event-log follows under zoom, the reasoning summary
   on its line (architect).
+- pipeline: the PDF iframe takes no sandbox: Chrome 156 refuses to render a PDF in a sandboxed
+  iframe (`sandbox=""`, `allow-scripts allow-same-origin`, `allow-same-origin` all show the blocked
+  page, checked by screenshot in the v0.8.0 standards review), and its object URL can only carry
+  `application/pdf`.
 
 ## Pending edits
 
@@ -1108,3 +1112,5 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   `spike-html-apps-noctis` (its peer range moves to foundation ^0.3.0 in this task).
 - standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
   `spike-html-apps-sdk` (its client reads a body as text, released in this task).
+- the answer task carries context/conventions.md into the spike's answer, for the experiment's
+  intake to adopt (architect).
