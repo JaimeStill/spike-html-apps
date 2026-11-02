@@ -259,9 +259,11 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 18 (the walkthrough, behaviors 18 and 22). Slice 17 committed (087557d) and
-  its review accepted; `mise run demo` hosts the client beside two emulators. For the closing
-  standards review: document.test.ts's `WATCH` timeline sampler has the race shape bdae1db fixed.
+- Next move: components v0.10.1 (Q14, sl-pagination's page field) at a checkpoint, then the root
+  onto it; then the closing loop (standards review of the root's whole diff, with
+  document.test.ts's `WATCH` sampler; spec review; editor; validation with the bundle size; the
+  session brief, where accepting the walkthrough is its design review). Slice 18 committed
+  (9bbbde2, f955c01, 2bd4b92); `mise run screenshots` runs both ways.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1099,6 +1101,13 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   apiBase, nats: { url, stream, token } }] }`; each panel sends its token as `Authorization` on
   API calls too, so every cross-origin call is preflighted; a panel's feed reads from the oldest
   on every load, with no cursor; an entry or a match selected follows its stages.
+- pipeline: slice 18 (architect, Q14): sl-pagination's page field, `inline-size: 4ch`, clips a
+  two-digit page at regular spacing ("1:" for "13"), so the layers task's "the 4ch stands" is
+  revised: the field fits three digits and the input's padding at every spacing, released as
+  components v0.10.1, the root onto it.
+- pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
+  tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
+  Unicode-placeholder mode is built for tmux. Not in this task.
 - pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
   cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
   reads the first page of 96; search has no nav link, the header field is its way in.
