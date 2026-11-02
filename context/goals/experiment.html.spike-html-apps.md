@@ -239,8 +239,8 @@ session confirms each tag rather than pushing it.
 
 slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
   and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
-  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0); sdk v0.3.0
-  (PR #6); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
+  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1); sdk v0.3.0
+  (PR #6), v0.4.0 (PR #8, c36dc72); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
   review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
   NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
   standards: per layer release, root not yet · spec — · editor —
@@ -259,10 +259,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: components v0.10.0 (7a9e6db and its review; Q6–Q8 in progress) and sdk v0.4.0 (a
-  typed unknown-cursor error, Q5), each at a checkpoint; the root's Q3 fix is committed (9f1d19d)
-  and matches the sdk's message text until then. Then the root onto both tags, testing the type
-  and dropping its own total note; then slices 17 and 18.
+- Next move: the root onto components v0.10.0 and sdk v0.4.0 (both released): the search view
+  passes `total` and drops its own note; the log tests UnknownCursorError, not the message; the
+  root's Q3 fix (9f1d19d) through its standards review. Then slices 17 and 18.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
