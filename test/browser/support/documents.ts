@@ -87,23 +87,32 @@ export interface FileSpec {
   type?: string;
 }
 
+/** The directory the files chosen in this test file's process are written to, made at the first
+ * choice and removed as the process exits. */
+let chosen: string | undefined;
+
 /** Chooses the files through the dropzone's file input, as its picker sets them: each written to
- * a directory of its own, removed once the input holds them. */
+ * a directory of its own, kept until the process exits. A chosen file is a path to the browser,
+ * which opens it only when the upload's body starts out, after setFileInputFiles has answered and
+ * on a busy machine well after; removing it any sooner fails that upload with a network error, its
+ * body never sent. So the files stay on disk while any page may read them, as a picked file stays
+ * on a person's. */
 export async function choose(page: Page, files: FileSpec[]): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), "browser-upload."));
-  try {
-    const paths = files.map(({ name, size = 0, text }) => {
-      const path = join(dir, name);
-      writeFileSync(path, text ?? Buffer.alloc(size, 97));
-      return path;
-    });
-    const { result } = await page.cdp("Runtime.evaluate", {
-      expression: `${ZONE}.querySelector("input[type=file]")`,
-    });
-    await page.cdp("DOM.setFileInputFiles", { files: paths, objectId: result.objectId });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
+  if (chosen === undefined) {
+    const root = mkdtempSync(join(tmpdir(), "browser-upload."));
+    process.on("exit", () => rmSync(root, { recursive: true, force: true }));
+    chosen = root;
   }
+  const dir = mkdtempSync(join(chosen, "choice."));
+  const paths = files.map(({ name, size = 0, text }) => {
+    const path = join(dir, name);
+    writeFileSync(path, text ?? Buffer.alloc(size, 97));
+    return path;
+  });
+  const { result } = await page.cdp("Runtime.evaluate", {
+    expression: `${ZONE}.querySelector("input[type=file]")`,
+  });
+  await page.cdp("DOM.setFileInputFiles", { files: paths, objectId: result.objectId });
 }
 
 /** Drops the files on the dropzone's zone, as a drag from the desktop ends. */
