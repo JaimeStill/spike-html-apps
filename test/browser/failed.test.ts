@@ -4,9 +4,10 @@
 // dropzone beside a document no rule matches, its list entry and its document view reach failed
 // live, with no reload, the view's status line naming the stage and its timeline's failed stage
 // showing when and why, while the other run completes; the list's entries take their states' tones,
-// red failed and green complete; the event log shows the failure as a line of its own. A deep link
-// to the failed document, and a reload of it, show the same at once, the failure's time the run's. Each case boots its own emulator, so its
-// store starts empty, and opens its own page, so its sessionStorage starts empty.
+// red failed and green complete; the event log shows the failure as an event of its own, its data
+// naming the stage and why. A deep link to the failed document, and a reload of it, show the same
+// at once, the failure's time the run's. Each case boots its own emulator, so its store starts
+// empty, and opens its own page, so its sessionStorage starts empty.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
@@ -14,7 +15,7 @@ import { after, afterEach, before, describe, test } from "node:test";
 import { launch, until } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-import { lines, mounted, openWith, reload } from "./support/app.ts";
+import { LOG, logged, mounted, openWith, reload } from "./support/app.ts";
 import {
   choose,
   clickAt,
@@ -223,31 +224,37 @@ describe("a run that fails", () => {
     assert.equal(await runStatus(page), failedStatus);
     assert.equal(await page.evaluate("window.unreloaded"), true, "the page never reloaded");
 
-    // The event log shows the failure as a line of its own, after the two stages it completed,
-    // and no stage line for the stage it failed at, or after.
+    // The event log shows the failure as an event of its own, after the two stages it completed,
+    // and no stage event for the stage it failed at, or after.
     await page.evaluate(`navigation.navigate(".").finished.then(() => true)`);
     await mounted(page, "pipeline-log");
     await until(
       page,
-      `[...document.querySelectorAll("pipeline-log li")].some((li) => li.textContent.includes("emulator.run.failed"))`,
+      `[...(${LOG}?.querySelectorAll("li.event .type") ?? [])].some((type) => type.textContent === "emulator.run.failed")`,
     );
-    const shown = await lines(page);
-    const unparsed = shown.flatMap((line) => ("unparsed" in line ? [line.unparsed] : []));
-    for (const line of shown)
-      t.diagnostic("unparsed" in line ? line.unparsed : (line.text ?? line.error));
-    const failure = unparsed.filter((text) => text.includes("emulator.run.failed"));
-    assert.equal(failure.length, 1, "one failure line");
-    const [text] = failure;
-    assert.match(
-      text,
-      /^\S+ emulator\.run\.failed run \S+: extraction \(3\/5\) of document \S+ failed: /,
-    );
-    assert.ok(text.endsWith(` failed: ${reason}`), `the line ends with the reason: ${text}`);
-    const failedRunId = text.match(/ run (\S+):/)![1];
+    const shown = await logged(page);
+    for (const event of shown)
+      t.diagnostic(`${event.type} ${event.subject} ${JSON.stringify(event.data)}`);
+    const failures = shown.filter((event) => event.type === "emulator.run.failed");
+    assert.equal(failures.length, 1, "one failure event");
+    const [failure] = failures;
+    assert.deepEqual(failure.data, {
+      stage: "extraction",
+      position: 3,
+      stage_count: 5,
+      document_id: (failure.data as { document_id: string }).document_id,
+      reason,
+    });
+    assert.ok(!Number.isNaN(Date.parse(failure.time ?? "")), `the failure's time: ${failure.time}`);
     const stagesOfFailed = shown
-      .filter((line) => line.event?.subject === failedRunId)
-      .map((line) => line.event!.data.stage);
+      .filter((event) => event.subject === failure.subject && event.type === "emulator.run.stage")
+      .map((event) => (event.data as { stage: string }).stage);
     assert.deepEqual(stagesOfFailed, ["upload", "metadata"]);
+    assert.ok(
+      shown.indexOf(failure) >
+        shown.findLastIndex((event) => event.subject === failure.subject && event !== failure),
+      "the failure after its run's stages",
+    );
   });
 
   test("shows failed at once by a deep link, and after a reload", async () => {

@@ -21,11 +21,14 @@ interface APIError {
   error?: { description: string };
 }
 
-/** A stream's state, as the JetStream API's stream info gives it: the fields the tier reads. */
+/** A stream's state, as the JetStream API's stream info gives it: the fields the tier reads. Each
+ * read of the sdk's NATS adapter is an ordered consumer of its own, so the consumers count the
+ * reads open on the stream. */
 export interface StreamState {
   messages: number;
   first_seq: number;
   last_seq: number;
+  consumer_count: number;
 }
 
 /** A JetStream publish's ack: the stream and the sequence it stored the message at. */
@@ -88,7 +91,8 @@ export function request<T>({
   });
 }
 
-/** The stream's state, its messages and first and last sequences, from the JetStream API. */
+/** The stream's state, its messages, first and last sequences, and consumers, from the JetStream
+ * API. */
 export async function streamState({
   port,
   token,

@@ -50,6 +50,15 @@ const FRAMED = `(() => {
 /** The search field's value. */
 const FIELD = "document.querySelector('input[name=q]').value";
 
+/** The search view's results have answered for the query: its status line counts matches or says
+ * there are none for it. */
+const SEARCHED = (q: string) =>
+  `(() => {
+    const results = document.querySelector("pipeline-search sl-search-results");
+    const status = results?.shadowRoot?.querySelector(".status")?.textContent ?? "";
+    return results?.query === ${JSON.stringify(q)} && results.state === "ready" && status.includes(${JSON.stringify(`“${q}”`)});
+  })()`;
+
 const VIEWS: View[] = [
   {
     path: "",
@@ -64,7 +73,7 @@ const VIEWS: View[] = [
   {
     path: "search?q=brief",
     tag: "pipeline-search",
-    shows: `document.querySelector('pipeline-search [data-query]')?.textContent === 'brief' && ${FIELD} === 'brief'`,
+    shows: `${SEARCHED("brief")} && ${FIELD} === 'brief'`,
   },
   {
     path: "documents/doc-1",
@@ -116,7 +125,7 @@ for (const mount of ["/app", "/"]) {
       const memo: View = {
         path: "search?q=memo",
         tag: "pipeline-search",
-        shows: `document.querySelector('pipeline-search [data-query]')?.textContent === 'memo' && ${FIELD} === 'memo'`,
+        shows: `${SEARCHED("memo")} && ${FIELD} === 'memo'`,
       };
       await page.goto(`${origin}${base}`);
       await reached(page, base, log);

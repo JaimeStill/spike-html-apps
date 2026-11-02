@@ -1,7 +1,8 @@
 // The emulator's API as the app calls it: the client main makes from the shell's config, which
 // every view reaches through apiClient, and the domain services over it, each a stateless object
 // of endpoints over the client (the sdk's Service pattern), with the entities they answer as the
-// emulator's domain packages write them (domain/document, domain/run, and domain/conversation).
+// emulator's domain packages write them (domain/document, domain/run, domain/search, and
+// domain/conversation).
 
 import type { Client, Page, Result, ServerSentEvent } from "@jaimestill/spike-html-apps-sdk/api.js";
 import type { Service } from "@jaimestill/spike-html-apps-sdk/service.js";
@@ -98,6 +99,30 @@ export const runService = (client: Client) =>
       client.get(`runs/${encodeURIComponent(id)}`, { signal }),
   }) satisfies Service;
 
+/** A search's match, as domain/search's Match writes it: the document's id and name, the field the
+ * query matched in, and the snippet around the first match, an ellipsis at an end it cuts short.
+ * It is the search results' SearchMatch as it is. */
+export interface Match {
+  id: string;
+  name: string;
+  field: "name" | "content";
+  snippet: string;
+}
+
+/** A search, the query and the page of its matches to read. */
+export interface SearchQuery extends PageQuery {
+  q: string;
+}
+
+/** The search domain, /search: a page of the matches for a query, in document creation order,
+ * matched case-insensitively against each document's name and text content. A blank query is a
+ * 400, so the app asks only with one that isn't. */
+export const searchService = (client: Client) =>
+  ({
+    search: (query: SearchQuery, signal?: AbortSignal): Promise<Result<Page<Match>>> =>
+      client.get("search", { query: { ...query }, signal }),
+  }) satisfies Service;
+
 /** An item's progress, as domain/conversation's Status writes it. */
 export type Status = "in_progress" | "completed" | "incomplete";
 
@@ -192,6 +217,7 @@ export const conversationService = (client: Client) =>
 export interface Api {
   documents: ReturnType<typeof documentService>;
   runs: ReturnType<typeof runService>;
+  search: ReturnType<typeof searchService>;
   conversations: ReturnType<typeof conversationService>;
 }
 
@@ -202,6 +228,7 @@ export function useClient(client: Client) {
   api = {
     documents: documentService(client),
     runs: runService(client),
+    search: searchService(client),
     conversations: conversationService(client),
   };
 }

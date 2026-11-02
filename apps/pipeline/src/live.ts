@@ -1,20 +1,23 @@
 // The app's one live read of the emulator's run events, its stage events and its failure events,
 // which every view that shows a run's progress shares: main makes the feed over the NATS sequence
 // and starts it once, and a view listens to it rather than reading the sequence itself, so the app
-// holds one subscription however many views show runs. Today the side pane's document list reads
-// each run's progress from it; the document view's stage timeline (slice 14) and the event log
-// (slice 16) are meant to read it too, the first by a run's progress, the second by the deliveries
-// it keeps, which a view mounted late replays before it follows the live ones.
+// holds one subscription however many views show runs. The side pane's document list and the
+// document view's stage timeline read each run's progress from it, and the event log the
+// deliveries it keeps, which a view mounted late replays before it follows the live ones.
 //
-// The read starts at the oldest event the stream keeps, so the feed knows every kept run's
-// progress, whatever loaded first; a run's progress also takes the API's answer for it (note), and
-// each run's completed count only ever rises, so an event and an API answer arriving in either
-// order agree. A run's failure is recorded beside its progress, from the failure event or from an
-// API answer of a failed run, whichever arrives first, the two telling the same stage, reason, and
-// time; a failure is terminal, so nothing later, an event or an answer read before it failed,
-// un-fails the run or raises its progress past the failed stage. When the read fails (the
-// connection lost for good, the token refused), the feed says so and reads again after a backoff,
-// from the last cursor it delivered, with no gap and no duplicate.
+// The read starts where main tells it: after the cursor the event log last showed in this tab, so
+// a reload resumes the log's sequence with no gap and no duplicate, or, with none, at the oldest
+// event the stream keeps. Either way the feed learns a run's progress from its events and from the
+// API's answer for it (note), and each run's completed count only ever rises, so an event and an
+// API answer arriving in either order agree, and a run whose earlier events came before the
+// cursor is known by its answer. A stage event's position is the stage's own, not a count of the
+// events read, so a read that starts mid-run still raises the run to it. A run's failure is
+// recorded beside its progress, from the failure event or from an API answer of a failed run,
+// whichever arrives first, the two telling the same stage, reason, and time; a failure is
+// terminal, so nothing later, an event or an answer read before it failed, un-fails the run or
+// raises its progress past the failed stage. When the read fails (the connection lost for good,
+// the token refused, a start cursor the stream never gave out), the feed says so and reads again
+// after a backoff, from the last cursor it delivered, or its start, with no gap and no duplicate.
 
 import type {
   CloudEvent,
@@ -98,12 +101,15 @@ export class StageFeed extends EventTarget {
   #cursor: Cursor | undefined;
   #started = false;
 
-  constructor(sequence: EventSequence<RunData>) {
+  /** The feed over the sequence, reading from after the cursor `after`, or with none from the
+   * oldest event the stream keeps. */
+  constructor(sequence: EventSequence<RunData>, after?: Cursor) {
     super();
     this.#sequence = sequence;
+    this.#cursor = after;
   }
 
-  /** Every delivery so far, in the sequence's order. */
+  /** Every delivery so far, from the feed's start, in the sequence's order. */
   get deliveries(): readonly Delivery<RunData>[] {
     return this.#deliveries;
   }

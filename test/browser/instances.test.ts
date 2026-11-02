@@ -8,7 +8,7 @@ import { after, before, test } from "node:test";
 import { launch } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 
-import { lines, linesOnce, mounted, openWith } from "./support/app.ts";
+import { logged, loggedOnce, mounted, openWith } from "./support/app.ts";
 import { start, token } from "./support/emulator.ts";
 import type { Emulator } from "./support/emulator.ts";
 import { streamState } from "./support/nats.ts";
@@ -39,12 +39,12 @@ async function uploadRun(instance: Emulator, name: string) {
   return doc;
 }
 
-/** The runs the page's log shows a line of, each by its subject, with its count of lines. */
+/** The runs the page's log shows an event of, each by its subject, with its count of events. */
 async function runsShown(page: Page): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
-  for (const line of await lines(page)) {
-    assert.ok(line.event, `an event line: ${JSON.stringify(line)}`);
-    counts[line.event.subject] = (counts[line.event.subject] ?? 0) + 1;
+  for (const { subject } of await logged(page)) {
+    assert.ok(subject, "an event with a subject");
+    counts[subject] = (counts[subject] ?? 0) + 1;
   }
   return counts;
 }
@@ -66,18 +66,19 @@ test("neither instance's events reach the other's stream", async (t) => {
   const [pageA, pageB] = [await openLog(a), await openLog(b)];
   try {
     const docA = await uploadRun(a, "a.txt");
-    for (const { text } of await linesOnce(pageA, 5)) t.diagnostic(`A: ${text}`);
+    for (const { id } of await loggedOnce(pageA, 5)) t.diagnostic(`A: ${id}`);
     const docB = await uploadRun(b, "b.txt");
-    for (const { text } of await linesOnce(pageB, 5)) t.diagnostic(`B: ${text}`);
+    for (const { id } of await loggedOnce(pageB, 5)) t.diagnostic(`B: ${id}`);
 
     // Each stream holds its own run's five events, each from sequence 1, and each log shows them.
     assert.deepEqual(await streamState({ port: a.natsPort, token }).then(counts), [5, 1, 5]);
     assert.deepEqual(await streamState({ port: b.natsPort, token }).then(counts), [5, 1, 5]);
     assert.deepEqual(await runsShown(pageA), { [docA.run_id]: 5 });
     assert.deepEqual(await runsShown(pageB), { [docB.run_id]: 5 });
-    assert.deepEqual(
-      (await lines(pageB)).map(({ cursor }) => cursor),
-      ["1", "2", "3", "4", "5"],
+    assert.equal(
+      await pageB.evaluate("sessionStorage.getItem('pipeline-log.cursor')"),
+      "5",
+      "B's log shows its stream's events from its first",
     );
   } finally {
     await pageA.close();

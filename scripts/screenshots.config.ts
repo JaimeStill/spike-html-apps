@@ -5,10 +5,12 @@
 // know, a run failed, and not found, docked at 1280×1200 and at 375px, full-page (--page
 // document); and the chat, empty, the rich reply mid-stream, its reasoning and function call
 // open, the rich reply finished, its Markdown, one stopped, one failed, and a send the network
-// failed, at the same two sizes (--page chat); light and dark, over an
-// emulator the start function boots for the run. Headless
-// Chrome has no PDF viewer, so the PDF state's frame is blank there; a real Chrome renders its
-// one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
+// failed, at the same two sizes (--page chat); the event log, empty before any run (--page
+// log-empty), runs arriving live, a run's failure event, and the live read paused (--page log);
+// and the search view, its prompt, matches with the query marked, none, searching, and a search
+// the network failed (--page search), at the same two sizes; light and dark, over an emulator the
+// start function boots for the run. Headless Chrome has no PDF viewer, so the PDF state's frame is
+// blank there; a real Chrome renders its one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
 // (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
 //
 //   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
@@ -20,8 +22,9 @@
 // its fail rule failing a document named fail-at-… at extraction, so a capture shows a failed run,
 // and its replies a word every 150 ms, so a capture finds one mid-stream.
 // The states run in order, each in a fresh tab, light then dark, against the one emulator: the
-// empty state first, before any upload, and each later state adding the documents it shows, so
-// a dark capture lists the documents its light one uploaded too.
+// empty log and the empty side pane first, before any upload, and each later state adding the
+// documents it shows, so a dark capture lists the documents its light one uploaded too; the
+// search's states search the documents the earlier pages uploaded.
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -537,8 +540,165 @@ const chatStates = [
   },
 ]);
 
+/** The event log's sl-event-log's shadow root, and its frame, as page expressions. */
+const LOG_ROOT = "document.querySelector('pipeline-log sl-event-log')?.shadowRoot";
+const LOG_FRAME = `${LOG_ROOT}?.querySelector(".frame")`;
+
+/** Waits until the log's frame shows `count` events or more. */
+const logShows = (page: Page, count: number) =>
+  until(page, `(${LOG_ROOT}?.querySelectorAll("li.event").length ?? 0) >= ${count}`, 15_000);
+
+/** Scrolls the log's frame to its end, where it follows the newest event. */
+const logToEnd = (page: Page) =>
+  page.evaluate(`void ((frame) => { frame.scrollTop = frame.scrollHeight; })(${LOG_FRAME})`);
+
+/** The log in a tab before any run: no events yet. */
+const logEmpty: Step = async (page) => {
+  await until(page, `${LOG_ROOT}?.querySelector(".empty")`);
+};
+
+/** Two runs uploaded a second apart by another client, their stage events arriving live at the
+ * log's end, the newest's data opened as a reader opens it. */
+const logLive: Step = async (page) => {
+  await logShows(page, 1);
+  await wait(500);
+  await logToEnd(page);
+  const shown: number = await page.evaluate(`${LOG_ROOT}.querySelectorAll("li.event").length`);
+  await upload("weekly-summary.txt");
+  await wait(1_200);
+  await upload("meeting-minutes.txt");
+  await logShows(page, shown + 4);
+  await wait(300);
+  await page.evaluate(`void (${LOG_ROOT}.querySelectorAll("li.event details.data") ?? []).forEach(
+    (details, i, all) => { details.open = i === all.length - 1; })`);
+  await logToEnd(page);
+};
+
+/** The failed run's failure event, scrolled to and its data opened. */
+const logFailed: Step = async (page) => {
+  await failedDocument();
+  await until(
+    page,
+    `[...(${LOG_ROOT}?.querySelectorAll("li.event .type") ?? [])].some((type) => type.textContent === "emulator.run.failed")`,
+    15_000,
+  );
+  await page.evaluate(`(() => {
+    const failure = [...${LOG_ROOT}.querySelectorAll("li.event")].find(
+      (li) => li.querySelector(".type").textContent === "emulator.run.failed",
+    );
+    failure.querySelector("details.data").open = true;
+    failure.scrollIntoView({ block: "center" });
+  })()`);
+};
+
+/** The feed paused: the tab's stored cursor is one the stream never gave out, as after the
+ * emulator restarted with a new store, so the read fails and the log says why. */
+const logPaused: Step = async (page) => {
+  await page.evaluate(`sessionStorage.setItem("pipeline-log.cursor", "999999")`);
+  const loaded = new Promise((resolve) => page.on("Page.loadEventFired", resolve));
+  await page.cdp("Page.reload");
+  await loaded;
+  await until(page, `document.querySelector("pipeline-log .log-status.paused")`, 15_000);
+};
+
+/** The log's states, each docked at 1280×1200 and at 375×667, captured full-page. */
+const logStates = (states: { name: string; caption: string; open: Step }[]) =>
+  states.flatMap(({ name, caption, open }) => [
+    {
+      name: `docked-${name}`,
+      caption: `Event log, docked at 1280×1200, ${caption}`,
+      viewport: { width: 1280, height: 1200 },
+      full: true,
+      open,
+    },
+    {
+      name: `narrow-${name}`,
+      caption: `Event log at 375px, ${caption}`,
+      viewport: phone,
+      full: true,
+      open,
+    },
+  ]);
+
+/** The search results, as a page expression. */
+const RESULTS = "document.querySelector('pipeline-search sl-search-results')";
+
+/** Navigates to the search for `q` and waits for its answer. */
+async function search(page: Page, q: string) {
+  await page.evaluate(
+    `navigation.navigate("search?q=${encodeURIComponent(q)}").finished.then(() => true)`,
+  );
+  await until(page, `${RESULTS}?.query === ${JSON.stringify(q)} && ${RESULTS}.state !== "loading"`);
+  await wait(200);
+}
+
+/** The prompt, before any query. */
+const searchPrompt: Step = async (page) => {
+  await until(page, `${RESULTS}?.shadowRoot?.querySelector(".status .prompt")`);
+};
+
+/** The matches for "notes", in names and in content, the second match focused. */
+const searchMatches: Step = async (page) => {
+  await search(page, "notes");
+  await focus(page, `${RESULTS}.shadowRoot.querySelectorAll("button.match")[1]`);
+};
+
+/** A query no document matches. */
+const searchNone: Step = (page) => search(page, "zebra crossing");
+
+/** The matches for "notes" kept, busy, while the search for "onboarding" is under way: its
+ * request held, as a slow link holds it. */
+const searchLoading: Step = async (page) => {
+  await search(page, "notes");
+  await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/api/search*" }] });
+  await page.evaluate(`void navigation.navigate("search?q=onboarding")`);
+  await until(page, `${RESULTS}?.state === "loading"`);
+};
+
+/** A search the network failed, its Try again focused. */
+const searchError: Step = async (page) => {
+  page.on("Fetch.requestPaused", ({ requestId }: { requestId: string }) => {
+    void page.cdp("Fetch.failRequest", { requestId, errorReason: "InternetDisconnected" });
+    void page.cdp("Fetch.disable");
+  });
+  await page.cdp("Fetch.enable", { patterns: [{ urlPattern: "*/api/search*" }] });
+  await page.evaluate(`void navigation.navigate("search?q=onboarding")`);
+  await until(page, `${RESULTS}?.state === "error"`);
+  await focus(page, "document.querySelector('.search-retry')");
+};
+
+/** The search view's states, each docked at 1280×1200 and at 375×667, captured full-page. */
+const searchStates = [
+  { name: "prompt", caption: "no query yet", open: searchPrompt },
+  { name: "matches", caption: "matches, the query marked, one focused", open: searchMatches },
+  { name: "none", caption: "no matches", open: searchNone },
+  { name: "loading", caption: "searching, the last matches busy", open: searchLoading },
+  { name: "error", caption: "a search the network failed", open: searchError },
+].flatMap(({ name, caption, open }) => [
+  {
+    name: `docked-${name}`,
+    caption: `Search, docked at 1280×1200, ${caption}`,
+    viewport: { width: 1280, height: 1200 },
+    full: true,
+    open,
+  },
+  {
+    name: `narrow-${name}`,
+    caption: `Search at 375px, ${caption}`,
+    viewport: phone,
+    full: true,
+    open,
+  },
+]);
+
 const description: Description = {
   pages: [
+    {
+      name: "log-empty",
+      caption: "Event log, empty",
+      path: "",
+      states: logStates([{ name: "empty", caption: "before any run", open: logEmpty }]),
+    },
     {
       name: "documents",
       caption: "Side pane",
@@ -596,6 +756,22 @@ const description: Description = {
       caption: "Chat",
       path: "chat",
       states: chatStates,
+    },
+    {
+      name: "log",
+      caption: "Event log",
+      path: "",
+      states: logStates([
+        { name: "live", caption: "runs arriving live, the newest's data open", open: logLive },
+        { name: "failed", caption: "a run's failure event, its data open", open: logFailed },
+        { name: "paused", caption: "the live read paused, and why", open: logPaused },
+      ]),
+    },
+    {
+      name: "search",
+      caption: "Search",
+      path: "search",
+      states: searchStates,
     },
   ],
   server: async () => {
