@@ -8,13 +8,16 @@
 // after it, so a reload, which loads a new document, shows the events after the last one this tab
 // showed, with no gap and no duplicate; a tab that has shown none reads from the oldest event the
 // stream keeps. Only what the log has shown moves the cursor: events the feed delivers while
-// another view is mounted are shown when the log next mounts, in this document or the next.
+// another view is mounted are shown when the log next mounts, in this document or the next. A
+// stored cursor the stream never gave out, as after the emulator restarted with a new store, the
+// feed forgets and reads from the oldest event at once, and the log forgets it too.
 //
 // The log fills the main pane, as the chat does, and holds sl-event-log to the height its header
 // and status line leave, so the log's own frame scrolls and follows the newest event while the
 // reader is at its end; the page stays put as events arrive. The status line above it says the
-// log follows the stream live, and from where, or, while the feed's read has failed, why it is
-// paused; it stays one line high whatever it says, so its text changing moves nothing below it.
+// log follows the stream live, and from where (the oldest event, when the stream restarted under
+// the tab's cursor), or, while the feed's read has failed, why it is paused; it stays one line
+// high whatever it says, so its text changing moves nothing below it.
 
 import { html, LitElement } from "lit";
 
@@ -55,34 +58,15 @@ function storeCursor(cursor: Cursor | undefined) {
 let resumed: Cursor | undefined;
 
 /**
- * Starts the feed main made after the stored cursor `after`, and keeps a cursor the stream never
- * gave out from failing every reload: a read from it fails before it delivers anything, so while
- * the feed has failed with nothing delivered the stored cursor is forgotten, and a reload starts
- * from the oldest event; once the feed delivers, its start is kept again, unless the log stored a
- * later one. The read itself retries from the same cursor, so a failure that passes (the
- * connection lost a moment) resumes with no gap and no duplicate.
+ * Starts the feed main made after the stored cursor `after`. When the feed restarts from the
+ * oldest event, the cursor one the stream never gave out, the stored one is forgotten with it, so
+ * a reload before the log shows an event starts from the oldest too, rather than at the same
+ * refusal. Any other failure keeps it: the read retries from it, and so does a reload, so a
+ * failure that passes (the connection lost a moment) resumes with no gap and no duplicate.
  */
 export function resumeFeed(feed: StageFeed, after: Cursor | undefined) {
   resumed = after;
-  if (after !== undefined) {
-    const watch = new AbortController();
-    feed.addEventListener(
-      "failure",
-      () => {
-        if (feed.deliveries.length > 0) return;
-        storeCursor(feed.failure === undefined ? after : undefined);
-      },
-      { signal: watch.signal },
-    );
-    feed.addEventListener(
-      "delivery",
-      () => {
-        if (storedCursor() === undefined) storeCursor(after);
-        watch.abort();
-      },
-      { signal: watch.signal },
-    );
-  }
+  feed.addEventListener("restart", () => storeCursor(undefined), { once: true });
   feed.start();
 }
 
@@ -93,18 +77,27 @@ const logged = ({ event }: Delivery<RunData>): LogEvent => ({
   time: event.time ?? "",
 });
 
-/** What the status line says while the feed reads: that the log is live, and from where. */
-function following(): string {
+/** What the status line says while the feed reads: that the log is live, and from where; a
+ * restart is said plainly, as no failure, since the log misses nothing for it. */
+function following(feed: StageFeed): string {
+  if (feed.restarted)
+    return "The stream restarted; following the run events live, from the oldest it keeps.";
   return resumed === undefined
     ? "Following the run events live, from the oldest the stream keeps."
     : "Following the run events live, after the last one this tab showed.";
 }
 
 class PipelineLog extends LitElement {
-  static properties = { events: { state: true }, paused: { state: true } };
+  static properties = {
+    events: { state: true },
+    following: { state: true },
+    paused: { state: true },
+  };
 
   /** The events shown, the feed's deliveries in its order. */
   declare events: readonly LogEvent[];
+  /** What the status line says while the feed reads. */
+  declare following: string;
   /** Why the feed's read is paused, while it is; empty while it reads. */
   declare paused: string;
 
@@ -113,6 +106,7 @@ class PipelineLog extends LitElement {
   constructor() {
     super();
     this.events = [];
+    this.following = "";
     this.paused = "";
   }
 
@@ -137,6 +131,7 @@ class PipelineLog extends LitElement {
       { signal },
     );
     feed.addEventListener("failure", () => this.#followFeed(), { signal });
+    feed.addEventListener("restart", () => this.#followFeed(), { signal });
     this.#followFeed();
   }
 
@@ -151,7 +146,9 @@ class PipelineLog extends LitElement {
   }
 
   #followFeed() {
-    const failure = appFeed().failure;
+    const feed = appFeed();
+    const failure = feed.failure;
+    this.following = following(feed);
     this.paused =
       failure === undefined
         ? ""
@@ -165,7 +162,7 @@ class PipelineLog extends LitElement {
       <header class="view-header"><h1>Event log</h1></header>
       <div class="view-body log-body">
         <p class="log-status ${this.paused ? "paused" : ""}" role="status">
-          ${this.paused ? `Live events paused: ${this.paused}. Reconnecting…` : following()}
+          ${this.paused ? `Live events paused: ${this.paused}. Reconnecting…` : this.following}
         </p>
         <sl-event-log .events=${this.events}></sl-event-log>
       </div>

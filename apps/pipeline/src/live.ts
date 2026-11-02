@@ -16,8 +16,11 @@
 // whichever arrives first, the two telling the same stage, reason, and time; a failure is
 // terminal, so nothing later, an event or an answer read before it failed, un-fails the run or
 // raises its progress past the failed stage. When the read fails (the connection lost for good,
-// the token refused, a start cursor the stream never gave out), the feed says so and reads again
-// after a backoff, from the last cursor it delivered, or its start, with no gap and no duplicate.
+// the token refused), the feed says so and reads again after a backoff, from the last cursor it
+// delivered, or its start, with no gap and no duplicate. A start cursor the stream never gave out
+// (the tab's, kept from a stream before an emulator restart) is no failure to wait out: the read
+// fails before it delivers anything, so the feed forgets the cursor and reads again at once from
+// the oldest event the stream keeps, which nothing shown can duplicate, and says it restarted.
 
 import type {
   CloudEvent,
@@ -79,6 +82,20 @@ export interface ProgressDetail {
   run: string;
 }
 
+/**
+ * Whether the read's error is the NATS adapter's refusal of the start cursor `after`, one past the
+ * stream's last sequence or one it never writes. The sdk gives that failure no type or code of its
+ * own (the EventSequence contract says only that the iteration rejects with an Error), so the
+ * feed knows it by the adapter's message for that cursor alone: every other failure, the
+ * connection's or the token's among them, is waited out and read again from the same cursor.
+ */
+function unknownCursor(error: unknown, after: Cursor): boolean {
+  return (
+    error instanceof Error &&
+    error.message === `the NATS sequence gave out no cursor ${JSON.stringify(after)}`
+  );
+}
+
 /** The waits between a failed read and the next, in ms, the last repeated. */
 const backoff = [1_000, 2_000, 5_000, 10_000, 30_000];
 
@@ -88,9 +105,10 @@ const settle = 2_000;
 /**
  * The live feed. It dispatches `delivery` with each delivery's CustomEvent, `progress` with a
  * ProgressDetail when a run's completed count rises, `run-failed` with a ProgressDetail when a run
- * fails, once a run, and `failure` when the read fails or recovers, `failure` then holding the
- * error or undefined. The two failures are named apart: `failure` is the feed's own, its read
- * lost, and `run-failed` a run's, which the emulator reports.
+ * fails, once a run, `failure` when the read fails or recovers, `failure` then holding the
+ * error or undefined, and `restart` when it forgets a start cursor the stream never gave out and
+ * reads from the oldest event, `restarted` then true. The two failures are named apart: `failure`
+ * is the feed's own, its read lost, and `run-failed` a run's, which the emulator reports.
  */
 export class StageFeed extends EventTarget {
   readonly #sequence: EventSequence<RunData>;
@@ -100,6 +118,7 @@ export class StageFeed extends EventTarget {
   #failure: unknown = undefined;
   #cursor: Cursor | undefined;
   #started = false;
+  #restarted = false;
 
   /** The feed over the sequence, reading from after the cursor `after`, or with none from the
    * oldest event the stream keeps. */
@@ -118,6 +137,12 @@ export class StageFeed extends EventTarget {
    * it reads. */
   get failure(): unknown {
     return this.#failure;
+  }
+
+  /** Whether the feed forgot the cursor it started after, one the stream never gave out, and reads
+   * from the oldest event the stream keeps instead. */
+  get restarted(): boolean {
+    return this.#restarted;
   }
 
   /** The run's progress, or undefined when neither an event nor the API has told of it. */
@@ -218,6 +243,17 @@ export class StageFeed extends EventTarget {
       } catch (error) {
         clearTimeout(settled);
         if (signal?.aborted) return;
+        // Only the start cursor: one the feed delivered came from this stream.
+        const start = this.#deliveries.length === 0 ? this.#cursor : undefined;
+        if (start !== undefined && unknownCursor(error, start)) {
+          // Nothing is delivered yet, so the oldest event duplicates none; the loop's next attempt
+          // is the first again, and its settling clears any failure an earlier attempt reported.
+          this.#cursor = undefined;
+          this.#restarted = true;
+          this.dispatchEvent(new Event("restart"));
+          attempt = -1;
+          continue;
+        }
         this.#fail(error);
         const wait = backoff[Math.min(attempt, backoff.length - 1)];
         await new Promise((resolve) => setTimeout(resolve, wait));

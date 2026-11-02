@@ -206,31 +206,51 @@ describe("a read resumed from the last cursor", () => {
     assert.equal(await page.evaluate(STORED), "20");
   });
 
-  test("forgets a cursor the stream never gave out, and a reload starts from the oldest", async (t) => {
+  test("restarts at once from the oldest event on a cursor the stream never gave out", async (t) => {
     await boot();
-    const doc = await uploadRun("restarted.txt");
+    const sockets: string[] = [];
+    const kept = await uploadRun("restarted.txt");
     // The cursor of an emulator before this one, whose stream reached further.
     const page = await openLog(emulator.origin, async (page) => {
+      page.on("Network.webSocketCreated", ({ url }: { url: string }) => sockets.push(url));
+      await page.cdp("Network.enable");
       await page.cdp("Page.addScriptToEvaluateOnNewDocument", {
-        source: `if (!sessionStorage.getItem("seeded")) {
-          sessionStorage.setItem("seeded", "1");
-          sessionStorage.setItem(${JSON.stringify(cursorKey)}, "99");
-        }`,
+        source: `sessionStorage.setItem(${JSON.stringify(cursorKey)}, "99")`,
       });
     });
-    await until(page, `(${LOG_STATUS})?.startsWith("Live events paused")`);
+    await page.evaluate("void (window.unreloaded = true)");
+
+    // The feed forgets the cursor and reads from the oldest event, with no reload, and the status
+    // line says so quietly, as no failure.
+    assertRun(t, await loggedOnce(page, 5), kept);
     t.diagnostic(await page.evaluate(LOG_STATUS));
     assert.equal(
       await page.evaluate(LOG_STATUS),
-      `Live events paused: the NATS sequence gave out no cursor "99". Reconnecting…`,
+      "The stream restarted; following the run events live, from the oldest it keeps.",
     );
-    assert.equal(await page.evaluate(STORED), null, "the cursor forgotten");
-    assert.deepEqual(await logged(page), []);
-
-    await reload(page);
-    await mounted(page, "pipeline-log");
-    assertRun(t, await loggedOnce(page, 5), doc);
+    assert.equal(
+      await page.evaluate("document.querySelector('pipeline-log .log-status.paused')"),
+      null,
+    );
     assert.equal(await page.evaluate(STORED), "5");
+
+    // The read is live: the next upload's events follow, and the list's entry follows its run.
+    const live = await emulator.upload("live.txt");
+    await entriesShown(page, 2);
+    await emulator.complete(live.run_id);
+    const shown = await loggedOnce(page, 10);
+    assertRun(t, shown.slice(5), live);
+    assertDistinct(shown);
+    await until(
+      page,
+      `[...${LIST}.querySelectorAll("sl-entry")].find((e) => e.item?.name === "live.txt")?.shadowRoot.querySelector(".status")?.textContent === "complete 5/5"`,
+    );
+    assert.equal(await page.evaluate("document.querySelector('.documents-live')"), null);
+    assert.equal(await page.evaluate(STORED), "10");
+    assert.equal(await page.evaluate("window.unreloaded"), true, "the page never reloaded");
+    const { consumer_count } = await streamState({ port: emulator.natsPort, token });
+    assert.equal(consumer_count, 1, "the feed's one read");
+    assert.deepEqual(sockets, [emulator.wsURL + "/"], "one connection");
   });
 });
 

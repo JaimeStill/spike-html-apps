@@ -6,7 +6,8 @@
 // document); and the chat, empty, the rich reply mid-stream, its reasoning and function call
 // open, the rich reply finished, its Markdown, one stopped, one failed, and a send the network
 // failed, at the same two sizes (--page chat); the event log, empty before any run (--page
-// log-empty), runs arriving live, a run's failure event, and the live read paused (--page log);
+// log-empty), runs arriving live, a run's failure event, and the read restarted from the oldest
+// event under a cursor the stream never gave out (--page log);
 // and the search view, its prompt, matches with the query marked, none, searching, and a search
 // the network failed (--page search), at the same two sizes; light and dark, over an emulator the
 // start function boots for the run. Headless Chrome has no PDF viewer, so the PDF state's frame is
@@ -591,14 +592,21 @@ const logFailed: Step = async (page) => {
   })()`);
 };
 
-/** The feed paused: the tab's stored cursor is one the stream never gave out, as after the
- * emulator restarted with a new store, so the read fails and the log says why. */
-const logPaused: Step = async (page) => {
+/** The feed restarted: the tab's stored cursor is one the stream never gave out, as after the
+ * emulator restarted with a new store, so the feed reads from the oldest event at once and the
+ * log's status line says so, quietly. */
+const logRestarted: Step = async (page) => {
   await page.evaluate(`sessionStorage.setItem("pipeline-log.cursor", "999999")`);
   const loaded = new Promise((resolve) => page.on("Page.loadEventFired", resolve));
   await page.cdp("Page.reload");
   await loaded;
-  await until(page, `document.querySelector("pipeline-log .log-status.paused")`, 15_000);
+  await until(
+    page,
+    `document.querySelector("pipeline-log .log-status")?.textContent.includes("restarted")`,
+    15_000,
+  );
+  await logShows(page, 1);
+  await wait(300);
 };
 
 /** The log's states, each docked at 1280×1200 and at 375×667, captured full-page. */
@@ -764,7 +772,11 @@ const description: Description = {
       states: logStates([
         { name: "live", caption: "runs arriving live, the newest's data open", open: logLive },
         { name: "failed", caption: "a run's failure event, its data open", open: logFailed },
-        { name: "paused", caption: "the live read paused, and why", open: logPaused },
+        {
+          name: "restarted",
+          caption: "the read restarted from the oldest event, said quietly",
+          open: logRestarted,
+        },
       ]),
     },
     {
