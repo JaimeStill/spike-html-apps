@@ -407,16 +407,9 @@
     color: var(--red);
   }
 
-  /* The search view: Try again below a failed search's status line, and the note of the matches
-     past the first page below the list. */
+  /* The search view: Try again below a failed search's status line. */
   .search-retry {
     margin-block-start: var(--space-xs);
-  }
-
-  .search-more {
-    margin-block: var(--space-s) 0;
-    color: var(--fg-2);
-    font-size: var(--text-s);
   }
 
   @media (width < 48rem) {

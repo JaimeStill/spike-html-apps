@@ -20,9 +20,9 @@
     "vite-plugin-standard-css-modules": "0.3.0"
   },
   "dependencies": {
-    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.9.1",
+    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.10.0",
     "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.3.0",
-    "@jaimestill/spike-html-apps-sdk": "github:JaimeStill/spike-html-apps-sdk#v0.3.0",
+    "@jaimestill/spike-html-apps-sdk": "github:JaimeStill/spike-html-apps-sdk#v0.4.0",
     "@nats-io/jetstream": "3.4.0",
     "@nats-io/nats-core": "3.4.0",
     "lit": "3.3.3"

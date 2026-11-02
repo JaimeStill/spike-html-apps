@@ -2,10 +2,11 @@
 // root: the header's search field submitted opens the view for ?q=, each match's name and snippet
 // with the query's occurrences marked, case-insensitively, through sl-search-results; a deep link,
 // a reload, and back and forward reach it; and activating a match opens its document's view. Then,
-// once: a query no document matches, a blank one's prompt, which asks the API nothing, and a
-// search in flight, which keeps the last query's matches listed and busy, then fails as a lost
-// network does, saying why, and Try again finds the matches. Each mount boots its own emulator
-// with the same three documents.
+// once: a query no document matches, a query more documents match than the page the view reads,
+// its count of all of them, a blank one's prompt, which asks the API nothing, and a search in
+// flight, which keeps the last query's matches listed and busy, then fails as a lost network does,
+// saying why, and Try again finds the matches. Each mount, and the once, boots its own emulator
+// with the same three documents, the paged query's uploading its own beside them.
 
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
@@ -30,6 +31,10 @@ after(async () => {
 
 /** The search results, as a page expression. */
 const RESULTS = "document.querySelector('pipeline-search sl-search-results')";
+
+/** The page of matches the view reads, the document list's largest page size
+ * (apps/pipeline/src/views/search.ts). */
+const searchSize = 96;
 
 /** The search field, as a page expression. */
 const FIELD = "document.querySelector('input[name=q]')";
@@ -238,6 +243,17 @@ describe("the search view's other states", () => {
       busy: false,
       matches: [],
     });
+  });
+
+  test("counts the first page's matches of all of them when more than a page match", async () => {
+    // One more than the page the view reads, each matching in its name alone.
+    const names = Array.from({ length: searchSize + 1 }, (_, i) => `paged-${i}.txt`);
+    for (const name of names) await emulator.upload(name);
+    await page.goto(`${emulator.origin}${emulator.base}search?q=paged`);
+    const results = await searched(page, "paged");
+    assert.equal(results.state, "ready");
+    assert.equal(results.status, `${searchSize} of ${searchSize + 1} matches for “paged”`);
+    assert.equal(results.matches.length, searchSize);
   });
 
   test("prompts for a blank query, and asks the API nothing", async () => {

@@ -70,12 +70,9 @@ export function resumeFeed(feed: StageFeed, after: Cursor | undefined) {
   feed.start();
 }
 
-/** The event as the log shows it. A CloudEvent's time is optional, the log's is not: an event
- * without one, which the emulator never publishes, shows no time. */
-const logged = ({ event }: Delivery<RunData>): LogEvent => ({
-  ...event,
-  time: event.time ?? "",
-});
+/** The event as the log shows it: the delivery's CloudEvent as it is, its time optional in both,
+ * so an event without one, which the emulator never publishes, shows its type alone. */
+const logged = ({ event }: Delivery<RunData>): LogEvent => event;
 
 /** What the status line says while the feed reads: that the log is live, and from where; a
  * restart is said plainly, as no failure, since the log misses nothing for it. */

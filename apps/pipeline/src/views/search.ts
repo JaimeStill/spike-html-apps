@@ -8,8 +8,9 @@
 // count of matches, none, or that the search failed and why, with Try again below it. While a new
 // query is searched, the last query's matches stay listed, marked busy, so the list doesn't empty
 // and refill. The view reads the first page of matches, at the largest page size the document list
-// offers; a query that matches more says how many more below the list, which a narrower query
-// reaches. A blank query asks nothing of the API, which refuses one, and shows the prompt.
+// offers; for a query that matches more, the status line counts the page's matches of the total,
+// and a narrower query reaches the rest. A blank query asks nothing of the API, which refuses one,
+// and shows the prompt.
 
 import { html, LitElement, nothing } from "lit";
 import type { PropertyValues } from "lit";
@@ -120,12 +121,12 @@ class PipelineSearch extends LitElement {
   }
 
   render() {
-    const { total, items } = this;
     return frame(
       "Search",
       html`<sl-search-results
           .query=${this.query}
-          .items=${items}
+          .items=${this.items}
+          .total=${this.total}
           .state=${this.state}
           .message=${this.message}
           @open=${(e: CustomEvent<SearchOpenDetail>) => this.#open(e.detail)}
@@ -135,13 +136,6 @@ class PipelineSearch extends LitElement {
             ? html`<button type="button" class="search-retry" @click=${() => void this.#fetch()}>
                 Try again
               </button>`
-            : nothing
-        }
-        ${
-          this.state === "ready" && total !== null && total > items.length
-            ? html`<p class="search-more">
-                The first ${items.length} of ${total} matches; a narrower search finds the rest.
-              </p>`
             : nothing
         }`,
     );

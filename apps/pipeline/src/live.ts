@@ -22,6 +22,7 @@
 // fails before it delivers anything, so the feed forgets the cursor and reads again at once from
 // the oldest event the stream keeps, which nothing shown can duplicate, and says it restarted.
 
+import { UnknownCursorError } from "@jaimestill/spike-html-apps-sdk/events.js";
 import type {
   CloudEvent,
   Cursor,
@@ -80,20 +81,6 @@ export interface Failure {
 /** `progress`'s and `run-failed`'s detail: the run whose progress rose, or that failed. */
 export interface ProgressDetail {
   run: string;
-}
-
-/**
- * Whether the read's error is the NATS adapter's refusal of the start cursor `after`, one past the
- * stream's last sequence or one it never writes. The sdk gives that failure no type or code of its
- * own (the EventSequence contract says only that the iteration rejects with an Error), so the
- * feed knows it by the adapter's message for that cursor alone: every other failure, the
- * connection's or the token's among them, is waited out and read again from the same cursor.
- */
-function unknownCursor(error: unknown, after: Cursor): boolean {
-  return (
-    error instanceof Error &&
-    error.message === `the NATS sequence gave out no cursor ${JSON.stringify(after)}`
-  );
 }
 
 /** The waits between a failed read and the next, in ms, the last repeated. */
@@ -243,9 +230,9 @@ export class StageFeed extends EventTarget {
       } catch (error) {
         clearTimeout(settled);
         if (signal?.aborted) return;
-        // Only the start cursor: one the feed delivered came from this stream.
-        const start = this.#deliveries.length === 0 ? this.#cursor : undefined;
-        if (start !== undefined && unknownCursor(error, start)) {
+        // Only the start cursor: one the feed delivered came from this stream. Every other failure,
+        // the connection's or the token's among them, is waited out and read again from the cursor.
+        if (this.#deliveries.length === 0 && error instanceof UnknownCursorError) {
           // Nothing is delivered yet, so the oldest event duplicates none; the loop's next attempt
           // is the first again, and its settling clears any failure an earlier attempt reported.
           this.#cursor = undefined;
