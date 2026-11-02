@@ -1084,6 +1084,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   answered, while searching and none keep the current query; Q8, an in-page types module under
   `types:browser` guards LogEvent.time's optionality. Q5: the sdk rejects a cursor the stream never
   gave out with a typed error, released as sdk v0.4.0; the root tests the type, never the message.
+- pipeline: Q10 (architect): "No matches" names the query the empty items answered, the idle
+  prompt with none, so a query set alone never changes the search results' live region. Q11: the
+  sdk's UnknownCursorError promises only what the NATS adapter detects (a malformed cursor, or one
+  past the stream's last event); a recreated stream isn't detected, and a stored cursor at or below
+  its last event resumes partway in. A gap for the answer task, beside real auth and persistence;
+  the capstone's backend decides it.
 - pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
   cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
   reads the first page of 96; search has no nav link, the header field is its way in.
