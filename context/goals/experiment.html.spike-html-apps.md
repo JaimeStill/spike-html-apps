@@ -1,6 +1,6 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** building
+- **State:** handoff
 - **Task:** pipeline
 - **Branch:** pipeline
 
@@ -215,14 +215,13 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 13/18 plus the review rounds. Released, each tag and GitHub release confirmed: tooling
-  v0.3.0 (PR #4); foundation v0.2.1 (#5), v0.2.2 (#6), v0.2.3 (#7), v0.3.0 (#8, 373e357);
-  components v0.4.0 (#7), v0.5.0 (#8), v0.6.0 (#9, 371ee3a); noctis v0.1.1 (#3, 58b3242). Root:
-  slices 11 66a2447, 12 bcbe652, 13 3333b82, the CSS-module plugin b00c29c, rolldown 2e8843b, layout
-  20802a8, eslint 2629d74. Next: the root onto foundation v0.3.0 and components v0.6.0 (drop
-  47.99rem and its own Documents heading; "Search" narrow; badge and current nav on the accent;
-  the flaky NATS test), its design review, then slices 14–18 · standards: tooling, foundation,
-  components done · spec — · editor —
+slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
+  and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
+  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc); sdk v0.3.0
+  (PR #6); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
+  review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
+  NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
+  standards: per layer release, root not yet · spec — · editor —
 
 - Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
   positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
@@ -235,6 +234,36 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   group code moved from browser.ts to `src/group.ts`; the exports name the four public modules in
   place of `./*.js`, so group.js isn't importable (standards review, escalation 1, settled by the
   brief's export list); stop() has no bound past SIGKILL, left as is (review, escalation 2).
+
+## Handoff
+
+- Next move: slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
+  matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
+  shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
+  second read of the stream; then its design review. Then slice 17 (the external client, behaviors
+  19–21; services.json beside its build), slice 18 (the walkthrough and the root's `mise run
+  screenshots` task, behavior 22), then the closing loop: standards and spec reviews over the
+  root's whole diff, the editor, validation with the end-of-task size measurement (whole-bundle
+  gzip and brotli, compared with Material Web's 72.1 kB gzip all.js), the session brief, and SHIP
+  (the root merges with no tag; its Release line is all already released).
+- No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
+  holds the `pipeline` branch.
+- Open for the architect: whether the foundation's (48 KB) and the sdk's (13 KB) brotli budgets
+  are removed to match the components'.
+- Open finding, for a components patch: sl-chat-thread doesn't follow when an item at its end
+  expands (opening a `<details>` isn't new content), so the narrow streaming capture cuts off an
+  opened function call; decide whether expanding at the end keeps following (architect concurred
+  it's a finding; not started).
+- Held: globals 17.13.0 in the root and components until pnpm's release age clears (about
+  2026-11-02T11:01Z); then a plain bump in each, and in the foundation, sdk, noctis, and tooling at
+  their next change.
+- Working notes: the architect's "accept" covers every checkpoint brief open at the time; design
+  review stops show captures (light and dark, docked 1280×1200 and 375px full page) under
+  /tmp/…/scratchpad/review-<slice>/, which won't survive the session — re-capture with
+  `BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) pnpm exec spike-html-apps-screenshots
+  scripts/screenshots.config.ts --output directory --dir <dir>`; `mise run serve` shows the app at
+  127.0.0.1:8080/app (`EMULATOR_RUNS_FAIL='fail-at-*:extraction'` for a failed run; `/rich` and
+  `/fail` in the chat).
 
 ## Decisions
 
