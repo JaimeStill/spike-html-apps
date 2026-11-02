@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -287,9 +288,17 @@ func TestRuns_StageEventsPublished(t *testing.T) {
 // startFailing runs the app as startRuns does, under the fail rules rules.
 func startFailing(t *testing.T, interval time.Duration, rules ...string) (*running, *config.Config, *webtest.Client) {
 	t.Helper()
+	return startRules(t, interval, rules, nil)
+}
+
+// startRules runs the app as startRuns does, under the fail rules fail and
+// the hold rules hold.
+func startRules(t *testing.T, interval time.Duration, fail, hold []string) (*running, *config.Config, *webtest.Client) {
+	t.Helper()
 	cfg := configtest.Config(t)
 	cfg.Runs.StageInterval = libconfig.Duration(interval)
-	cfg.Runs.Fail = rules
+	cfg.Runs.Fail = fail
+	cfg.Runs.Hold = hold
 	r := start(t, cfg)
 	return r, cfg, webtest.NewClient("http://" + waitForReady(t, r.log))
 }
@@ -416,6 +425,139 @@ func TestRuns_MalformedFailRuleFailsStartup(t *testing.T) {
 			}
 			if out := log.String(); !strings.Contains(out, "fail rule") || strings.Contains(out, "server ready") {
 				t.Errorf("log = %q, want a failure naming the fail rule and no ready record", out)
+			}
+		})
+	}
+}
+
+// A document whose name matches a hold rule starts a run that holds at the
+// rule's stage: the stages before it complete and publish their stage
+// events, and the run stays running, the held stage and those after it
+// pending with no time and no reason, however long it is watched. The
+// broker holds its stage events for the stages before it alone, and no
+// failure event. The first matching rule wins, and a document no rule
+// matches, uploaded after it, completes as before, so the held run's
+// schedule has passed its every stage by then.
+func TestRuns_HoldRuleHoldsRunAtStage(t *testing.T) {
+	const interval = 20 * time.Millisecond
+	r, cfg, c := startRules(t, interval, nil, []string{"never-*:upload", "held-*:extraction", "held-*:metadata"})
+	col := collect(t, r.broker)
+
+	doc := uploadDoc(t, c, "held-brief.txt")
+	ok := uploadDoc(t, c, "report.txt")
+	awaitRun(t, c, doc.RunID, failsafe, func(r run.Run) bool { return completed(r) == 2 })
+	_, okRun := awaitRun(t, c, ok.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+	if okRun.Status != run.Complete || completed(okRun) != len(stageNames) {
+		t.Errorf("unmatched run = %+v, want it complete", okRun)
+	}
+	col.await(t, 2+len(stageNames))
+	time.Sleep(4 * interval)
+
+	rn := readRun(t, c, doc.RunID)
+	if rn.Status != run.Running || rn.CompletedAt != nil {
+		t.Fatalf("run = %+v, want it running, with no completion time", rn)
+	}
+	for i, s := range rn.Stages {
+		if i < 2 {
+			if s.State != run.Done || s.CompletedAt == nil || s.FailedAt != nil || s.Reason != nil {
+				t.Errorf("stage %d = %+v, want it complete", i, s)
+			}
+			continue
+		}
+		if s.State != run.Pending || s.CompletedAt != nil || s.FailedAt != nil || s.Reason != nil {
+			t.Errorf("stage %d = %+v, want it pending, held at extraction", i, s)
+		}
+	}
+	var mine []event.Event
+	for _, e := range col.snapshot() {
+		if e.Subject == doc.RunID {
+			mine = append(mine, e)
+		}
+	}
+	if len(mine) != 2 {
+		t.Fatalf("held run's events = %+v, want its two stage events", mine)
+	}
+	for i, e := range mine {
+		if e.Type != cfg.NATS.Prefix+".run.stage" || e.ID != doc.RunID+"."+strconv.Itoa(i+1) || !e.Time.Equal(*rn.Stages[i].CompletedAt) {
+			t.Errorf("event %d = %+v, want %s.run.stage, id %s.%d, at the stage's completion", i, e, cfg.NATS.Prefix, doc.RunID, i+1)
+		}
+	}
+}
+
+// A run can hold at its first stage, before any stage completes, and at
+// its last, after every other has.
+func TestRuns_HoldRuleAtFirstAndLastStage(t *testing.T) {
+	const interval = 10 * time.Millisecond
+	_, _, c := startRules(t, interval, nil, []string{"first.txt:upload", "last.txt:embeddings"})
+	first := uploadDoc(t, c, "first.txt")
+	last := uploadDoc(t, c, "last.txt")
+	awaitRun(t, c, last.RunID, failsafe, func(r run.Run) bool { return completed(r) == len(stageNames)-1 })
+	// The unmatched run, uploaded after both, completing bounds the wait:
+	// both held runs' schedules have passed every stage by then.
+	ok := uploadDoc(t, c, "report.txt")
+	awaitRun(t, c, ok.RunID, failsafe, func(r run.Run) bool { return r.Status == run.Complete })
+	for name, want := range map[string]struct {
+		id string
+		at int
+	}{"first.txt": {first.RunID, 0}, "last.txt": {last.RunID, len(stageNames) - 1}} {
+		rn := readRun(t, c, want.id)
+		if rn.Status != run.Running || completed(rn) != want.at || rn.Stages[want.at].State != run.Pending {
+			t.Errorf("%s: run = %+v, want it held at stage %d with %d complete", name, rn, want.at+1, want.at)
+		}
+	}
+}
+
+// A name that matches a fail rule and a hold rule stops at the earlier of
+// their two stages: a hold before the fail holds the run there, and it
+// never fails; a fail before the hold fails the run there; and a fail and
+// a hold at one stage fail the run.
+func TestRuns_FailAndHoldRulesEarlierStageWins(t *testing.T) {
+	const interval = 10 * time.Millisecond
+	_, _, c := startRules(t, interval,
+		[]string{"hold-first.txt:extraction", "fail-first.txt:metadata", "same.txt:chunks"},
+		[]string{"hold-first.txt:metadata", "fail-first.txt:extraction", "same.txt:chunks"})
+	holdFirst := uploadDoc(t, c, "hold-first.txt")
+	failFirst := uploadDoc(t, c, "fail-first.txt")
+	same := uploadDoc(t, c, "same.txt")
+	_, ff := awaitRun(t, c, failFirst.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+	_, sm := awaitRun(t, c, same.RunID, failsafe, func(r run.Run) bool { return r.Status != run.Running })
+	if ff.Status != run.Failed || completed(ff) != 1 || ff.Stages[1].State != run.Faulted {
+		t.Errorf("fail-first.txt: run = %+v, want it failed at metadata", ff)
+	}
+	if sm.Status != run.Failed || completed(sm) != 3 || sm.Stages[3].State != run.Faulted {
+		t.Errorf("same.txt: run = %+v, want it failed at chunks", sm)
+	}
+	// same.txt's run reached its fourth stage, later than hold-first.txt's
+	// second, which it was uploaded after.
+	hf := readRun(t, c, holdFirst.RunID)
+	if hf.Status != run.Running || completed(hf) != 1 || hf.Stages[1].State != run.Pending {
+		t.Errorf("hold-first.txt: run = %+v, want it held at metadata, never failed", hf)
+	}
+}
+
+// A malformed hold rule fails the run layer's construction, as a malformed
+// fail rule does, so Run exits 1 naming the rule before anything reports
+// ready.
+func TestRuns_MalformedHoldRuleFailsStartup(t *testing.T) {
+	for name, rule := range map[string]string{
+		"no stage":      "held-*",
+		"unknown stage": "held-*:indexing",
+		"empty pattern": ":upload",
+		"bad pattern":   "held-[:upload",
+	} {
+		t.Run(name, func(t *testing.T) {
+			cfg := configtest.Config(t)
+			cfg.Runs.Hold = []string{rule}
+			var log syncBuffer
+			a := newApp(t, cfg, &log)
+			withMemoryBroker(a)
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if code := a.Run(ctx); code != 1 {
+				t.Errorf("Run = %d, want 1", code)
+			}
+			if out := log.String(); !strings.Contains(out, "hold rule") || strings.Contains(out, "server ready") {
+				t.Errorf("log = %q, want a failure naming the hold rule and no ready record", out)
 			}
 		})
 	}

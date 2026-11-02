@@ -69,7 +69,13 @@ four domains is a package under `domain/`, served under `/api`:
   document's name, so under `fail-at-*:extraction` an upload named `fail-at-extraction.txt`
   fails there. The run's status reads `failed`, the stage `failed` with `failed_at` and `reason`,
   and in place of that stage's event the run publishes one `emulator.run.failed` CloudEvent (id
-  `<run>.failed`), whose data is the stage event's with `reason`; it advances no further.
+  `<run>.failed`), whose data is the stage event's with `reason`; it advances no further. The
+  test seam for a run under way is its counterpart, `runs.hold` (`EMULATOR_RUNS_HOLD`), in the
+  same rule syntax: under `held-*:extraction` an upload named `held-brief.txt` completes and
+  publishes upload and metadata, then stays `running` with extraction the first `pending` stage,
+  the one a reader shows under way, for as long as the emulator runs; nothing releases it, and no
+  event is published for the held stage. A name both kinds of rule match stops at the earlier of
+  their stages, and fails when they name one stage.
 - `conversation` (`/api/conversations`, and the stateless `/api/responses`): a scripted Open
   Responses stream. A user message whose text is exactly `/fail` takes the failure path, and one
   exactly `/rich` streams the rich reply: reasoning, a function call with its output, then a

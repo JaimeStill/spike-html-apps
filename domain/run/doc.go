@@ -26,6 +26,14 @@
 // stages after it pending, and no stage event is published for the failed
 // stage.
 //
+// A run whose document's name matches one of [Config.Hold]'s rules, the
+// test seam for a run under way, holds at the rule's stage: the stages
+// before it complete and publish as any run's do, and the held stage is
+// never due, so Advance publishes and records nothing for it and the run
+// stays [Running], that stage its first [Pending] one, for as long as the
+// process runs. A name both kinds of rule match stops at the earlier of
+// their stages, and fails when they name one stage.
+//
 // All state is in memory, guarded by one mutex; nothing outlives the
 // process.
 //

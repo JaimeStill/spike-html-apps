@@ -22,7 +22,7 @@ import (
 
 // Config is the layer's configuration: how long each stage takes, the
 // source its stage events name, the namespace of their type, the broker's
-// prefix, and the fail rules.
+// prefix, and the fail and hold rules.
 //
 // Fail is the emulator's test seam for a failed run, configuration and not
 // client API: each rule is <pattern>:<stage>, a path.Match pattern over the
@@ -31,11 +31,25 @@ import (
 // instead of completing it, so a test uploads fail-at-extraction.txt under
 // the rule fail-at-*:extraction. The stage is the text after the last ':',
 // so a pattern may hold one.
+//
+// Hold is the emulator's test seam for a run under way, configuration and
+// not client API, its rules written as Fail's are. A run whose document's
+// name matches a rule, the first that matches in order, holds at that
+// rule's stage: the stages before it complete and publish their events as
+// any run's do, and the held stage is never completed, failed, or
+// published, so the run stays [Running] with that stage the first
+// [Pending] one, the stage a reader shows under way (the layer publishes
+// no event for a stage's start), for as long as the process runs. Nothing
+// releases a hold, so a test uploads held-brief.txt under the rule
+// held-*:extraction to read a run mid-way for as long as it needs. A name
+// that matches a fail rule and a hold rule stops at the earlier of their
+// two stages, failing there or holding there; at one stage, it fails.
 type Config struct {
 	Interval time.Duration
 	Source   string
 	Prefix   string
 	Fail     []string
+	Hold     []string
 }
 
 // Service is the run layer: the store of every run and the advance that
@@ -45,7 +59,8 @@ type Service struct {
 	source   string
 	typ      string
 	failType string
-	rules    []failRule
+	rules    []stageRule
+	holds    []stageRule
 	pub      messaging.Publisher
 	logger   *slog.Logger
 	wake     *reactor.Waker
@@ -56,50 +71,73 @@ type Service struct {
 }
 
 // record is one run as the store holds it: completed holds the completion
-// time of each stage completed so far, in order; fail is the rule the
+// time of each stage completed so far, in order; fail is the fail rule the
 // run's document matched, or nil, and failed the time the stage after the
-// completed ones failed, once it has.
+// completed ones failed, once it has; hold is the 1-based position of the
+// stage the run holds at, or 0.
 type record struct {
 	id         string
 	documentID string
 	created    time.Time
 	completed  []time.Time
-	fail       *failRule
+	fail       *stageRule
 	failed     *time.Time
+	hold       int
 }
 
-// failRule is one of [Config.Fail]'s rules, parsed: the rule as
-// configured, its pattern, and its stage's 1-based position.
-type failRule struct {
+// stageRule is one of [Config.Fail]'s or [Config.Hold]'s rules, parsed:
+// the rule as configured, its pattern, and its stage's 1-based position.
+type stageRule struct {
 	rule     string
 	pattern  string
 	position int
 }
 
-// parseFailRule parses rule, <pattern>:<stage>: the pattern must be a
-// well-formed path.Match pattern, not empty, and the stage one of
-// [Stages].
-func parseFailRule(rule string) (failRule, error) {
-	i := strings.LastIndexByte(rule, ':')
-	if i < 0 {
-		return failRule{}, fmt.Errorf("fail rule %q: want <pattern>:<stage>", rule)
+// parseRules parses rules, each a kind rule ("fail" or "hold"),
+// <pattern>:<stage>: the pattern must be a well-formed path.Match pattern,
+// not empty, and the stage one of [Stages]. Each malformed rule is an
+// error naming its kind.
+func parseRules(kind string, rules []string) ([]stageRule, error) {
+	out := make([]stageRule, 0, len(rules))
+	var errs []error
+	for _, rule := range rules {
+		i := strings.LastIndexByte(rule, ':')
+		if i < 0 {
+			errs = append(errs, fmt.Errorf("%s rule %q: want <pattern>:<stage>", kind, rule))
+			continue
+		}
+		pattern, stage := rule[:i], rule[i+1:]
+		if pattern == "" {
+			errs = append(errs, fmt.Errorf("%s rule %q: the pattern is empty", kind, rule))
+			continue
+		}
+		if _, err := path.Match(pattern, ""); err != nil {
+			errs = append(errs, fmt.Errorf("%s rule %q: %w", kind, rule, err))
+			continue
+		}
+		k := slices.Index(Stages, stage)
+		if k < 0 {
+			errs = append(errs, fmt.Errorf("%s rule %q: stage %q is not one of %s", kind, rule, stage, strings.Join(Stages, ", ")))
+			continue
+		}
+		out = append(out, stageRule{rule: rule, pattern: pattern, position: k + 1})
 	}
-	pattern, stage := rule[:i], rule[i+1:]
-	if pattern == "" {
-		return failRule{}, fmt.Errorf("fail rule %q: the pattern is empty", rule)
-	}
-	if _, err := path.Match(pattern, ""); err != nil {
-		return failRule{}, fmt.Errorf("fail rule %q: %w", rule, err)
-	}
-	k := slices.Index(Stages, stage)
-	if k < 0 {
-		return failRule{}, fmt.Errorf("fail rule %q: stage %q is not one of %s", rule, stage, strings.Join(Stages, ", "))
-	}
-	return failRule{rule: rule, pattern: pattern, position: k + 1}, nil
+	return out, errors.Join(errs...)
 }
 
-// reason is why a run under the rule fails, the failed stage's reason.
-func (f *failRule) reason() string {
+// match returns the first of rules whose pattern matches name, or nil.
+func match(rules []stageRule, name string) *stageRule {
+	for i := range rules {
+		if ok, _ := path.Match(rules[i].pattern, name); ok {
+			return &rules[i]
+		}
+	}
+	return nil
+}
+
+// reason is why a run under the fail rule fails, the failed stage's
+// reason.
+func (f *stageRule) reason() string {
 	return fmt.Sprintf("emulated failure: the document's name matches the fail rule %q", f.rule)
 }
 
@@ -107,20 +145,13 @@ func (f *failRule) reason() string {
 // events through pub and logging a failed publish through logger. A
 // non-positive interval, an empty source, a prefix under which the stage
 // event's type is not one a broker routes (the failure event's type
-// differs only in a last segment as plain), or a malformed fail rule is an
-// error.
+// differs only in a last segment as plain), or a malformed fail or hold
+// rule is an error.
 func New(cfg Config, pub messaging.Publisher, logger *slog.Logger) (*Service, error) {
 	typ := cfg.Prefix + "." + StageCompleted
-	var errs []error
-	rules := make([]failRule, 0, len(cfg.Fail))
-	for _, rule := range cfg.Fail {
-		f, err := parseFailRule(rule)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		rules = append(rules, f)
-	}
+	rules, failErr := parseRules("fail", cfg.Fail)
+	holds, holdErr := parseRules("hold", cfg.Hold)
+	errs := []error{failErr, holdErr}
 	if cfg.Interval <= 0 {
 		errs = append(errs, fmt.Errorf("interval must be positive, got %s", cfg.Interval))
 	}
@@ -139,6 +170,7 @@ func New(cfg Config, pub messaging.Publisher, logger *slog.Logger) (*Service, er
 		typ:      typ,
 		failType: cfg.Prefix + "." + RunFailed,
 		rules:    rules,
+		holds:    holds,
 		pub:      pub,
 		logger:   logger,
 		// A fifth of the interval bounds how late a due stage completes;
@@ -151,14 +183,14 @@ func New(cfg Config, pub messaging.Publisher, logger *slog.Logger) (*Service, er
 // Start starts a run for the document documentID, named name, every stage
 // pending, and nudges the advance, which completes its first stage as soon
 // as it is free. The first fail rule whose pattern matches name sets the
-// stage the run fails at.
+// stage the run fails at, and the first hold rule's the stage it holds at;
+// of the two, the earlier stage stops the run, and at one stage the fail
+// does.
 func (s *Service) Start(documentID, name string) Run {
 	rec := &record{id: uuid.NewV7().String(), documentID: documentID, created: time.Now().UTC()}
-	for i := range s.rules {
-		if ok, _ := path.Match(s.rules[i].pattern, name); ok {
-			rec.fail = &s.rules[i]
-			break
-		}
+	rec.fail = match(s.rules, name)
+	if h := match(s.holds, name); h != nil && (rec.fail == nil || h.position < rec.fail.position) {
+		rec.fail, rec.hold = nil, h.position
 	}
 	s.mu.Lock()
 	s.byID[rec.id] = rec
@@ -231,7 +263,7 @@ type due struct {
 	run        string
 	documentID string
 	position   int // 1-based
-	fail       *failRule
+	fail       *stageRule
 }
 
 // Advance completes, for every run, the next stage when it is due: the
@@ -239,9 +271,11 @@ type due struct {
 // publishes each stage's event, then records the stage complete at the
 // event's time. A stage its run's fail rule names fails instead: Advance
 // publishes the run's failure event, then records the stage failed at the
-// event's time, and the run advances no further. A failed publish is
-// logged and leaves the stage pending for the next pass, so Advance itself
-// never fails; it stops between stages once the reactor's drain begins.
+// event's time, and the run advances no further. A stage its run's hold
+// rule names is never due: Advance publishes nothing for it and records
+// nothing, so the run stays running there. A failed publish is logged and
+// leaves the stage pending for the next pass, so Advance itself never
+// fails; it stops between stages once the reactor's drain begins.
 func (s *Service) Advance(ctx context.Context, now time.Time) error {
 	for _, d := range s.dueAt(now) {
 		select {
@@ -271,7 +305,7 @@ func (s *Service) dueAt(now time.Time) []due {
 	var out []due
 	for _, rec := range s.order {
 		n := len(rec.completed)
-		if n == len(Stages) || rec.failed != nil {
+		if n == len(Stages) || rec.failed != nil || rec.hold == n+1 {
 			continue
 		}
 		if now.Before(rec.created.Add(time.Duration(n) * s.interval)) {
