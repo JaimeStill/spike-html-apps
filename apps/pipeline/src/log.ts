@@ -2,7 +2,9 @@
 // run's stage events and a failed run's failure event, shown through the components'
 // sl-event-log, which keeps each shown event in place as the next arrives. The log keeps no read
 // of its own: it shows the feed's deliveries, those kept since the feed started, then each as it
-// arrives, so mounting it, again or late, replays the feed's and opens no second subscription.
+// arrives, so mounting it, again or late, replays the feed's and opens no second subscription. The
+// deliveries one frame hears are shown in one update, so a long stream's replay after a reload
+// lays the log out once a frame, not once an event.
 //
 // The log keeps the cursor of the last event it showed in sessionStorage, and main starts the feed
 // after it, so a reload, which loads a new document, shows the events after the last one this tab
@@ -99,6 +101,10 @@ class PipelineLog extends LitElement {
   declare paused: string;
 
   #disconnect: AbortController | undefined;
+  /** The deliveries heard since the last frame, shown together at the next. */
+  #pending: Delivery<RunData>[] = [];
+  /** The frame that shows them, while one is requested. */
+  #frame = 0;
 
   constructor() {
     super();
@@ -121,9 +127,8 @@ class PipelineLog extends LitElement {
     feed.addEventListener(
       "delivery",
       (e) => {
-        const delivery = (e as CustomEvent<Delivery<RunData>>).detail;
-        this.events = [...this.events, logged(delivery)];
-        this.#shown(delivery);
+        this.#pending.push((e as CustomEvent<Delivery<RunData>>).detail);
+        this.#frame ||= requestAnimationFrame(() => this.#flush());
       },
       { signal },
     );
@@ -135,6 +140,21 @@ class PipelineLog extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.#disconnect?.abort();
+    // Those not shown yet are the feed's still: the next mount shows them, and moves the cursor.
+    cancelAnimationFrame(this.#frame);
+    this.#frame = 0;
+    this.#pending = [];
+  }
+
+  /** Shows the deliveries heard since the last frame, in one update of the log: sl-event-log
+   * measures its frame at each update, so an update per delivery, as a reload's replay of a long
+   * stream delivers them, would lay the growing log out once for each event. */
+  #flush() {
+    this.#frame = 0;
+    const pending = this.#pending;
+    this.#pending = [];
+    this.events = [...this.events, ...pending.map(logged)];
+    this.#shown(pending.at(-1));
   }
 
   /** The log has shown the delivery: its cursor is where a reload resumes. */
