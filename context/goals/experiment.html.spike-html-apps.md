@@ -259,10 +259,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: the root onto components v0.10.2 with the event-log states re-captured for the
-  architect; then the emulator's hold rule (Q16), the spec review, the editor, validation, and the
-  session brief. The walkthrough's feedback is fixed: "processing" and the search clearing its
-  matches (8739e58), the log's lines (v0.10.2). The walkthrough awaits the architect's acceptance.
+- Next move: the emulator's hold rule (Q16) and the stage tests on it; then the spec review, the
+  editor, validation, and the session brief. The root is on components v0.10.2 (d19c12f); every
+  walkthrough finding is fixed and re-captured; the walkthrough awaits the architect's acceptance.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
