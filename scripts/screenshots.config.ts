@@ -1,33 +1,45 @@
-// The pipeline app's captures for the tooling's screenshot bin (spike-html-apps-screenshots): the
-// side pane's documents in each state, docked at 1280px and at 768px, the stacking width, and in
-// the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
-// Markdown artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't
-// know, a run failed, and not found, docked at 1280×1200 and at 375px, full-page (--page
-// document); and the chat, empty, the rich reply mid-stream, its reasoning and function call
-// open, the rich reply finished, its Markdown, one stopped, one failed, and a send the network
-// failed, at the same two sizes (--page chat); the event log, empty before any run (--page
-// log-empty), runs arriving live, a run's failure event, and the read restarted from the oldest
-// event under a cursor the stream never gave out (--page log);
-// and the search view, its prompt, matches with the query marked, none, searching, and a search
-// the network failed (--page search), at the same two sizes; light and dark, over an emulator the
-// start function boots for the run. Headless Chrome has no PDF viewer, so the PDF state's frame is
-// blank there; a real Chrome renders its one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
-// (mise run build:app) and run the bin with BROWSER_EXECUTABLE naming chrome-headless-shell:
+// mise run screenshots' description, which spike-html-apps-tooling's spike-html-apps-screenshots
+// reads: the pipeline app's walkthrough, its pages in the order a reader meets them, over an
+// emulator the start function boots for the run.
 //
-//   BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
-//     pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts --output directory
+// - Upload: the event log, empty before any run (--page log-empty); then the side pane's documents
+//   (--page documents), empty, uploading, live statuses, an upload refused, docked at 1280px and
+//   at 768px, the stacking width, in the drawer at 375px, closed and open, and a run failed.
+// - Stages live: the event log (--page log), runs arriving live, a run's failure event, and the
+//   read restarted from the oldest event under a cursor the stream never gave out.
+// - Chat (--page chat): empty, the rich reply mid-stream, its reasoning and function call open,
+//   the rich reply finished, its Markdown, one stopped, one failed, and a send the network failed.
+// - Search (--page search): its prompt, matches with the query marked, none, searching, and a
+//   search the network failed.
+// - Artifact: the document view (--page document), a run under way, complete with a Markdown
+//   artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't know, a run
+//   failed, and not found. Headless Chrome has no PDF viewer, so the PDF state's frame is blank
+//   there; a real Chrome renders its one page.
+// - The help dialog, opened by ? (--page help), and the theme menu, opened by t (--page theme),
+//   each its viewport alone at 1280px and at 375px.
 //
-// The start function builds cmd/server, embedding the app's build, into a temporary directory and
-// boots it on free loopback ports, as test/browser/support/emulator.ts does, its stages a second
-// apart so a capture finds runs mid-way, its upload limit 2 MB so a larger file is refused, and
-// its fail rule failing a document named fail-at-… at extraction, so a capture shows a failed run,
-// and its replies a word every 150 ms, so a capture finds one mid-stream.
-// The states run in order, each in a fresh tab, light then dark, against the one emulator: the
-// empty log and the empty side pane first, before any upload, and each later state adding the
-// documents it shows, so a dark capture lists the documents its light one uploaded too; the
-// search's states search the documents the earlier pages uploaded.
+// The log's, the chat's, the search's, and the document view's states are docked at 1280×1200 and
+// at 375px, full-page. Each state is captured light and dark at the profile the facets give,
+// palette, space, and type, flexoki, regular, and mono by default; --all takes every built-in
+// profile, each palette at the defaults, then compact and sans at flexoki, as the components'
+// description does, each name checked against the foundation's registry, which the app's
+// register-full.js fills.
+//
+// The start function builds nothing: mise run screenshots builds the app (build:app), then
+// cmd/server, embedding it, into a temporary directory, and names the binary in EMULATOR_BINARY,
+// as test:browser does. The start boots it with the tooling's process helper on free loopback
+// ports, the app at /app, its stages a second apart so a capture finds runs mid-way, its upload
+// limit 2 MB so a larger file is refused, its fail rule failing a document named fail-at-… at
+// extraction, so a capture shows a failed run, and its replies a word every 150 ms, so a capture
+// finds one mid-stream.
+//
+// The states run in order, each in a fresh tab, every profile and scheme of one state before the
+// next, against the one emulator: the empty log and the empty side pane first, before any upload,
+// and each later state adding the documents it shows, so a later capture lists the documents the
+// earlier ones uploaded too, and --all's twelve passes of a state upload twelve times over; the
+// states that show the newest documents turn the list to its last page to find them. The search's
+// states search the documents the earlier pages uploaded.
 
-import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,13 +50,8 @@ import type { Page } from "@jaimestill/spike-html-apps-tooling/browser.js";
 import { freePort, start } from "@jaimestill/spike-html-apps-tooling/process.js";
 import type { Description, Step } from "@jaimestill/spike-html-apps-tooling/screenshots.js";
 
-import {
-  choose,
-  entriesShown,
-  listReady,
-  PAGINATION,
-  throttle,
-} from "../test/browser/support/documents.ts";
+import { choose, listReady, PAGINATION, throttle } from "../test/browser/support/documents.ts";
+import { press, pressHelp } from "../test/browser/support/keys.ts";
 import { summaryPdf } from "../test/browser/support/media.ts";
 
 /** The repository root, where the emulator reads config.json. */
@@ -107,19 +114,48 @@ const uploading: Step = async (page) => {
   );
 };
 
+/** Turns the list to its last page, which holds the newest documents: Next, until there is none. */
+async function lastPage(page: Page) {
+  for (;;) {
+    const next = await page.evaluate(`(() => {
+      const next = ${PAGINATION}.querySelector('button[aria-label="Next page"]');
+      if (!next || next.disabled) return false;
+      next.click();
+      return true;
+    })()`);
+    if (!next) break;
+    await wait(200);
+    await listReady(page);
+  }
+}
+
+/** The name of the shown page's last entry, as a page expression. */
+const LAST_NAME = `(${LAST_ENTRY})?.getRootNode().querySelector('.name').textContent`;
+
+/** Turns the list to its last page until that page's last entry is the document named `name`, the
+ * newest: however many documents the states before uploaded, as --all's twelve passes of each
+ * state upload twelve times over, an upload elsewhere refreshes the last page quietly, or makes
+ * the next one. */
+async function newest(page: Page, name: string) {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    await lastPage(page);
+    if ((await page.evaluate(LAST_NAME)) === name) return;
+    if (Date.now() > deadline) throw new Error(`the list's last entry isn't ${name}`);
+    await wait(200);
+  }
+}
+
 /** Three runs uploaded a second apart by another client, so the list shows them at its end mid-way,
  * live; the newest's entry focused, which scrolls the pane to them. */
 const live: Step = async (page) => {
   await listReady(page);
-  const listed = await page.evaluate(
-    "document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelectorAll('li').length",
-  );
   await upload("contract-2026.txt");
   await wait(2_500);
   await upload("onboarding-checklist.txt");
   await wait(1_200);
   await upload("glossary.txt");
-  await entriesShown(page, listed + 3);
+  await newest(page, "glossary.txt");
   await wait(300);
   await focus(page, LAST_ENTRY);
   await page.evaluate(`(${LAST_ENTRY}).scrollIntoView({ block: "end" })`);
@@ -137,21 +173,6 @@ const failure: Step = async (page) => {
     `document.querySelector("pipeline-documents").uploads.every((u) => u.state !== "uploading")`,
   );
 };
-
-/** Turns the list to its last page, which holds the newest documents: Next, until there is none. */
-async function lastPage(page: Page) {
-  for (;;) {
-    const next = await page.evaluate(`(() => {
-      const next = ${PAGINATION}.querySelector('button[aria-label="Next page"]');
-      if (!next || next.disabled) return false;
-      next.click();
-      return true;
-    })()`);
-    if (!next) break;
-    await wait(200);
-    await listReady(page);
-  }
-}
 
 /** The document whose run the fail rule fails at extraction, uploaded with one whose run
  * completes after it, by the first state that shows it, and waited on until the API reads its run
@@ -193,7 +214,7 @@ const listFailed: Step = async (page) => {
 };
 
 /** The docked pane at its full width: an upload from the page under way above the list, and on
- * the list's last page, the newest documents, runs a second apart advancing live, the first of
+ * the list's last page, the newest documents, runs a second apart advancing live, the newest of
  * them chosen, its entry the selected one and its view in the main pane. */
 const docked: Step = async (page) => {
   await listReady(page);
@@ -202,17 +223,17 @@ const docked: Step = async (page) => {
   await upload("vendor-agreement.txt");
   await wait(1_500);
   await upload("release-notes.md");
-  await wait(300);
-  await lastPage(page);
-  await page.evaluate(`[
-    ...document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelectorAll('sl-entry'),
-  ].find((entry) => entry.shadowRoot.querySelector('.name').textContent === 'vendor-agreement.txt')
-    .shadowRoot.querySelector('button').click()`);
+  await newest(page, "release-notes.md");
+  await page.evaluate(`(${LAST_ENTRY}).click()`);
   await until(
     page,
     `document.querySelector('main')?.firstElementChild?.localName === 'pipeline-document'`,
   );
   await until(page, `document.querySelector("pipeline-documents").uploads[0].sent > 400000`);
+  // The chosen entry in view, below the earlier passes' documents when the last page is full.
+  await page.evaluate(
+    `document.querySelector('pipeline-documents sl-document-list').shadowRoot.querySelector('li[aria-current="true"]')?.scrollIntoView({ block: "nearest" })`,
+  );
 };
 
 /** The drawer, as a page expression. */
@@ -594,9 +615,13 @@ const logFailed: Step = async (page) => {
 
 /** The feed restarted: the tab's stored cursor is one the stream never gave out, as after the
  * emulator restarted with a new store, so the feed reads from the oldest event at once and the
- * log's status line says so, quietly. */
+ * log's status line says so, quietly. The cursor is stored as the reloaded document starts, ahead
+ * of the app's modules: stored any sooner, the log, showing the events of runs the earlier states
+ * left under way, would store its own over it before the reload. */
 const logRestarted: Step = async (page) => {
-  await page.evaluate(`sessionStorage.setItem("pipeline-log.cursor", "999999")`);
+  await page.cdp("Page.addScriptToEvaluateOnNewDocument", {
+    source: `sessionStorage.setItem("pipeline-log.cursor", "999999")`,
+  });
   const loaded = new Promise((resolve) => page.on("Page.loadEventFired", resolve));
   await page.cdp("Page.reload");
   await loaded;
@@ -699,6 +724,55 @@ const searchStates = [
   },
 ]);
 
+/** The workspace, mounted: the keys module listens once it is. */
+const mounted = (page: Page) => until(page, `Boolean(document.querySelector("pipeline-chat"))`);
+
+/** Waits out a dialog's opening animations, its backdrop's among them. */
+const opened = (page: Page, dialog: string) =>
+  page.evaluate(`(() => {
+    const dialog = document.querySelector(${JSON.stringify(dialog)});
+    return Promise.all(dialog.getAnimations({ subtree: true }).map((a) => a.finished)).then(() => true);
+  })()`);
+
+/** The help dialog, opened by ?, as a reader presses it, its list of every binding filled. */
+const helpOpen: Step = async (page) => {
+  await mounted(page);
+  await pressHelp(page);
+  await until(page, `document.querySelector("#help").open`);
+  await until(page, `Boolean(document.querySelector("#help [data-keys-list] kbd"))`);
+  await opened(page, "#help");
+};
+
+/** The theme menu's dialog. */
+const MENU = "sl-theme-menu dialog";
+
+/** The theme menu, opened by t, as a reader presses it, each row at the profile applied. */
+const themeOpen: Step = async (page) => {
+  await mounted(page);
+  await press(page, "t");
+  await until(page, `document.querySelector(${JSON.stringify(MENU)})?.open`);
+  await opened(page, MENU);
+};
+
+/** A dialog's states, named by it: its viewport alone, at 1280×800 and at 375×667. */
+const dialogStates = (name: string, caption: string, open: Step) => [
+  {
+    name: `${name}-wide`,
+    caption: `${caption} at 1280px`,
+    viewport: { width: 1280, height: 800 },
+    full: false,
+    open,
+  },
+  { name: `${name}-narrow`, caption: `${caption} at 375px`, viewport: phone, full: false, open },
+];
+
+/** The page's registered names, by flag, read from the foundation's store at its well-known
+ * global key, as the components' description reads it; its color facet is palette's. */
+const REGISTRY = `(() => {
+  const store = globalThis[Symbol.for("spike-html-apps-foundation.registry")] ?? {};
+  return { palette: store.color ?? [], space: store.space ?? [], type: store.type ?? [] };
+})()`;
+
 const description: Description = {
   pages: [
     {
@@ -754,18 +828,6 @@ const description: Description = {
       ],
     },
     {
-      name: "document",
-      caption: "Document view",
-      path: "chat",
-      states: documentStates,
-    },
-    {
-      name: "chat",
-      caption: "Chat",
-      path: "chat",
-      states: chatStates,
-    },
-    {
       name: "log",
       caption: "Event log",
       path: "",
@@ -780,24 +842,57 @@ const description: Description = {
       ]),
     },
     {
+      name: "chat",
+      caption: "Chat",
+      path: "chat",
+      states: chatStates,
+    },
+    {
       name: "search",
       caption: "Search",
       path: "search",
       states: searchStates,
     },
+    {
+      name: "document",
+      caption: "Document view",
+      path: "chat",
+      states: documentStates,
+    },
+    {
+      name: "help",
+      caption: "Help dialog",
+      path: "chat",
+      states: dialogStates("help", "Help dialog, opened by ?", helpOpen),
+    },
+    {
+      name: "theme",
+      caption: "Theme menu",
+      path: "chat",
+      states: dialogStates("theme", "Theme menu, opened by t", themeOpen),
+    },
   ],
+  facets: [
+    { flag: "palette", attribute: "data-palette", default: "flexoki" },
+    { flag: "space", attribute: "data-space", default: "regular" },
+    { flag: "type", attribute: "data-type", default: "mono" },
+  ],
+  all: [
+    ...["flexoki", "primer", "catppuccin", "everforest"].map((palette) => ({ palette })),
+    { space: "compact" },
+    { type: "sans" },
+  ],
+  profiles: (page) => page.evaluate(REGISTRY),
   server: async () => {
-    const bin = mkdtempSync(join(tmpdir(), "screenshots-emulator."));
+    const binary = process.env.EMULATOR_BINARY;
+    if (!binary) {
+      throw new Error("EMULATOR_BINARY names no binary: mise run screenshots builds cmd/server");
+    }
     const temp = mkdtempSync(join(tmpdir(), "screenshots-store."));
     try {
-      execFileSync("go", ["build", "-o", join(bin, "server"), "./cmd/server"], {
-        cwd: root,
-        env: { ...process.env, GOWORK: "off", GOTOOLCHAIN: "local" },
-        stdio: "inherit",
-      });
       const [port, natsPort, wsPort] = [await freePort(), await freePort(), await freePort()];
       origin = `http://127.0.0.1:${port}`;
-      const emulator = await start(join(bin, "server"), [], {
+      const emulator = await start(binary, [], {
         ready: `${origin}/readyz`,
         cwd: root,
         env: {
@@ -820,12 +915,10 @@ const description: Description = {
         origin: `${origin}/app`,
         stop: async () => {
           await emulator.stop();
-          rmSync(bin, { recursive: true, force: true });
           rmSync(temp, { recursive: true, force: true });
         },
       };
     } catch (error) {
-      rmSync(bin, { recursive: true, force: true });
       rmSync(temp, { recursive: true, force: true });
       throw error;
     }

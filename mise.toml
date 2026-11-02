@@ -145,6 +145,27 @@ depends = ["build:app"]
 run = "go run ./cmd/server"
 dir = "{{config_root}}"
 
+# Never a dependency of check: a reviewer's look at the app, not a test. The capture is
+# spike-html-apps-tooling's spike-html-apps-screenshots, on scripts/screenshots.config.ts, whose
+# start function boots the binary EMULATOR_BINARY names and builds nothing: the task builds the app
+# first, then cmd/server, embedding it, into a temporary directory the task removes, as
+# test:browser does.
+[tasks.screenshots]
+description = "Capture the pipeline app's walkthrough over the emulator, light and dark, at the default profile, or --palette/--space/--type <name>, or --all, every built-in profile; --page <name> (repeatable), --scheme light|dark, --output terminal|directory|browser, --dir <path>, --keep; reads no network, writes apps/pipeline/dist/ (gitignored) and the captures outside the repository"
+depends = ["preflight browser", "build:app"]
+# Its arguments follow the description, with or without a leading --.
+# raw: with dependencies, mise prefixes a task's output through a pipe; icat needs the terminal.
+raw = true
+run = '''
+set -eu
+bin=$(mktemp -d)
+trap 'rm -rf "$bin"' EXIT
+go build -o "$bin/server" ./cmd/server
+EMULATOR_BINARY="$bin/server" BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
+  pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts "$@"
+'''
+dir = "{{config_root}}"
+
 [tasks."build:app"]
 description = "Build the pipeline app with Vite (vite.config.ts): apps/pipeline/src/ into apps/pipeline/dist/, with its manifest in .vite/manifest.json, recreating the committed dist/.gitkeep Vite's emptied outDir drops; reads no network, writes apps/pipeline/dist/"
 depends = ["preflight"]

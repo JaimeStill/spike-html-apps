@@ -13,7 +13,7 @@
 //
 // The pipeline app's live.ts is the same feed over its one sequence, with a cursor the event log
 // keeps across a reload; an app imports no other app, so this is the client's own copy, without
-// the resume, and a candidate for a layer the two share.
+// the resume.
 
 import type {
   CloudEvent,

@@ -5,8 +5,7 @@
 // upload, a run, and a search.
 //
 // The pipeline app declares the same endpoints over its one client (apps/pipeline/src/api.ts); an
-// app imports no other app, so the two hold their own copies, a candidate for a layer the two
-// share.
+// app imports no other app, so each holds its own copy.
 
 import type { Client, Page, Result } from "@jaimestill/spike-html-apps-sdk/api.js";
 import type { Service } from "@jaimestill/spike-html-apps-sdk/service.js";

@@ -19,8 +19,7 @@
 // The pipeline app's side pane (apps/pipeline/src/documents.ts) wires the dropzone and the list to
 // its one client and feed the same way, and its document view the timeline; an app imports no
 // other app, so the panel holds its own copy of that wiring, the statuses' wording, the uploads'
-// lifecycle, and the run's stages as the timeline shows them, each a candidate for a layer the two
-// share.
+// lifecycle, and the run's stages as the timeline shows them.
 
 import { html, LitElement, nothing } from "lit";
 import type { TemplateResult } from "lit";
