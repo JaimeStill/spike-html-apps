@@ -259,8 +259,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: slice 16 (slices 15a–15d done: the foundation's PR #9 and the sdk's PR #7 merged
-  with no tag; components v0.9.1 released; the root on it at 253cb8b) (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
+- Next move: slice 16's design review (committed ab6fad4, check green; captures under the
+  scratchpad's review-16/, states 1–2 and 41–56). Then the components fixes, as one v0.9.2 at a
+  checkpoint: the call id's clip, and slice 16's findings, pending the architect's decision:
+  sl-search-results counts only the items it's given (no total) and marks the previous query's
+  matches with the new query while loading; LogEvent.time is required where CloudEvents make it
+  optional. Slices 15a–15d are done. (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
   matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
   shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
   second read of the stream; then its design review. Then slice 17 (the external client, behaviors
