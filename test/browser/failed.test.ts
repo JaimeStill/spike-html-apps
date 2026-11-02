@@ -93,12 +93,15 @@ const SHOWN = `[...(${TIMELINE}?.querySelectorAll("li") ?? [])]
 /** The timeline of a run failed at extraction: two complete, one failed, two pending. */
 const FAILED = "ccfpp";
 
-/** Records, inside the page, the timeline's states each time they change, every 5 ms, into
- * `window.timeline`; and marks the window, so a reload would show. */
-const WATCH = `void (window.timeline = [], window.unreloaded = true, setInterval(() => {
+/** Records, inside the page, the timeline's states each time they change, every animation frame,
+ * into `window.timeline`, from whenever a timeline shows; and marks the window, so a reload would
+ * show. It samples frames, as document.test.ts's WATCH does, so only what a person sees is
+ * recorded, and a case waits on the record, never on the DOM ahead of it. */
+const WATCH = `void (window.timeline = [], window.unreloaded = true, (function sample() {
   const shown = ${SHOWN};
   if (shown && window.timeline.at(-1) !== shown) window.timeline.push(shown);
-}, 5))`;
+  requestAnimationFrame(sample);
+})())`;
 
 /** The view's status line's text, its whitespace collapsed. */
 const runStatus = (page: Page): Promise<string> =>
@@ -126,7 +129,8 @@ async function failedRun(runId: string): Promise<Run> {
 
 /** Asserts the view shows the failed run: the timeline failed at extraction, its failed stage's
  * label in the failure's hue, its failure time shown (the run's `failedAt`, when given) and its
- * reason under it, and the status line naming the stage, in the same hue, the reason not repeated. */
+ * reason under it, and the status line naming the stage, in the same hue, the reason not
+ * repeated. */
 async function assertFailedView(page: Page, failedAt?: string) {
   assert.equal(await page.evaluate(SHOWN), FAILED);
   const red = await colorOf(page, "var(--red)");
@@ -184,7 +188,9 @@ describe("a run that fails", () => {
     // Stages 700 ms apart, so the view is open before the run fails at its third.
     await boot("700ms");
     const page = await open("chat");
-    await page.evaluate(`window.unreloaded = true`);
+    // The record starts before the uploads, so the timeline is sampled from its first frame: a
+    // sampler started once the view showed began behind a run that may have moved on.
+    await page.evaluate(WATCH);
     await choose(page, [
       { name: failing, text: "this one fails" },
       { name: passing, text: "this one completes" },
@@ -202,9 +208,8 @@ describe("a run that fails", () => {
     await clickAt(page, entryOf(failing));
     await mounted(page, "pipeline-document");
     await until(page, `${TIMELINE}?.querySelectorAll("li").length === ${stageNames.length}`);
-    await page.evaluate(WATCH);
 
-    await until(page, `(${SHOWN}) === ${JSON.stringify(FAILED)}`, 10_000);
+    await until(page, `window.timeline.at(-1) === ${JSON.stringify(FAILED)}`, 10_000);
     const seen: string[] = await page.evaluate("window.timeline");
     t.diagnostic(seen.join(" → "));
     assert.ok(seen.length >= 2 && !seen[0].includes("f"), `failed live: ${seen.join(", ")}`);

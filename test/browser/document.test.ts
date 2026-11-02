@@ -76,17 +76,27 @@ const timelineShown = (page: Page) =>
 const completeOf = (shown: { state: string }[]) =>
   shown.filter(({ state }) => state === "complete").length;
 
-/** Records, inside the page, the timeline's states each time they change, every 5 ms, into
- * `window.timeline`, each a string of the stages' initials (p, a, c); and marks the window, so a
- * reload would show. */
-const WATCH = `void (window.timeline = [], window.unreloaded = true, setInterval(() => {
+/** Records, inside the page, the timeline's states each time they change, every animation frame,
+ * into `window.timeline`, each a string of the stages' initials (p, a, c). Installed on a new
+ * document, ahead of the app's scripts, so its first entry is the first state painted: a sampler
+ * started after the page opened began behind it, and on a loaded machine the run had advanced, or
+ * finished, before its first sample. It samples frames, as HEADINGS below does, so only what a
+ * person sees is recorded. */
+const WATCH = `window.timeline = [];
+(function sample() {
   const root = ${TIMELINE};
-  if (!root) return;
-  const shown = [...root.querySelectorAll("li")]
+  const shown = [...(root?.querySelectorAll("li") ?? [])]
     .map((li) => ["pending", "active", "complete"].find((s) => li.classList.contains(s))?.[0] ?? "?")
     .join("");
   if (shown && window.timeline.at(-1) !== shown) window.timeline.push(shown);
-}, 5))`;
+  requestAnimationFrame(sample);
+})();`;
+
+/** Records WATCH on every document the page loads from here on. */
+const watch = (page: Page) => page.cdp("Page.addScriptToEvaluateOnNewDocument", { source: WATCH });
+
+/** Marks the page's window, so a reload, a new window without the mark, would show. */
+const mark = (page: Page) => page.evaluate("void (window.unreloaded = true)");
 
 /** The timeline's states a run passes through, from its first stage complete: the stages complete
  * so far, then the active one, then those pending. */
@@ -113,7 +123,8 @@ describe("a document's stages", () => {
     await boot({ env: { EMULATOR_RUNS_STAGE_INTERVAL: "500ms" } });
     const doc = await emulator!.upload("brief.md", { type: "text/markdown", body: "# Brief" });
     const before = await reached(doc.run_id, 2);
-    const page = await open(`documents/${doc.id}`);
+    const page = await open(`documents/${doc.id}`, watch);
+    await mark(page);
     await timelineShown(page);
     const first = await stages(page);
     t.diagnostic(
@@ -123,7 +134,13 @@ describe("a document's stages", () => {
       first.map(({ name }) => name),
       stageNames,
     );
-    assert.ok(completeOf(first) >= before, "the stages as they stood when the page opened");
+    await until(page, "window.timeline.length > 0");
+    const painted: string = await page.evaluate("window.timeline[0]");
+    assert.ok(
+      [...painted].filter((s) => s === "c").length >= before,
+      `the first state painted, ${painted}, the stages as they stood when the page opened`,
+    );
+    assert.ok(completeOf(first) < stageNames.length, "the run is still mid-way when shown");
     // The stage after the last complete one is the active one, in the accent, from the component.
     assert.equal(first[completeOf(first)].state, "active");
     const color: string = await page.evaluate(
@@ -139,7 +156,6 @@ describe("a document's stages", () => {
     })()`);
     assert.equal(color, accent, "the active stage's label in the accent");
 
-    await page.evaluate(WATCH);
     await until(page, `window.timeline.at(-1) === "ccccc"`, 10_000);
     const seen: string[] = await page.evaluate("window.timeline");
     t.diagnostic(seen.join(" → "));
@@ -163,11 +179,18 @@ describe("a document's stages", () => {
     const page = await open(`documents/${doc.id}`);
     await timelineShown(page);
     const before = await reached(doc.run_id, 3);
+    await watch(page);
     await reload(page);
+    await mark(page);
     await timelineShown(page);
     const first = await stages(page);
     assert.ok(completeOf(first) >= before, `${completeOf(first)} shown, ${before} before reload`);
-    await page.evaluate(WATCH);
+    await until(page, "window.timeline.length > 0");
+    const painted: string = await page.evaluate("window.timeline[0]");
+    assert.ok(
+      [...painted].filter((s) => s === "c").length >= before,
+      `the first state painted after the reload, ${painted}, ${before} complete before it`,
+    );
     await until(page, `window.timeline.at(-1) === "ccccc"`, 10_000);
     assert.equal(await page.evaluate("window.unreloaded"), true, "no second reload");
   });
