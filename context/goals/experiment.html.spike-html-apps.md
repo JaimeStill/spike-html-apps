@@ -271,6 +271,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   (the root merges with no tag; its Release line is all already released).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
+- Open, decided (architect): sl-chat-thread's function-call id (`call_…`, unbroken) runs past the
+  thread's edge at 375px (review-15d, 30-narrow-streaming); fix it at its source as components
+  v0.9.2 at a checkpoint, then the root onto it. Next, after slice 16's design review.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
   release age clears; a plain bump at the next change.
 - Held: globals 17.13.0 in the root and components until pnpm's release age clears (about
