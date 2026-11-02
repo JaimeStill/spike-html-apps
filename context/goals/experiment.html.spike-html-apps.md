@@ -239,7 +239,7 @@ session confirms each tag rather than pushing it.
 
 slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
   and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
-  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc); sdk v0.3.0
+  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0); sdk v0.3.0
   (PR #6); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
   review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
   NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
@@ -259,9 +259,8 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: merge foundation PR #9 and sdk PR #7 (budget removals, green, no tag); finish slice
-  15c (components `pipeline`: the last-item rule and reattach fix, then its checkpoint v0.9.1);
-  slice 15d (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
+- Next move: slice 15d (slices 15a–15c done: the foundation's PR #9 and the sdk's PR #7 merged
+  with no tag; components v0.9.1 released) (the root onto components v0.9.1); then slice 16, search and the event log (brief behaviors 12, 14): the search view (`?q=`,
   matches marked, opening a match opens its document) and the event log on `sl-event-log` over the
   shared StageFeed (`feed.deliveries` and the `delivery` event), replacing log.ts's text log and its
   second read of the stream; then its design review. Then slice 17 (the external client, behaviors
