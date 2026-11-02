@@ -261,8 +261,8 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 - Next move: once the architect's screenshot runs finish, the root onto components v0.10.1, and
   slice 18's defect: each `--page` must stand alone (the log's live state waited for runs earlier
-  pages uploaded; the search page likewise reads them). Then Q16 (the stage tests' margin on the
-  emulator's timing), the spec review, the editor, validation, and the session brief; the
+  pages uploaded; the search page likewise reads them). Then the emulator's hold rule and the
+  stage tests on it (Q16), the spec review, the editor, validation, and the session brief; the
   walkthrough awaits the architect's acceptance. The closing standards review is done (dd85c7b,
   ec7522a, 789b5d6; the WATCH sampler's race fixed, 2/64 to 0/64).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
@@ -1108,6 +1108,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   components v0.10.1, the root onto it.
 - pipeline: Q15 (architect): at 20rem, four mono pagination states wrap their controls to a
   second row with v0.10.1's field, the component's designed narrow layout; accepted.
+- pipeline: Q16 (architect): the emulator gains a configured hold rule beside its fail rule
+  (`EMULATOR_RUNS_HOLD`, a document name pattern and a stage), so the stage tests that leaned on
+  its fixed timing hold a run where they read it, fixed at the race's cause; no client API.
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
