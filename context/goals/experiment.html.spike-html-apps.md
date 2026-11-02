@@ -1014,6 +1014,9 @@ slices 13/18 plus the review rounds. Released, each tag and GitHub release confi
   release); the emulator's scripted reply can carry reasoning, a function call with its output,
   and Markdown, a test seam like the failure trigger, and the app folds those events; the flaky
   upload-progress test is fixed at its race.
+- pipeline: components v0.9.0 released (PR #13, a45eccc): the thread follows its newest item, the
+  composer keeps focus off a disabled control, event-log follows under zoom, the reasoning summary
+  on its line (architect).
 
 ## Pending edits
 
