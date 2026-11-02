@@ -609,7 +609,7 @@ const logFailed: Step = async (page) => {
       (li) => li.querySelector(".type").textContent === "emulator.run.failed",
     );
     failure.querySelector("details.data").open = true;
-    failure.scrollIntoView({ block: "center" });
+    failure.scrollIntoView({ block: "start" });
   })()`);
 };
 
