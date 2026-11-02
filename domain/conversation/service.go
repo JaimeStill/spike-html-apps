@@ -105,7 +105,8 @@ func (s *Service) List(q web.Query) ([]Conversation, web.Paging, error) {
 
 // post adds the user's message of text to the conversation id and returns
 // the reply that answers it: its input is the whole history, the message
-// included, and it takes the failure path when text is exactly [Trigger].
+// included; it takes the failure path when text is exactly [Trigger], and
+// is the rich reply when text is exactly [RichTrigger].
 // Blank text is an [ErrValidation], and an unknown id [ErrNotFound].
 func (s *Service) post(id, text string) (reply, error) {
 	if strings.TrimSpace(text) == "" {
@@ -120,20 +121,18 @@ func (s *Service) post(id, text string) (reply, error) {
 	rec.history = append(rec.history, userMessage(text))
 	input := 0
 	for _, it := range rec.history {
-		for _, p := range it.Content {
-			input += tokens(p.Text)
-		}
+		input += tokens(it.text())
 	}
-	return reply{model: Model, inputTokens: input, fail: text == Trigger}, nil
+	return reply{model: Model, inputTokens: input, fail: text == Trigger, rich: text == RichTrigger}, nil
 }
 
-// complete adds item, a reply streamed whole, to the conversation id's
-// history.
-func (s *Service) complete(id string, item Item) {
+// complete adds items, a reply's streamed whole, to the conversation id's
+// history, in their output order.
+func (s *Service) complete(id string, items []Item) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if rec, ok := s.byID[id]; ok {
-		rec.history = append(rec.history, item)
+		rec.history = append(rec.history, items...)
 	}
 }
 

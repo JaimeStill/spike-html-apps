@@ -69,7 +69,10 @@ four domains is a package under `domain/`, served under `/api`:
   and in place of that stage's event the run publishes one `emulator.run.failed` CloudEvent (id
   `<run>.failed`), whose data is the stage event's with `reason`; it advances no further.
 - `conversation` (`/api/conversations`, and the stateless `/api/responses`): a scripted Open
-  Responses stream. A user message whose text is exactly `/fail` takes the failure path.
+  Responses stream. A user message whose text is exactly `/fail` takes the failure path, and one
+  exactly `/rich` streams the rich reply: reasoning, a function call with its output, then a
+  Markdown message, so the chat thread shows its whole range. Both are test seams, not client
+  APIs, and the stateless route takes only `/fail`.
 - `search` (`/api/search`): a text match over document names and text-like content.
 
 It embeds nats-server with JetStream, on a temporary store directory because go-messaging's nats
