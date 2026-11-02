@@ -239,7 +239,7 @@ session confirms each tag rather than pushing it.
 
 slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
   and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
-  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a); sdk v0.3.0
+  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a), v0.10.2 (PR #17, 19d4f59); sdk v0.3.0
   (PR #6), v0.4.0 (PR #8, c36dc72); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
   review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
   NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
@@ -259,12 +259,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: components v0.10.2 (sl-event-log's source, subject, id each on its own line) at a
-  checkpoint, and the root's walkthrough fixes (Q18, Q19); then the root onto v0.10.2 with the
-  affected states re-captured for the architect; then the emulator's hold rule (Q16), the spec
-  review, the editor, validation, and the session brief. The walkthrough's review is in progress:
-  its feedback is being fixed. The root is on components v0.10.1 (cd505c8); every screenshot page
-  stands alone (5ac876c).
+- Next move: the root onto components v0.10.2 with the event-log states re-captured for the
+  architect; then the emulator's hold rule (Q16), the spec review, the editor, validation, and the
+  session brief. The walkthrough's feedback is fixed: "processing" and the search clearing its
+  matches (8739e58), the log's lines (v0.10.2). The walkthrough awaits the architect's acceptance.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1119,6 +1117,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   "Searching for …" alone until its answer (Q19 B, both apps; the component keeps its kept-while-
   loading behavior for other consumers); sl-event-log puts an event's source, subject, and id each
   on its own line, released as components v0.10.2.
+- pipeline: Q20 (architect): sl-event-log's pairs are a `--space-3xs` step apart at 30rem and
+  wider, `--space-2xs` under it; a margin between pairs, since the 30rem query can't restyle the
+  container it measures.
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
