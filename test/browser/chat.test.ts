@@ -4,11 +4,14 @@
 // Escape in the composer, abort a reply mid-stream, which shows incomplete and stops growing, the
 // composer keeping focus on Escape; Escape outside any field stops one too, and Escape in the
 // composer with nothing streaming leaves the field; /fail shows the failed item with the
-// failure's message; the thread survives leaving the chat and coming back, and a reload, which
+// failure's message; /rich streams reasoning, a function call, its output, then a Markdown
+// message, each growing in place, the JSON shown as written, and a reload shows the same items,
+// while Stop inside the function call leaves it incomplete and its output and message unsent; the thread survives leaving the chat and coming back, and a reload, which
 // reads the history back; the thread follows the newest item unless the reader has scrolled up;
 // and a send the network fails shows its trouble with Try again, which sends it. Each case opens
 // its own tab, so its sessionStorage, and its conversation, start empty; the cases share one
-// emulator whose replies stream a word every 80 ms, so a reply takes about 3.5 s.
+// emulator whose replies stream a word every 80 ms, so a reply takes about 3.5 s, and the rich
+// reply about 11 s.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
@@ -30,6 +33,23 @@ const SCRIPT =
 
 /** The words the failure path streams before its error, domain/conversation's FailAfter. */
 const FAIL_AFTER = 4;
+
+/** The rich reply's trigger and script, domain/conversation's RichTrigger and Rich* constants. */
+const RICH = "/rich";
+const RICH_REASONING =
+  "The reader asked for the rich reply. I will call lookup_forecast for Oslo, then answer in " +
+  "Markdown: a heading, a list, a table, inline code, a code block, and a link.";
+const RICH_SUMMARY = "Looked up the forecast for Oslo with a tool, then answered in Markdown.";
+const RICH_ARGUMENTS = `{"city": "Oslo", "10": "snow", "2": "rain", "station": 98765432109876543210}`;
+
+/** The rich reply's arguments and output as the thread formats them, from their own tokens: the
+ * integer-like keys where they were written and the integer past 2^53 whole, as parsing and
+ * printing them would not keep them. */
+const SHOWN_ARGUMENTS =
+  '{\n  "city": "Oslo",\n  "10": "snow",\n  "2": "rain",\n  "station": 98765432109876543210\n}';
+const SHOWN_OUTPUT =
+  '{\n  "city": "Oslo",\n  "10": {\n    "weather": "snow",\n    "high": -1\n  },\n' +
+  '  "2": {\n    "weather": "rain",\n    "high": 7\n  },\n  "station": 98765432109876543210\n}';
 
 let browser: Browser;
 let emulator: Emulator;
@@ -240,6 +260,183 @@ describe("a reply", () => {
     );
     assert.match(alert, /The reply failed\. The emulator failed this reply deliberately/);
     assert.deepEqual(await history(page), [{ role: "user", text: "/fail" }]);
+  });
+});
+
+/** A verbose item of the thread, its details, by its item type, as a page expression. */
+const VERBOSE = (type: string) => `${THREAD}.querySelector(".thread > li details.${type}")`;
+
+/** A verbose item as shown: its summary line's kind and status, and its content's text. */
+interface Verbose {
+  kind: string;
+  status: string | null;
+  text: string;
+}
+
+/** The verbose item of the type as the thread shows it, or null when it shows none. */
+const verbose = (page: Page, type: string): Promise<Verbose | null> =>
+  page.evaluate(`(() => {
+    const details = ${VERBOSE(type)};
+    return details && {
+      kind: details.querySelector(".kind").textContent,
+      status: details.querySelector("summary .status")?.textContent ?? null,
+      text: details.querySelector(".content").textContent.trim(),
+    };
+  })()`);
+
+/** Every item the thread shows, its kind (the role, or a verbose item's kind), status, and text. */
+const everything = (page: Page): Promise<Shown[]> =>
+  page.evaluate(`[...${THREAD}.querySelectorAll(".thread > li")].map((li) => ({
+    role: (li.querySelector(".role") ?? li.querySelector(".kind"))?.textContent ?? "",
+    status: li.querySelector(".status")?.textContent ?? null,
+    text: li.querySelector(".content")?.textContent.trim() ?? "",
+  }))`);
+
+/** The history's item types, as the API reads them. */
+async function historyTypes(page: Page): Promise<string[]> {
+  const id: string = await page.evaluate(`sessionStorage.getItem("pipeline.conversation")`);
+  const response = await fetch(`${emulator.origin}/api/conversations/${id}`);
+  const { history } = (await response.json()) as { history: { type: string }[] };
+  return history.map(({ type }) => type);
+}
+
+describe("the rich reply", () => {
+  test("streams reasoning, the function call, its output, then Markdown; a reload shows the same", async () => {
+    const page = await open();
+    await send(page, RICH);
+    // The reasoning grows in place, streaming, its text the script's start.
+    await until(
+      page,
+      `${VERBOSE("reasoning")}?.querySelector(".status")?.textContent === "Streaming" &&
+        ${VERBOSE("reasoning")}.querySelector(".content").textContent.trim().split(" ").length >= 3`,
+      10_000,
+    );
+    const reasoning = await verbose(page, "reasoning");
+    assert.ok(reasoning && RICH_REASONING.startsWith(reasoning.text), JSON.stringify(reasoning));
+    assert.equal(await page.evaluate(`${COMPOSER}.busy`), true);
+    assert.equal(
+      await page.evaluate(`${VIEW}.querySelector(".chat-status [role=status]").textContent`),
+      "Reasoning…",
+    );
+
+    // The call's arguments grow as the text streamed, shown as they are while they don't parse.
+    await until(
+      page,
+      `${VERBOSE("function_call")}?.querySelector(".status")?.textContent === "Streaming" &&
+        ${VERBOSE("function_call")}.querySelector("pre")?.textContent.length > 10`,
+      15_000,
+    );
+    const partial = await verbose(page, "function_call");
+    assert.ok(partial, "the function call shows");
+    assert.match(partial.text, /^\{"city": "Oslo"/);
+    assert.ok(RICH_ARGUMENTS.startsWith(partial.text) && partial.text !== RICH_ARGUMENTS);
+    assert.equal((await verbose(page, "reasoning"))?.status, null, "the reasoning completed");
+    assert.equal(
+      await page.evaluate(`${VIEW}.querySelector(".chat-status [role=status]").textContent`),
+      "Calling a function…",
+    );
+
+    // The Markdown message streams last, rendered as it grows.
+    await until(page, `${LAST_ROLE} === "Assistant" && ${LAST_STATUS} === "Streaming"`, 10_000);
+    await until(page, `!${COMPOSER}.busy`, 20_000);
+
+    const shown = await everything(page);
+    assert.deepEqual(
+      shown.map(({ role, status }) => [role, status]),
+      [
+        ["User", null],
+        ["Reasoning", null],
+        ["Function call", null],
+        ["Function output", null],
+        ["Assistant", null],
+      ],
+    );
+    const done = await verbose(page, "reasoning");
+    assert.ok(done?.text.startsWith(RICH_SUMMARY) && done.text.endsWith(RICH_REASONING));
+    const call: string = await page.evaluate(
+      `${VERBOSE("function_call")}.querySelector("pre").textContent`,
+    );
+    assert.equal(call, SHOWN_ARGUMENTS, "the arguments formatted as written");
+    assert.match(
+      await page.evaluate(`${VERBOSE("function_call")}.querySelector("summary").textContent`),
+      /lookup_forecast/,
+    );
+    const output: string = await page.evaluate(
+      `${VERBOSE("function_call_output")}.querySelector("pre").textContent`,
+    );
+    assert.equal(output, SHOWN_OUTPUT, "the output formatted as written");
+
+    const MARKDOWN = `[...${THREAD}.querySelectorAll(".thread > li")].at(-1).querySelector(".markdown")`;
+    const markdown: {
+      heading: string;
+      items: string[];
+      cells: string[];
+      inline: string[];
+      block: string;
+      link: string | null;
+    } = await page.evaluate(`(() => {
+      const md = ${MARKDOWN};
+      return {
+        heading: md.querySelector("h2")?.textContent ?? "",
+        items: [...md.querySelectorAll("ul > li")].map((li) => li.textContent.trim()),
+        cells: [...md.querySelectorAll("table th, table td")].map((cell) => cell.textContent.trim()),
+        inline: [...md.querySelectorAll(":not(pre) > code")].map((code) => code.textContent),
+        block: md.querySelector("pre > code")?.textContent ?? "",
+        link: md.querySelector("a")?.getAttribute("href") ?? null,
+      };
+    })()`);
+    assert.deepEqual(markdown, {
+      heading: "Forecast for Oslo",
+      items: [
+        "Day 2: rain, a high of 7 °C",
+        "Day 10: snow, a high of -1 °C",
+        "Station 98765432109876543210",
+      ],
+      cells: ["Day", "Weather", "High", "2", "Rain", "7 °C", "10", "Snow", "-1 °C"],
+      inline: ["lookup_forecast", "98765432109876543210"],
+      block: '{"2": "rain", "10": "snow"}',
+      link: "https://www.openresponses.org/",
+    });
+    assert.deepEqual(await historyTypes(page), [
+      "message",
+      "reasoning",
+      "function_call",
+      "function_call_output",
+      "message",
+    ]);
+
+    // A reload reads the history back, and the thread shows the same items.
+    await reload(page);
+    await mounted(page, "pipeline-chat");
+    await until(page, `${THREAD}?.querySelectorAll(".thread > li").length === 5`);
+    assert.deepEqual(await everything(page), shown);
+  });
+
+  test("Stop inside the function call leaves it incomplete, its output and message unsent", async () => {
+    const page = await open();
+    await send(page, RICH);
+    await until(
+      page,
+      `${VERBOSE("function_call")}?.querySelector("pre")?.textContent.length > 10`,
+      15_000,
+    );
+    await clickAt(page, ACTION);
+    await until(page, `!${COMPOSER}.busy`);
+    const stopped = await everything(page);
+    assert.deepEqual(
+      stopped.map(({ role, status }) => [role, status]),
+      [
+        ["User", null],
+        ["Reasoning", null],
+        ["Function call", "Incomplete"],
+      ],
+    );
+    const call = await verbose(page, "function_call");
+    assert.ok(call && RICH_ARGUMENTS.startsWith(call.text) && call.text !== RICH_ARGUMENTS);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    assert.deepEqual(await everything(page), stopped, "nothing more arrived");
+    // The emulator keeps none of a reply cut off, the reasoning streamed whole included.
+    assert.deepEqual(await historyTypes(page), ["message"]);
   });
 });
 

@@ -98,6 +98,9 @@ export const runService = (client: Client) =>
       client.get(`runs/${encodeURIComponent(id)}`, { signal }),
   }) satisfies Service;
 
+/** An item's progress, as domain/conversation's Status writes it. */
+export type Status = "in_progress" | "completed" | "incomplete";
+
 /** A message content part, as domain/conversation's Part writes it: a user's input_text, or an
  * assistant's output_text. */
 export interface Part {
@@ -105,19 +108,62 @@ export interface Part {
   text: string;
 }
 
+/** A reasoning item's text part, as domain/conversation's Part writes it: reasoning_text in its
+ * content, summary_text in its summary. */
+export interface ReasoningPart {
+  type: "reasoning_text" | "summary_text";
+  text: string;
+}
+
 /** An Open Responses message item, as domain/conversation's Item writes it: a user's input item,
  * with no id or status, or an assistant's output item. */
-export interface Item {
+export interface MessageItem {
   type: "message";
   id?: string;
   role: "user" | "assistant";
-  status?: "in_progress" | "completed" | "incomplete";
+  status?: Status;
   content: Part[];
 }
 
+/** A reasoning item, as the emulator's rich reply writes it: its content and its summary. */
+export interface ReasoningItem {
+  type: "reasoning";
+  id: string;
+  status: Status;
+  content: ReasoningPart[];
+  summary: ReasoningPart[];
+}
+
+/** A function_call item, as the rich reply writes it: its arguments JSON text, "" until they
+ * stream. */
+export interface FunctionCallItem {
+  type: "function_call";
+  id: string;
+  status: Status;
+  call_id: string;
+  name: string;
+  arguments: string;
+}
+
+/** A function_call_output item, as the rich reply writes it: the output of the call it names by
+ * call_id, JSON text, "" while the function runs. */
+export interface FunctionCallOutputItem {
+  type: "function_call_output";
+  id: string;
+  status: Status;
+  call_id: string;
+  output: string;
+}
+
+/** An item of a conversation's history or a reply's output, as domain/conversation's Item writes
+ * it: a message, or, from the rich reply (a message of exactly /rich), its reasoning, function
+ * call, and the call's output, which come ahead of its message. Each is assignable to the chat
+ * thread's ThreadItem, so a history shows as it is. */
+export type Item = MessageItem | ReasoningItem | FunctionCallItem | FunctionCallOutputItem;
+
 /** A conversation, as domain/conversation's Conversation writes it: its history oldest first, the
- * user's messages and every reply that streamed whole; a reply cut off, or one that failed, never
- * joins it. */
+ * user's messages and the items of every reply that streamed whole; a reply cut off, or one that
+ * failed, never joins it, none of its items. */
 export interface Conversation {
   id: string;
   created_at: string;

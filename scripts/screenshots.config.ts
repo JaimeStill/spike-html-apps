@@ -3,8 +3,9 @@
 // the drawer at 375px, and a run failed; and the document view, a run under way, complete with a
 // Markdown artifact, a JSON artifact, a PDF, an image, a binary of a type the viewer doesn't
 // know, a run failed, and not found, docked at 1280×1200 and at 375px, full-page (--page
-// document); and the chat, empty, a reply mid-stream, two finished, one stopped, one failed, and
-// a send the network failed, at the same two sizes (--page chat); light and dark, over an
+// document); and the chat, empty, the rich reply mid-stream, its reasoning and function call
+// open, the rich reply finished, its Markdown, one stopped, one failed, and a send the network
+// failed, at the same two sizes (--page chat); light and dark, over an
 // emulator the start function boots for the run. Headless
 // Chrome has no PDF viewer, so the PDF state's frame is blank there; a real Chrome renders its
 // one page. A first cut, which slice 18's mise run screenshots extends: until then, build the app
@@ -442,25 +443,38 @@ async function chatSend(page: Page, text: string) {
 const chatWords = (page: Page, words: number) =>
   until(page, `${LAST_TEXT}.split(/\\s+/).filter(Boolean).length >= ${words}`, 15_000);
 
-/** Waits until the composer is idle again, the reply ended. */
-const chatIdle = (page: Page) => until(page, `!${COMPOSER}.busy`, 15_000);
+/** Waits until the composer is idle again, the reply ended: the rich reply streams about 125
+ * deltas, some 19 s at 150 ms each. */
+const chatIdle = (page: Page) => until(page, `!${COMPOSER}.busy`, 30_000);
+
+/** The thread's verbose item of the type, its details, as a page expression. */
+const VERBOSE = (type: string) => `${THREAD}?.querySelector(".thread > li details.${type}")`;
 
 /** The empty conversation, before anything is sent. */
 const chatEmpty: Step = async (page) => {
   await until(page, `${COMPOSER}?.shadowRoot?.querySelector("textarea")`);
 };
 
-/** A reply mid-stream, the composer busy with its Stop. */
+/** The rich reply mid-stream, its function call's arguments growing, the composer busy with its
+ * Stop: the reasoning, done, and the call, streaming, opened, as a reader opens them. */
 const chatStreaming: Step = async (page) => {
-  await chatSend(page, "What does the onboarding guide cover?");
-  await chatWords(page, 12);
+  await chatSend(page, "/rich");
+  await until(
+    page,
+    `${VERBOSE("function_call")}?.querySelector("pre")?.textContent.length > 30`,
+    30_000,
+  );
+  await page.evaluate(
+    `${THREAD}.querySelectorAll("details.reasoning, details.function_call").forEach((details) => {
+      details.open = true;
+    })`,
+  );
 };
 
-/** Two replies finished, the composer's field focused with a draft. */
+/** The rich reply finished, its Markdown rendered, its reasoning and function call collapsed, the
+ * composer's field focused with a draft. */
 const chatFinished: Step = async (page) => {
-  await chatSend(page, "What does the onboarding guide cover?");
-  await chatIdle(page);
-  await chatSend(page, "And how long does a run take,\nfrom upload to embeddings?");
+  await chatSend(page, "/rich");
   await chatIdle(page);
   await focus(page, `${COMPOSER}.shadowRoot.querySelector("textarea")`);
   await page.cdp("Input.insertText", { text: "Which documents failed?" });
@@ -493,12 +507,16 @@ const chatTrouble: Step = async (page) => {
 };
 
 /** The chat view's states, each docked at 1280×1200 and at 375×667, captured full-page. The
- * emulator's scripted reply is plain prose, with no Markdown, reasoning, or function call, so the
- * states show none. */
+ * mid-stream and finished states send the emulator's rich trigger, /rich, so they show reasoning,
+ * a function call and its output, and a Markdown reply; the rest stream its plain prose. */
 const chatStates = [
   { name: "empty", caption: "empty", open: chatEmpty },
-  { name: "streaming", caption: "a reply mid-stream", open: chatStreaming },
-  { name: "finished", caption: "two replies finished, a draft", open: chatFinished },
+  {
+    name: "streaming",
+    caption: "the rich reply mid-stream, its function call's arguments growing",
+    open: chatStreaming,
+  },
+  { name: "finished", caption: "the rich reply finished in Markdown, a draft", open: chatFinished },
   { name: "stopped", caption: "a reply stopped", open: chatStopped },
   { name: "failed", caption: "a reply failed by /fail", open: chatFailed },
   { name: "trouble", caption: "a send the network failed", open: chatTrouble },

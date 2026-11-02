@@ -12,9 +12,16 @@
 //
 // The conversation is created on the first send, so the chat's empty state calls nothing. A reply
 // is read with the client's stream and folded into the thread event by event, the Open Responses
-// events the emulator writes: response.output_item.added starts an item, its parts and text
-// deltas grow it, response.output_item.done replaces it whole, and response.completed ends the
-// reply. The failure path's error event and response.failed end it failed: its item, which the
+// events the emulator writes: response.output_item.added starts an item, its parts and deltas
+// grow it, response.output_item.done replaces it whole, and response.completed ends the reply.
+// Every event names its item by item_id, so a reply of several items, the emulator's rich reply
+// (a message of exactly /rich), grows each in place: a reasoning item's reasoning_text part by
+// response.reasoning.delta and its summary_text part by response.reasoning_summary_text.delta, a
+// function call's arguments by response.function_call_arguments.delta, as the text streamed, which
+// the thread shows as it is until it parses and then formats from its own tokens, the call's
+// output whole at its done, and the message's Markdown by response.output_text.delta. Each .done
+// event's text replaces what its deltas made. The history read back holds the same items, so a
+// reload shows what the stream did. The failure path's error event and response.failed end it failed: its item, which the
 // emulator marks incomplete, is shown failed, the response's status, so a failure reads apart from
 // a reply the reader stopped, which is incomplete, and the error's message is the session's
 // failure. Stop aborts the stream's request, which the emulator sees as the client closing the
@@ -55,11 +62,37 @@ interface StreamData {
   item?: ThreadItem;
   item_id?: string;
   content_index?: number;
-  part?: { type: "output_text"; text: string };
+  summary_index?: number;
+  part?: { type: string; text: string };
   delta?: string;
   text?: string;
+  arguments?: string;
   response?: { output?: ThreadItem[]; error?: { message?: string } | null };
   error?: { message?: string };
+}
+
+/** A text part: a message's output_text, or a reasoning item's reasoning_text or summary_text. */
+interface TextPart<T extends string> {
+  type: T;
+  text: string;
+}
+
+/**
+ * The parts with the one at `at` of `type` grown: its text so far, "" when there is none there or
+ * one of another type, with the delta after it, or the done event's whole text in its place.
+ */
+function grown<P extends { type: string }, T extends string>(
+  parts: readonly P[] | undefined,
+  at: number,
+  type: T,
+  { delta, text }: Pick<StreamData, "delta" | "text">,
+): (P | TextPart<T>)[] {
+  const out: (P | TextPart<T>)[] = [...(parts ?? [])];
+  // A part of another type, a refusal among them, holds no text this grows.
+  const held = out[at] as Partial<TextPart<string>> | undefined;
+  const before = held?.type === type ? (held.text ?? "") : "";
+  out[at] = { type, text: text ?? before + (delta ?? "") };
+  return out;
 }
 
 /** The stored conversation's id, or "" when there is none or storage is blocked. */
@@ -263,27 +296,60 @@ export class ChatSession extends EventTarget {
         break;
       case "response.content_part.added":
         this.#update(event.item_id, (item) => {
-          if (item.type !== "message" || !event.part) return item;
-          const content = [...item.content];
-          content[event.content_index ?? content.length] = event.part;
-          return { ...item, content };
+          const at = event.content_index ?? 0;
+          if (item.type === "message" && event.part?.type === "output_text")
+            return { ...item, content: grown(item.content, at, "output_text", event.part) };
+          if (item.type === "reasoning" && event.part?.type === "reasoning_text")
+            return { ...item, content: grown(item.content, at, "reasoning_text", event.part) };
+          return item;
         });
         break;
       case "response.output_text.delta":
       case "response.output_text.done":
-        this.#update(event.item_id, (item) => {
-          if (item.type !== "message") return item;
-          const at = event.content_index ?? 0;
-          const part = item.content[at];
-          const before = part?.type === "output_text" ? part.text : "";
-          const text =
-            type === "response.output_text.done"
-              ? (event.text ?? before)
-              : before + (event.delta ?? "");
-          const content = [...item.content];
-          content[at] = { type: "output_text", text };
-          return { ...item, content };
-        });
+        this.#update(event.item_id, (item) =>
+          item.type === "message"
+            ? {
+                ...item,
+                content: grown(item.content, event.content_index ?? 0, "output_text", event),
+              }
+            : item,
+        );
+        break;
+      case "response.reasoning.delta":
+      case "response.reasoning.done":
+        this.#update(event.item_id, (item) =>
+          item.type === "reasoning"
+            ? {
+                ...item,
+                content: grown(item.content, event.content_index ?? 0, "reasoning_text", event),
+              }
+            : item,
+        );
+        break;
+      case "response.reasoning_summary_part.added":
+      case "response.reasoning_summary_text.delta":
+      case "response.reasoning_summary_text.done":
+        this.#update(event.item_id, (item) =>
+          item.type === "reasoning"
+            ? {
+                ...item,
+                summary: grown(
+                  item.summary,
+                  event.summary_index ?? 0,
+                  "summary_text",
+                  event.part ?? event,
+                ),
+              }
+            : item,
+        );
+        break;
+      case "response.function_call_arguments.delta":
+      case "response.function_call_arguments.done":
+        this.#update(event.item_id, (item) =>
+          item.type === "function_call"
+            ? { ...item, arguments: event.arguments ?? item.arguments + (event.delta ?? "") }
+            : item,
+        );
         break;
       case "response.completed":
         for (const item of event.response?.output ?? []) this.#put(item);

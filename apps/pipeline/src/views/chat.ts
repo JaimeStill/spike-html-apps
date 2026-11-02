@@ -1,7 +1,9 @@
 // The "/chat" route: the conversation with the emulator's scripted assistant, its thread in
 // sl-chat-thread and the message being written in sl-composer, over the app's one conversation
 // (conversation.ts), which outlives the view, so leaving the chat and coming back keeps the
-// thread, its draft, and a reply still streaming. Loaded on its first visit.
+// thread, its draft, and a reply still streaming. Loaded on its first visit. The thread is
+// verbose, so a reply's reasoning, function calls, and their outputs show ahead of its message,
+// each collapsed in its own details until the reader opens it.
 //
 // The composer binds no key, so the view does, on the composer, where a key typed in its field
 // reaches the view before the foundation's keys module, which listens on the document: Enter
@@ -51,7 +53,12 @@ export function statusOf(session: ChatSession): string {
     case "sending":
       return "Sending…";
     case "streaming": {
+      // The item the reply is on: its reasoning, its function call and the call's output, then
+      // its message, as the rich reply (/rich) streams them.
       const last = session.items.at(-1);
+      if (last?.type === "reasoning") return "Reasoning…";
+      if (last?.type === "function_call" || last?.type === "function_call_output")
+        return "Calling a function…";
       const started =
         last?.type === "message" &&
         last.role === "assistant" &&
