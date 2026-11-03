@@ -1,0 +1,58 @@
+{
+  "log": {
+    "level": "info",
+    "format": "json"
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout": "30s",
+    "read_header_timeout": "5s",
+    "write_timeout": "30s",
+    "idle_timeout": "2m",
+    "transfer_rate": 65536
+  },
+  "database": {
+    "name": "app",
+    "user": "app",
+    "options": {
+      "sslmode": "disable"
+    }
+  },
+  "storage": {
+    "container": "go-web-service",
+    "max_object_size": 10485760,
+    "request_timeout": "3s",
+    "read_idle_timeout": "30s",
+    "options": {
+      "try_timeout": "5s"
+    }
+  },
+  "messaging": {
+    "source": "web-service"
+  },
+  "nats": {
+    "url": "nats://127.0.0.1:4222",
+    "stream": "WEB_SERVICE",
+    "prefix": "web-service",
+    "owner": true
+  },
+  "observability": {
+    "endpoint": "127.0.0.1:4317"
+  },
+  "rate_limit": {
+    "requests": 300,
+    "window": "1m"
+  },
+  "admin": {
+    "seed": ""
+  },
+  "sweep": {
+    "interval": "30s",
+    "batch": 100,
+    "stale_age": "1h",
+    "outbox_age": "168h",
+    "inbox_age": "168h"
+  },
+  "shutdown_timeout": "10s"
+}
