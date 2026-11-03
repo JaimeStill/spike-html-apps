@@ -65,9 +65,11 @@ const layers: Layer[] = Object.entries(manifest.dependencies).flatMap(([name, sp
   const pin = /^github:([^#]+)#(v\d+\.\d+\.\d+)$/.exec(spec);
   return pin ? [{ name, repository: pin[1], tag: pin[2] }] : [];
 });
-/** A layer by the last part of its name: foundation, components, sdk, or noctis. */
+/** The last part of a layer's name: foundation, components, sdk, or noctis. */
+const shortName = (name: string): string => name.slice(name.lastIndexOf("-") + 1);
+/** A layer by the last part of its name. */
 const layer = (short: string): Layer =>
-  layers.find(({ name }) => name.endsWith(`-${short}`)) ??
+  layers.find(({ name }) => shortName(name) === short) ??
   (() => {
     throw new Error(`consumers: the template declares no ${short}`);
   })();
@@ -197,9 +199,8 @@ const tags = new Map<string, Promise<Tree>>(
     (async () => {
       const dir = join(scratch, "tags", basename(each.repository));
       const url = `https://github.com/${each.repository}.git`;
-      const clone = await run("git", [
-        ...["clone", "--quiet", "--depth", "1", "--branch", each.tag, url, dir],
-      ]);
+      const args = ["clone", "--quiet", "--depth", "1", "--branch", each.tag, url, dir];
+      const clone = await run("git", args);
       if (!clone.ok) throw new Error(`can't clone ${each.tag} of ${url}: ${clone.output}`);
       return readTree(dir, [".git"]);
     })(),
@@ -260,7 +261,7 @@ async function installed(manager: Manager, version: string) {
     let holds = true;
     for (const each of layers) {
       const installedDir = realpathSync(join(modules, each.name));
-      const short = each.name.slice(each.name.lastIndexOf("-") + 1);
+      const short = shortName(each.name);
       const mismatch = versionMismatch(
         readFileSync(join(installedDir, "package.json"), "utf8"),
         each.name,
@@ -475,7 +476,7 @@ try {
     ...managers.map((manager) => `${manager} ${versions[manager]}`),
     `Vite ${manifest.devDependencies.vite}`,
   ].join(", ");
-  const tagged = layers.map(({ name, tag }) => `${name.slice(name.lastIndexOf("-") + 1)} ${tag}`);
+  const tagged = layers.map(({ name, tag }) => `${shortName(name)} ${tag}`);
   console.log(
     [
       `## Consumers, ${date} (UTC)`,
