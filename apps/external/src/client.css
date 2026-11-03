@@ -1,0 +1,221 @@
+/*
+ * The client's layout, in the layer app, after every foundation layer page-full.css declares, so a
+ * rule here beats the foundation's at any specificity. Colors, space, type, and lines read the
+ * foundation's tokens alone, so the frame follows every profile and scheme the theme menu applies;
+ * the foundation's elements layer gives every control its visible focus outline. Nothing here
+ * moves: no transition and no animation, so reduced motion has nothing to stop.
+ *
+ * The client's own text is in the interface voice, the type profile's --font-ui and --leading-ui,
+ * as the components' controls are, and the components' shadow roots inherit it. A failure keeps
+ * --red, a hue of its own meaning; what is current or active is the components' accent.
+ *
+ * The page scrolls as one: the header across the top, then the panels, one per service, side by
+ * side at 56rem and wider, each column at least 26rem there, and stacked below it, each the
+ * viewport's width. A panel's lines that live data changes are each held a line high, and its
+ * event log is held to a height, its frame scrolling inside and following the newest event, so
+ * nothing in a panel moves as events arrive; a document joining the list grows it, as a list grows.
+ */
+
+@layer app {
+  body {
+    margin: 0;
+  }
+
+  external-client {
+    display: block;
+    min-block-size: 100dvh;
+    font-family: var(--font-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .client-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+    padding: var(--space-xs) var(--space-m);
+    border-block-end: var(--line-s) solid var(--border);
+    background-color: var(--bg-1);
+  }
+
+  .client-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: var(--text-l);
+  }
+
+  /* The menu element holds only its dialog, which opens in the top layer: no box of its own. */
+  .client-header sl-theme-menu {
+    display: contents;
+  }
+
+  .client-main {
+    padding: var(--space-m);
+  }
+
+  .client-loading {
+    margin: 0;
+    color: var(--fg-2);
+  }
+
+  .client-error {
+    max-inline-size: 48rem;
+    padding: var(--space-m);
+    border: var(--line-s) solid var(--red);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-1);
+
+    & h2 {
+      margin-block: 0 var(--space-2xs);
+      font-size: var(--text-l);
+    }
+  }
+
+  .client-message {
+    margin: 0;
+    color: var(--red);
+    overflow-wrap: anywhere;
+  }
+
+  .client-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-m);
+    align-items: start;
+  }
+
+  external-panel {
+    display: block;
+    min-inline-size: 0;
+  }
+
+  .panel {
+    padding: var(--space-m);
+    border: var(--line-s) solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-1);
+  }
+
+  .panel-header {
+    padding-block-end: var(--space-s);
+    border-block-end: var(--line-s) solid var(--border);
+
+    & h2 {
+      margin: 0;
+      font-size: var(--text-xl);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* The service's address, then its live line, each a line high whatever it says. */
+  .panel-base,
+  .panel-live {
+    min-block-size: 1lh;
+    margin: 0;
+    color: var(--fg-2);
+    font-size: var(--text-s);
+    overflow-wrap: anywhere;
+  }
+
+  .panel-base {
+    font-family: var(--font-code);
+  }
+
+  .panel-live.paused {
+    color: var(--red);
+  }
+
+  .panel-loading {
+    margin-block: var(--space-m) 0;
+    color: var(--fg-2);
+  }
+
+  /* A panel whose service failed: the problem's title, why, and Try again. */
+  .panel-failed {
+    margin-block-start: var(--space-m);
+  }
+
+  .panel-problem {
+    margin: 0;
+    color: var(--red);
+    font-size: var(--text-l);
+    font-weight: 700;
+  }
+
+  .panel-reason {
+    margin-block: var(--space-3xs) 0;
+    color: var(--fg-2);
+    overflow-wrap: anywhere;
+  }
+
+  .panel-retry {
+    margin-block-start: var(--space-xs);
+  }
+
+  .panel-section {
+    margin-block-start: var(--space-l);
+
+    & h3 {
+      margin-block: 0 var(--space-2xs);
+      font-size: var(--text-m);
+    }
+  }
+
+  .panel-hint {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: var(--text-s);
+  }
+
+  /* The selected document's name and its run's status, each a line high. */
+  .panel-selected {
+    min-block-size: 1lh;
+    margin: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .panel-run {
+    min-block-size: 1lh;
+    margin-block: 0 var(--space-xs);
+    color: var(--fg-2);
+    font-size: var(--text-s);
+  }
+
+  .panel-error {
+    color: var(--red);
+  }
+
+  .panel-search {
+    display: flex;
+    gap: var(--space-2xs);
+    margin-block-end: var(--space-xs);
+
+    & input {
+      flex: 1 1 auto;
+      min-inline-size: 0;
+    }
+  }
+
+  /* The run events, held to a height: the log's frame scrolls inside. */
+  .panel-section sl-event-log {
+    block-size: 18rem;
+  }
+
+  @media (width >= 56rem) {
+    .client-panels {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (width < 36rem) {
+    .client-header,
+    .client-main {
+      padding-inline: var(--space-s);
+    }
+
+    .panel {
+      padding: var(--space-s);
+    }
+  }
+}

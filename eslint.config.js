@@ -20,11 +20,15 @@ export const packages = ["foundation", "components", "sdk"].map(
   (layer) => `@jaimestill/spike-html-apps-${layer}`,
 );
 
+/** The libraries an app imports beside the layers, each a package by name, at any subpath: lit,
+ * at the components' pin, so an app's elements and the components' share one copy. */
+export const libraries = ["lit"];
+
 // The app tier's table: each app is a directory in apps/, the * its name, which may import its
-// own files and the layers below it, and nothing else. An import into an app passes only from the
-// same app, so no app imports another; nothing below an app is linted here, since each layer's
-// own check holds it to its direction, so nothing imports upward into an app.
-export const layers = [{ name: "app", path: "apps/*", may: ["app", ...packages] }];
+// own files, the layers below it, and the libraries, and nothing else. An import into an app
+// passes only from the same app, so no app imports another; nothing below an app is linted here,
+// since each layer's own check holds it to its direction, so nothing imports upward into an app.
+export const layers = [{ name: "app", path: "apps/*", may: ["app", ...packages, ...libraries] }];
 
 // The app is an element by its directory, matched from the root (partialMatch false), with a
 // second pattern for a file in a directory whose name starts with a dot, which micromatch's **
@@ -43,8 +47,8 @@ const elements = [
 
 // The rule's default is disallow, and it checks every origin (a package is external) and local
 // files no element holds: an import passes only when a policy names its target, its own app,
-// captured by the same directory name, or a package the table names, which the rule matches by
-// its name, any subpath of it.
+// captured by the same directory name, or a layer or library the table names, which the rule
+// matches by its name, any subpath of it.
 const policies = layers.map(({ name, may }) => ({
   from: { element: { type: name } },
   allow: {
@@ -61,8 +65,11 @@ export default defineConfig([
   globalIgnores(["apps/*/dist/"]),
   { files: code, extends: [js.configs.recommended, tseslint.configs.recommended] },
   { files: code, languageOptions: { globals: globals.browser } },
-  // The suite and the config run on node.
-  { files: ["test/**", "eslint.config.js"], languageOptions: { globals: globals.node } },
+  // The suite, the scripts, and the config run on node.
+  {
+    files: ["test/**", "scripts/**", "eslint.config.js"],
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ["apps/**"],
     plugins: { boundaries, "import-x": importX },

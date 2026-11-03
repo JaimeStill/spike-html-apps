@@ -1,15 +1,19 @@
 // The browser tier's emulator: the binary EMULATOR_BINARY names (mise run test:browser builds
 // cmd/server into a temporary directory, embedding the pipeline app's build), booted on reserved
 // loopback ports with its configuration in its environment, as the integration tier's harness
-// boots it, and driven over its HTTP API as a client drives it.
+// boots it, and driven over its HTTP API as a client drives it. The tooling's process helper
+// spawns it in a process group of its own, polls /readyz, drains it, and ends it if the run never
+// stops it; the harness adds the relaunch on a lost port, the TMPDIR, and the API.
 // Adapted from integration/harness.go: its Launch, Ready, and environment, in TypeScript on node.
 
-import { spawn } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+import { freePort, start as run } from "@jaimestill/spike-html-apps-tooling/process.js";
+import type { Started } from "@jaimestill/spike-html-apps-tooling/process.js";
+
+export { freePort };
 
 /** The repository root, the binary's working directory, where it reads config.json. */
 const root = join(import.meta.dirname, "../../..");
@@ -17,8 +21,29 @@ const root = join(import.meta.dirname, "../../..");
 /** The nats token every emulator the tier boots is configured with. */
 export const token = "browser-token";
 
+/** The stage interval, EMULATOR_RUNS_STAGE_INTERVAL, the cases that watch a run advance live
+ * boot with: documents.test.ts's "advances live" and failed.test.ts's failed-live case. Each
+ * uploads, then samples the list or the view as the run moves, so each claims the page shows a
+ * stage the run had not yet passed when its entry was listed; and listing a new entry takes the
+ * list's 200 ms debounce and a read of the API, while the run's first stage completes at once and
+ * each after it one interval later. That is a timing dependency, the real API's limit, accepted
+ * with a wide margin: a second and a half per stage lists the entry, and opens its view, well
+ * before the next stage completes, even under load, at a few seconds a case. Every other case
+ * keeps start's 100 ms, or the interval its own comment gives. */
+export const liveStageInterval = "1500ms";
+
 /** The order a run's stages pass in. */
 export const stageNames = ["upload", "metadata", "extraction", "chunks", "embeddings"];
+
+/** The hold rules every emulator the tier boots is configured with, EMULATOR_RUNS_HOLD: one per
+ * stage, held-at-<stage>.*:<stage>, so a document named held-at-extraction.brief.md starts a run
+ * that completes upload and metadata, then stays running with extraction under way for as long as
+ * the emulator runs. A case reads a run mid-way through it, however long the page takes to show
+ * it; a document no rule names runs to complete. */
+export const holdRules = stageNames.map((stage) => `held-at-${stage}.*:${stage}`).join(",");
+
+/** The name a hold rule holds at `stage`: `name` under the stage's held-at- prefix. */
+export const heldAt = (stage: string, name: string) => `held-at-${stage}.${name}`;
 
 /** How long a boot, a drain, or a run may take before the tier gives up on it. */
 const failsafe = 15_000;
@@ -29,30 +54,11 @@ export const bootAttempts = 5;
 /** The bind's report of a port another socket holds, as the emulator's output names it. */
 const addressInUse = /address already in use/;
 
-/** A free loopback port: one the system hands out, released for the emulator to take. */
-export async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  // A server listening on a host and port has an AddressInfo, never a pipe's path.
-  const { port } = server.address() as AddressInfo;
-  await new Promise((resolve) => server.close(resolve));
-  return port;
-}
-
 /** Polls `check` every 25 ms until it resolves truthy, resolving to its value, and rejects naming
- * `what` after the failsafe or once `failed()` returns a reason. */
-async function until<T>(
-  what: string,
-  check: () => Promise<T | false>,
-  failed: () => string | false | undefined = () => undefined,
-): Promise<T> {
+ * `what` after the failsafe. */
+async function until<T>(what: string, check: () => Promise<T | false>): Promise<T> {
   const deadline = Date.now() + failsafe;
   for (;;) {
-    const reason = failed();
-    if (reason) throw new Error(`${what}: ${reason}`);
     const value = await check().catch(() => undefined);
     if (value) return value;
     if (Date.now() > deadline) throw new Error(`${what}: not within ${failsafe} ms`);
@@ -75,10 +81,20 @@ export interface UploadedDocument {
   run_id: string;
 }
 
-/** A run, as the API answers it: the field the tier reads. */
+/** A run, as the API answers it: the fields the tier reads. */
 export interface Run {
   status: string;
+  stages: { name: string; state: string; failed_at: string | null; reason: string | null }[];
 }
+
+/** An upload's body and the Content-Type it declares. */
+export interface Content {
+  type: string;
+  body: string | Uint8Array;
+}
+
+/** The text document upload sends by default. */
+const brief: Content = { type: "text/plain", body: "the capstone's brief" };
 
 /** An emulator start booted, ready; start's comment and the members' describe each. */
 export interface Emulator {
@@ -89,7 +105,8 @@ export interface Emulator {
   wsURL: string;
   output(): string;
   store(): string | undefined;
-  upload(name?: string): Promise<UploadedDocument>;
+  upload(name?: string, content?: Content): Promise<UploadedDocument>;
+  run(runId: string): Promise<Run>;
   complete(runId: string): Promise<Run>;
   stop(): Promise<void>;
 }
@@ -98,7 +115,7 @@ export interface Emulator {
  * Boots the emulator and resolves once its readiness probe answers. Its app is at `mount`; its
  * WebSocket listener, like its CORS, accepts `origins`, by default its own origin, where its app
  * is served; `env` adds or overrides variables last. No overlay applies (EMULATOR_ENV is empty),
- * and the stages pass every 100 ms. Its TMPDIR, where the embedded NATS server keeps its store,
+ * the stages pass every 100 ms, and holdRules hold the runs of the documents heldAt names. Its TMPDIR, where the embedded NATS server keeps its store,
  * is a directory of its own, which stop() requires empty and removes.
  *
  * A reserved port is released before the emulator binds it, and the check's tiers reserve and bind
@@ -147,52 +164,47 @@ async function launch(
   const [port, natsPort, wsPort] = [await reserve(), await reserve(), await reserve()];
   const origin = `http://127.0.0.1:${port}`;
   const temp = mkdtempSync(join(tmpdir(), "browser-emulator."));
-  const child = spawn(binary, [], {
-    cwd: root,
-    stdio: ["ignore", "pipe", "pipe"],
-    env: {
-      ...process.env,
-      TMPDIR: temp,
-      EMULATOR_ENV: "",
-      EMULATOR_LOG_LEVEL: "debug",
-      EMULATOR_LOG_FORMAT: "text",
-      EMULATOR_SERVER_HOST: "127.0.0.1",
-      EMULATOR_SERVER_PORT: String(port),
-      EMULATOR_NATS_TOKEN: token,
-      EMULATOR_NATS_PORT: String(natsPort),
-      EMULATOR_NATS_WEBSOCKET_HOST: "127.0.0.1",
-      EMULATOR_NATS_WEBSOCKET_PORT: String(wsPort),
-      EMULATOR_CORS_ALLOWED_ORIGINS: (origins ?? [origin]).join(","),
-      EMULATOR_RUNS_STAGE_INTERVAL: "100ms",
-      EMULATOR_APP_MOUNT: mount,
-      ...env,
-    },
-  });
-  let output = "";
-  for (const stream of [child.stdout, child.stderr]) {
-    stream.setEncoding("utf8");
-    stream.on("data", (chunk) => (output += chunk));
+  let started: Started;
+  try {
+    started = await run(binary, [], {
+      ready: `${origin}/readyz`,
+      cwd: root,
+      timeout: failsafe,
+      drain: failsafe,
+      env: {
+        TMPDIR: temp,
+        EMULATOR_ENV: "",
+        EMULATOR_LOG_LEVEL: "debug",
+        EMULATOR_LOG_FORMAT: "text",
+        EMULATOR_SERVER_HOST: "127.0.0.1",
+        EMULATOR_SERVER_PORT: String(port),
+        EMULATOR_NATS_TOKEN: token,
+        EMULATOR_NATS_PORT: String(natsPort),
+        EMULATOR_NATS_WEBSOCKET_HOST: "127.0.0.1",
+        EMULATOR_NATS_WEBSOCKET_PORT: String(wsPort),
+        EMULATOR_CORS_ALLOWED_ORIGINS: (origins ?? [origin]).join(","),
+        EMULATOR_RUNS_STAGE_INTERVAL: "100ms",
+        EMULATOR_RUNS_HOLD: holdRules,
+        EMULATOR_APP_MOUNT: mount,
+        ...env,
+      },
+    });
+  } catch (error) {
+    // The helper has ended the emulator's group before it rejects, its message ending with the
+    // emulator's output, where a lost port's bind names itself; it rejects with an Error alone.
+    rmSync(temp, { recursive: true, force: true });
+    const { message } = error as Error;
+    throw addressInUse.test(message) ? new PortTaken(message) : error;
   }
-  /** The emulator's exit code once it has exited, null when a signal ended it. */
-  let exit: number | null | undefined;
-  const exited = new Promise<number | null>((resolve) =>
-    child.once("exit", (code) => resolve((exit = code))),
-  );
-  // A run that ends without stopping the emulator still ends it.
-  const orphan = () => child.kill("SIGKILL");
-  process.once("exit", orphan);
+  const { output } = started;
 
-  /** Drains the emulator with SIGTERM, or after the failsafe kills it, and removes its TMPDIR;
-   * rejects when it exits other than 0 or leaves anything in its TMPDIR. */
+  /** Drains the emulator, and removes its TMPDIR; rejects when it exits other than 0 or leaves
+   * anything in its TMPDIR. */
   async function stop(): Promise<void> {
-    process.off("exit", orphan);
-    if (exit === undefined) child.kill("SIGTERM");
-    const timer = setTimeout(() => child.kill("SIGKILL"), failsafe);
-    const code = await exited;
-    clearTimeout(timer);
+    const code = await started.stop();
     const left = readdirSync(temp);
     rmSync(temp, { recursive: true, force: true });
-    if (code !== 0) throw new Error(`the emulator at ${origin} exited ${code}:\n${output}`);
+    if (code !== 0) throw new Error(`the emulator at ${origin} exited ${code}:\n${output()}`);
     if (left.length > 0) throw new Error(`the emulator at ${origin} left ${left.join(", ")}`);
   }
 
@@ -206,23 +218,6 @@ async function launch(
     return JSON.parse(body);
   }
 
-  try {
-    await until(
-      `the emulator at ${origin}`,
-      // Each probe gives up after a second, so a port another socket holds and never answers on
-      // fails this poll rather than hanging the boot.
-      async () => (await fetch(`${origin}/readyz`, { signal: AbortSignal.timeout(1000) })).ok,
-      () => exit !== undefined && `exited ${exit}:\n${output}`,
-    );
-  } catch (error) {
-    await stop().catch(() => {});
-    // until rejects with an Error alone, and stop's own failure is caught.
-    if (exit !== undefined && addressInUse.test(output)) {
-      throw new PortTaken((error as Error).message);
-    }
-    throw error;
-  }
-
   return {
     origin,
     /** How many times start launched the emulator: one, and one more for each lost port. */
@@ -231,17 +226,20 @@ async function launch(
     base: mount === "/" ? "/" : `${mount}/`,
     natsPort,
     wsURL: `ws://127.0.0.1:${wsPort}`,
-    /** The output so far. */
-    output: () => output,
+    /** The output so far: the helper's tail of it, its last 64 KiB. */
+    output,
     /** The embedded NATS server's store, as its start record logs it. */
-    store: () => output.match(/msg="nats started".* store=(\S+)/)?.[1],
-    /** Uploads a text document, resolving to the document, its run_id the run it started. */
-    upload: (name = "brief.txt") =>
+    store: () => output().match(/msg="nats started".* store=(\S+)/)?.[1],
+    /** Uploads a document, a text one by default, resolving to the document, its run_id the run
+     * it started. */
+    upload: (name = "brief.txt", { type, body }: Content = brief) =>
       api<UploadedDocument>(
         `/api/documents?name=${encodeURIComponent(name)}`,
-        { method: "POST", headers: { "content-type": "text/plain" }, body: "the capstone's brief" },
+        { method: "POST", headers: { "content-type": type }, body },
         201,
       ),
+    /** The run's API answer. */
+    run: (runId) => api<Run>(`/api/runs/${runId}`),
     /** Resolves to the run once its status is complete. */
     complete: (runId) =>
       until(`run ${runId}`, async () => {

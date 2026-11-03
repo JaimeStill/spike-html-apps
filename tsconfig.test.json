@@ -1,5 +1,6 @@
 // mise run types:test: tsc type-checks the suite under test/, the TypeScript node --test runs
-// under node's type stripping, against node's types (@types/node) and the test tooling's
+// under node's type stripping, and the scripts' TypeScript (the screenshot bin's description),
+// which node runs the same way, against node's types (@types/node) and the test tooling's
 // declarations, without emitting. allowJs: the unit tier imports eslint.config.js's table, whose
 // types tsc infers from the JavaScript; tsconfig.json checks that file itself. The suite runs on
 // node alone, so no DOM library: what it runs in the page is expression text.
@@ -12,6 +13,6 @@
     "types": ["node"],
     "checkJs": false
   },
-  "include": ["test/**/*.ts"],
+  "include": ["test/**/*.ts", "scripts/**/*.ts"],
   "exclude": []
 }

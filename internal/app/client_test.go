@@ -37,9 +37,12 @@ var (
 	configContent = regexp.MustCompile(`(?s)<script type="application/json" id="app-config">(.*?)</script>`)
 )
 
-// isShell reports whether body is the app's shell.
+// isShell reports whether body is the app's shell: the app's
+// render-blocking modules, in their order, then its entry.
 func isShell(body string) bool {
-	return strings.Contains(body, `<script type="module" src="assets/main-test.js">`)
+	return strings.Contains(body, `<script type="module" blocking="render" src="assets/register-test.js"></script>
+<script type="module" blocking="render" src="assets/preferences-test.js"></script>
+<script type="module" src="assets/main-test.js">`)
 }
 
 // isProblem reports whether a response is a problem document with status.

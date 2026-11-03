@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 
 import type { ESLint } from "eslint";
 
-import { packages } from "../../eslint.config.js";
+import { libraries, packages } from "../../eslint.config.js";
 
 const root = join(import.meta.dirname, "../..");
 
@@ -67,9 +67,10 @@ export const violations: Cases = {
     [`${app}/client-reentry.ts`]: `import "../../apps/client/main.js";`,
     [`${app}/client-climb.ts`]: `import "./x/../../client/main.js";`,
     [`${app}/a/b/client.ts`]: `import "../../../client/main.js";`,
-    // A package the table doesn't name: lit, which only the components import; a devDependency;
-    // and a package whose name begins with a layer's, which the table's names must not prefix.
-    ...forms(`${app}/forms/lit`, "lit"),
+    // A package the table doesn't name: lit-html, which lit re-exports and an app imports only
+    // through it, its name beginning with the library's, which the table's names must not
+    // prefix; a devDependency; and a package whose name begins with a layer's.
+    [`${app}/lit-prefix.ts`]: `import "lit-html";`,
     [`${app}/typescript.ts`]: `import ts from "typescript";`,
     // The test tooling, which only test/ imports.
     ...forms(`${app}/forms/tooling`, `${tooling}/browser.js`),
@@ -80,6 +81,8 @@ export const violations: Cases = {
     [`${app}/bare-parent.ts`]: `export * from "..";`,
     // A file directly in apps/, in no app, which imports nothing, a layer neither.
     "apps/index.ts": `export * from "${foundation}/dom.js";`,
+    // lit, likewise, from a file in no app.
+    "apps/lit.ts": `export * from "lit";`,
   }),
   // A layer by a relative path into node_modules/, rather than by its name.
   ...by([table, relativePackages], {
@@ -96,8 +99,11 @@ export const sources = (cases: Cases): Files =>
   Object.fromEntries(Object.entries(cases).map(([path, { source }]) => [path, source]));
 
 // Every import an app may make, in each form, with names that hold dots, which a rule must tell
-// from . and .. segments: each layer by its name, at a subpath, and the app's own files.
+// from . and .. segments: each layer by its name, at a subpath, lit by its name and at a subpath,
+// and the app's own files.
 export const allowed: Files = {
+  ...forms(`${app}/forms/lit`, "lit"),
+  [`${app}/lit-decorators.ts`]: `import { define } from "lit/decorators.js";`,
   [`${app}/main.ts`]: [
     `import { define } from "${foundation}/dom.js";`,
     `import type { X } from "${components}/status-badge.js";`,
@@ -127,9 +133,10 @@ const targets: Files = {
   "test/unit/x.js": "export {};",
 };
 
-/** The packages the cases name, as stubs in node_modules/: the layers, lit, typescript, the
- * test tooling, and the foundation's namesake, each a module and its types at every subpath. */
-const externals = [...packages, "lit", "typescript", tooling, `${foundation}x`];
+/** The packages the cases name, as stubs in node_modules/: the layers, the libraries, lit-html,
+ * typescript, the test tooling, and the foundation's namesake, each a module and its types at
+ * every subpath. */
+const externals = [...packages, ...libraries, "lit-html", "typescript", tooling, `${foundation}x`];
 const stub = (name: string): Files => ({
   "package.json": JSON.stringify({
     name,

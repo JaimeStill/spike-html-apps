@@ -1,0 +1,14 @@
+{
+  "services": [
+    {
+      "name": "Service A",
+      "apiBase": "http://127.0.0.1:8181/api",
+      "nats": { "url": "ws://127.0.0.1:4282", "stream": "EMULATOR", "token": "demo-token-a" }
+    },
+    {
+      "name": "Service B",
+      "apiBase": "http://127.0.0.1:8182/api",
+      "nats": { "url": "ws://127.0.0.1:4292", "stream": "EMULATOR", "token": "demo-token-b" }
+    }
+  ]
+}

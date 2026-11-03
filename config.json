@@ -35,7 +35,8 @@
   },
   "runs": {
     "stage_interval": "750ms",
-    "instance": ""
+    "instance": "",
+    "fail": []
   },
   "conversations": {
     "delta_interval": "50ms"

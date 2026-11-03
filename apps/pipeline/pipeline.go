@@ -14,8 +14,16 @@ import (
 	"io/fs"
 )
 
-// Entry is the manifest key of the app's entry module, Vite's input.
+// Entry is the manifest key of the app's entry module, one of Vite's inputs.
 const Entry = "src/main.ts"
+
+// RenderBlocking lists the manifest keys of the modules the shell loads
+// with blocking="render" ahead of Entry, each another of Vite's inputs, in
+// the order they must run: the foundation's full stylesheet and every
+// built-in profile's registration, then the preferences module, which
+// applies the reader's stored theme choice to the root element before
+// first paint, against the registry the first fills.
+var RenderBlocking = []string{"src/register.ts", "src/preferences.ts"}
 
 // dist is the build as compiled in; all: takes the build's .vite/ directory,
 // where the manifest lives, which a bare pattern would skip as a dotted

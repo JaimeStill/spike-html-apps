@@ -53,9 +53,10 @@ func newConversations(n *Nodes) func(*graph.Scope) (*conversation.Service, error
 }
 
 // newRuns constructs the run layer from the config node's runs block, its
-// interval and its instance's event source, under the nats block's prefix,
-// the namespace of every type the broker publishes, publishing through the
-// broker node and logging a failed publish through the logger node.
+// interval, its instance's event source, and its fail and hold rules, under
+// the nats block's prefix, the namespace of every type the broker
+// publishes, publishing through the broker node and logging a failed
+// publish through the logger node.
 func newRuns(n *Nodes) func(*graph.Scope) (*run.Service, error) {
 	return func(s *graph.Scope) (*run.Service, error) {
 		cfg := s.Use(n.Config)
@@ -63,6 +64,8 @@ func newRuns(n *Nodes) func(*graph.Scope) (*run.Service, error) {
 			Interval: cfg.Runs.StageInterval.Duration(),
 			Source:   cfg.Runs.Source(),
 			Prefix:   cfg.NATS.Prefix,
+			Fail:     cfg.Runs.Fail,
+			Hold:     cfg.Runs.Hold,
 		}, s.Use(n.Broker), s.Use(n.Logger))
 	}
 }

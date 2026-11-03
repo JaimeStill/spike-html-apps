@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -12,8 +13,8 @@ import (
 )
 
 // Pins the documented defaults: a 750ms stage interval, a 32 MiB upload
-// limit, and an instance named by a fresh UUID, distinct for each
-// finalized configuration, so two emulators left unnamed source their
+// limit, no fail or hold rule, and an instance named by a fresh UUID, distinct for
+// each finalized configuration, so two emulators left unnamed source their
 // events apart.
 func TestRuns_FinalizeDefaults(t *testing.T) {
 	a, b := withToken(), withToken()
@@ -27,6 +28,12 @@ func TestRuns_FinalizeDefaults(t *testing.T) {
 	}
 	if got := *a.Documents.MaxSize; got != 32<<20 {
 		t.Errorf("Documents.MaxSize = %d, want %d", got, 32<<20)
+	}
+	if len(a.Runs.Fail) != 0 {
+		t.Errorf("Runs.Fail = %q, want no rule", a.Runs.Fail)
+	}
+	if len(a.Runs.Hold) != 0 {
+		t.Errorf("Runs.Hold = %q, want no rule", a.Runs.Hold)
 	}
 	if _, err := uuid.Parse(a.Runs.Instance); err != nil {
 		t.Errorf("Runs.Instance = %q, want a UUID", a.Runs.Instance)
@@ -46,8 +53,12 @@ func TestRuns_FinalizeEnvOverrides(t *testing.T) {
 	t.Setenv("EMULATOR_RUNS_STAGE_INTERVAL", "25ms")
 	t.Setenv("EMULATOR_RUNS_INSTANCE", "lab-a")
 	t.Setenv("EMULATOR_DOCUMENTS_MAX_SIZE", "1024")
+	t.Setenv("EMULATOR_RUNS_FAIL", " fail-at-*:extraction, ,last.txt:embeddings ")
+	t.Setenv("EMULATOR_RUNS_HOLD", "held-*:chunks,, first.txt:metadata ")
 
 	cfg := withToken()
+	cfg.Runs.Fail = []string{"configured:upload"}
+	cfg.Runs.Hold = []string{"configured:upload"}
 	if err := cfg.Finalize("emulator"); err != nil {
 		t.Fatalf("Finalize: %v", err)
 	}
@@ -60,7 +71,13 @@ func TestRuns_FinalizeEnvOverrides(t *testing.T) {
 	if *cfg.Documents.MaxSize != 1024 {
 		t.Errorf("Documents.MaxSize = %d, want 1024", *cfg.Documents.MaxSize)
 	}
-	wantRuns := config.RunsEnv{StageInterval: "EMULATOR_RUNS_STAGE_INTERVAL", Instance: "EMULATOR_RUNS_INSTANCE"}
+	if want := []string{"fail-at-*:extraction", "last.txt:embeddings"}; !slices.Equal(cfg.Runs.Fail, want) {
+		t.Errorf("Runs.Fail = %q, want %q, the variable's list in place of the configured one", cfg.Runs.Fail, want)
+	}
+	if want := []string{"held-*:chunks", "first.txt:metadata"}; !slices.Equal(cfg.Runs.Hold, want) {
+		t.Errorf("Runs.Hold = %q, want %q, the variable's list in place of the configured one", cfg.Runs.Hold, want)
+	}
+	wantRuns := config.RunsEnv{StageInterval: "EMULATOR_RUNS_STAGE_INTERVAL", Instance: "EMULATOR_RUNS_INSTANCE", Fail: "EMULATOR_RUNS_FAIL", Hold: "EMULATOR_RUNS_HOLD"}
 	if cfg.Runs.Env != wantRuns {
 		t.Errorf("Runs.Env = %+v, want %+v", cfg.Runs.Env, wantRuns)
 	}
@@ -108,6 +125,26 @@ func TestRuns_MergeOverlaysSetFields(t *testing.T) {
 		t.Errorf("merged = %+v, %+v; want the overlay's instance over the base's interval and limit", base.Runs, base.Documents)
 	}
 
+	base.Runs.Fail = []string{"base:upload"}
+	overlay = &config.Config{}
+	overlay.Runs.Fail = []string{}
+	base.Merge(overlay)
+	if base.Runs.Fail == nil || len(base.Runs.Fail) != 0 {
+		t.Errorf("merged Runs.Fail = %q, want the overlay's empty list in place of the base's", base.Runs.Fail)
+	}
+
+	base.Runs.Hold = []string{"base:upload"}
+	overlay = &config.Config{}
+	base.Merge(overlay)
+	if !slices.Equal(base.Runs.Hold, []string{"base:upload"}) {
+		t.Errorf("merged Runs.Hold = %q, want the base's, the overlay's unset", base.Runs.Hold)
+	}
+	overlay.Runs.Hold = []string{}
+	base.Merge(overlay)
+	if base.Runs.Hold == nil || len(base.Runs.Hold) != 0 {
+		t.Errorf("merged Runs.Hold = %q, want the overlay's empty list in place of the base's", base.Runs.Hold)
+	}
+
 	overlay = &config.Config{}
 	overlay.Runs.StageInterval = libconfig.Duration(time.Minute)
 	overlay.Documents.MaxSize = new(int64(20))
@@ -117,20 +154,23 @@ func TestRuns_MergeOverlaysSetFields(t *testing.T) {
 	}
 }
 
-// runs and documents are file keys, with stage_interval and instance, and
-// max_size, beneath them.
+// runs and documents are file keys, with stage_interval, instance, fail,
+// and hold, and max_size, beneath them.
 func TestLoad_RunsAndDocumentsKeys(t *testing.T) {
-	inDir(t, map[string]string{"config.json": `{"runs": {"stage_interval": "2s", "instance": "from-file"},
+	inDir(t, map[string]string{"config.json": `{"runs": {"stage_interval": "2s", "instance": "from-file", "fail": ["f-*:chunks"], "hold": ["h-*:metadata"]},
 		"documents": {"max_size": 4096}}`})
 	t.Setenv("EMULATOR_RUNS_STAGE_INTERVAL", "")
 	t.Setenv("EMULATOR_RUNS_INSTANCE", "")
+	t.Setenv("EMULATOR_RUNS_FAIL", "")
+	t.Setenv("EMULATOR_RUNS_HOLD", "")
 	t.Setenv("EMULATOR_DOCUMENTS_MAX_SIZE", "")
 
 	cfg, err := config.Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.Runs.StageInterval.Duration() != 2*time.Second || cfg.Runs.Instance != "from-file" || *cfg.Documents.MaxSize != 4096 {
+	if cfg.Runs.StageInterval.Duration() != 2*time.Second || cfg.Runs.Instance != "from-file" ||
+		!slices.Equal(cfg.Runs.Fail, []string{"f-*:chunks"}) || !slices.Equal(cfg.Runs.Hold, []string{"h-*:metadata"}) || *cfg.Documents.MaxSize != 4096 {
 		t.Errorf("Runs, Documents = %+v, %+v, want the file's blocks", cfg.Runs, cfg.Documents)
 	}
 }

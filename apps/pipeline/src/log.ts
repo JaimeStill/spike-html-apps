@@ -1,29 +1,44 @@
-// The live event log, the "/" route: each run's stage events as text lines as they arrive. The
-// element reads while it is connected and stops when the router replaces it. It keeps the cursor
-// of the last event it showed in sessionStorage, so a reload, or a return to the route, continues
-// the sequence after it with no gap and no duplicate; a tab that has shown none reads from the
-// oldest event the stream keeps.
+// The live event log, the "/" route: the run events the app's one feed (live.ts) delivers, each
+// run's stage events and a failed run's failure event, shown through the components'
+// sl-event-log, which keeps each shown event in place as the next arrives. The log keeps no read
+// of its own: it shows the feed's deliveries, those kept since the feed started, then each as it
+// arrives, so mounting it, again or late, replays the feed's and opens no second subscription. The
+// deliveries one frame hears are shown in one update, so a long stream's replay after a reload
+// lays the log out once a frame, not once an event.
+//
+// The log keeps the cursor of the last event it showed in sessionStorage, and main starts the feed
+// after it, so a reload, which loads a new document, shows the events after the last one this tab
+// showed, with no gap and no duplicate; a tab that has shown none reads from the oldest event the
+// stream keeps. Only what the log has shown moves the cursor: events the feed delivers while
+// another view is mounted are shown when the log next mounts, in this document or the next. A
+// stored cursor the stream never gave out, as after the emulator restarted with a new store, the
+// feed forgets and reads from the oldest event at once, and the log forgets it too.
+//
+// The log fills the main pane, as the chat does, and holds sl-event-log to the height its header
+// and status line leave, so the log's own frame scrolls and follows the newest event while the
+// reader is at its end; the page stays put as events arrive. The status line above it says the
+// log follows the stream live, and from where (the oldest event, when the stream restarted under
+// the tab's cursor), or, while the feed's read has failed, why it is paused; it stays one line
+// high whatever it says, so its text changing moves nothing below it.
 
-import type { Cursor, EventSequence } from "@jaimestill/spike-html-apps-sdk/events.js";
+import { html, LitElement } from "lit";
 
-/** The stage event's type: the emulator's nats.prefix ("emulator", its config's default) and the
- * run domain's run.stage. */
-export const stageType = "emulator.run.stage";
+import "@jaimestill/spike-html-apps-components/event-log.js";
+import type { LogEvent } from "@jaimestill/spike-html-apps-components/event-log.js";
+import type { Cursor, Delivery } from "@jaimestill/spike-html-apps-sdk/events.js";
 
-/** A stage event's data, as the run domain's StageCompletedData writes it. */
-interface StageData {
-  stage: string;
-  position: number;
-  stage_count: number;
-  document_id: string;
-}
+import { appFeed } from "./live.ts";
+import type { RunData, StageFeed } from "./live.ts";
+
+/** The event log view's tag, which the router mounts. */
+export const logTag = "pipeline-log";
 
 /** The sessionStorage key of the last cursor the log showed. */
 export const cursorKey = "pipeline-log.cursor";
 
 /** The stored cursor, or undefined when there is none or storage is unavailable. It came from the
- * sequence the log reads, so it passes back as one, as the adapter's Cursor says. */
-function storedCursor(): Cursor | undefined {
+ * sequence the feed reads, so it passes back as one, as the adapter's Cursor says. */
+export function storedCursor(): Cursor | undefined {
   try {
     return (sessionStorage.getItem(cursorKey) ?? undefined) as Cursor | undefined;
   } catch {
@@ -42,58 +57,135 @@ function storeCursor(cursor: Cursor | undefined) {
   }
 }
 
-/** The sequence the log reads, set by main before the router mounts the element. */
-let events: EventSequence<StageData> | undefined;
+/** The cursor the feed started after, which main read from storage; undefined from the oldest. */
+let resumed: Cursor | undefined;
 
-/** Sets the sequence every log element reads. */
-export function useEvents(sequence: EventSequence<StageData>) {
-  events = sequence;
+/**
+ * Starts the feed main made after the stored cursor `after`. When the feed restarts from the
+ * oldest event, the cursor one the stream never gave out, the stored one is forgotten with it, so
+ * a reload before the log shows an event starts from the oldest too, rather than at the same
+ * refusal. Any other failure keeps it: the read retries from it, and so does a reload, so a
+ * failure that passes (the connection lost a moment) resumes with no gap and no duplicate.
+ */
+export function resumeFeed(feed: StageFeed, after: Cursor | undefined) {
+  resumed = after;
+  feed.addEventListener("restart", () => storeCursor(undefined), { once: true });
+  feed.start();
 }
 
-export class PipelineLog extends HTMLElement {
-  #abort: AbortController | undefined;
+/** The event as the log shows it: the delivery's CloudEvent as it is, its time optional in both,
+ * so an event without one, which the emulator never publishes, shows its type alone. */
+const logged = ({ event }: Delivery<RunData>): LogEvent => event;
+
+/** What the status line says while the feed reads: that the log is live, and from where; a
+ * restart is said plainly, as no failure, since the log misses nothing for it. */
+function following(feed: StageFeed): string {
+  if (feed.restarted)
+    return "The stream restarted; following the run events live, from the oldest it keeps.";
+  return resumed === undefined
+    ? "Following the run events live, from the oldest the stream keeps."
+    : "Following the run events live, after the last one this tab showed.";
+}
+
+class PipelineLog extends LitElement {
+  static properties = {
+    events: { state: true },
+    following: { state: true },
+    paused: { state: true },
+  };
+
+  /** The events shown, the feed's deliveries in its order. */
+  declare events: readonly LogEvent[];
+  /** What the status line says while the feed reads. */
+  declare following: string;
+  /** Why the feed's read is paused, while it is; empty while it reads. */
+  declare paused: string;
+
+  #disconnect: AbortController | undefined;
+  /** The deliveries heard since the last frame, shown together at the next. */
+  #pending: Delivery<RunData>[] = [];
+  /** The frame that shows them, while one is requested. */
+  #frame = 0;
+
+  constructor() {
+    super();
+    this.events = [];
+    this.following = "";
+    this.paused = "";
+  }
+
+  protected createRenderRoot() {
+    return this;
+  }
 
   connectedCallback() {
-    const heading = document.createElement("h1");
-    heading.textContent = "Run stages";
-    const list = document.createElement("ol");
-    this.replaceChildren(heading, list);
-    this.#abort = new AbortController();
-    void this.#read(list, this.#abort.signal);
+    super.connectedCallback();
+    this.#disconnect = new AbortController();
+    const { signal } = this.#disconnect;
+    const feed = appFeed();
+    this.events = feed.deliveries.map(logged);
+    this.#shown(feed.deliveries.at(-1));
+    feed.addEventListener(
+      "delivery",
+      (e) => {
+        this.#pending.push((e as CustomEvent<Delivery<RunData>>).detail);
+        this.#frame ||= requestAnimationFrame(() => this.#flush());
+      },
+      { signal },
+    );
+    feed.addEventListener("failure", () => this.#followFeed(), { signal });
+    feed.addEventListener("restart", () => this.#followFeed(), { signal });
+    this.#followFeed();
   }
 
   disconnectedCallback() {
-    this.#abort?.abort();
+    super.disconnectedCallback();
+    this.#disconnect?.abort();
+    // Those not shown yet are the feed's still: the next mount shows them, and moves the cursor.
+    cancelAnimationFrame(this.#frame);
+    this.#frame = 0;
+    this.#pending = [];
   }
 
-  async #read(list: HTMLOListElement, signal: AbortSignal) {
-    if (!events) throw new Error("useEvents wasn't called before the log mounted");
-    const after = storedCursor();
-    let shown = 0;
-    try {
-      for await (const { event, cursor } of events.read({ types: [stageType], after, signal })) {
-        const item = document.createElement("li");
-        // The cursor marks the line, so a reader of the page can tell where the sequence stands.
-        item.dataset.cursor = cursor;
-        const data = event.data;
-        const head = `${event.time ?? ""} ${event.type} run ${event.subject ?? "?"}`;
-        item.textContent = data
-          ? `${head}: ${data.stage} (${data.position}/${data.stage_count}) ` +
-            `of document ${data.document_id}`
-          : head;
-        list.append(item);
-        storeCursor(cursor);
-        shown++;
-      }
-    } catch (error) {
-      // A stored cursor the stream never gave out (the emulator restarted with a new store, say)
-      // fails the read before it shows anything, and every read from it after; forgetting it lets
-      // a reload start again from the oldest.
-      if (after !== undefined && shown === 0) storeCursor(undefined);
-      const item = document.createElement("li");
-      item.className = "error";
-      item.textContent = `the event read failed: ${String(error)}`;
-      list.append(item);
-    }
+  /** Shows the deliveries heard since the last frame, in one update of the log: sl-event-log
+   * measures its frame at each update, so an update per delivery, as a reload's replay of a long
+   * stream delivers them, would lay the growing log out once for each event. */
+  #flush() {
+    this.#frame = 0;
+    const pending = this.#pending;
+    this.#pending = [];
+    this.events = [...this.events, ...pending.map(logged)];
+    this.#shown(pending.at(-1));
+  }
+
+  /** The log has shown the delivery: its cursor is where a reload resumes. */
+  #shown(delivery: Delivery<RunData> | undefined) {
+    if (delivery) storeCursor(delivery.cursor);
+  }
+
+  #followFeed() {
+    const feed = appFeed();
+    const failure = feed.failure;
+    this.following = following(feed);
+    this.paused =
+      failure === undefined
+        ? ""
+        : failure instanceof Error && failure.message
+          ? failure.message
+          : String(failure);
+  }
+
+  render() {
+    return html`
+      <header class="view-header"><h1>Event log</h1></header>
+      <div class="view-body log-body">
+        <p class="log-status ${this.paused ? "paused" : ""}" role="status">
+          ${this.paused ? `Live events paused: ${this.paused}. Reconnecting…` : this.following}
+        </p>
+        <sl-event-log .events=${this.events}></sl-event-log>
+      </div>
+    `;
   }
 }
+
+customElements.define(logTag, PipelineLog);

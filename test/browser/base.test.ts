@@ -51,23 +51,23 @@ for (const mount of ["/app", "/"]) {
       });
       try {
         // The deep link: the server sends the shell, and the router mounts the lazy route.
-        await page.goto(`${origin}${base}about`);
-        await mounted(page, "pipeline-about");
-        assert.deepEqual(await route(page), { path: `${base}about`, tag: "pipeline-about" });
+        await page.goto(`${origin}${base}chat`);
+        await mounted(page, "pipeline-chat");
+        assert.deepEqual(await route(page), { path: `${base}chat`, tag: "pipeline-chat" });
         assert.equal(await page.evaluate("document.baseURI"), `${origin}${base}`);
 
         await reload(page);
-        await mounted(page, "pipeline-about");
-        assert.deepEqual(await route(page), { path: `${base}about`, tag: "pipeline-about" });
+        await mounted(page, "pipeline-chat");
+        assert.deepEqual(await route(page), { path: `${base}chat`, tag: "pipeline-chat" });
 
         // The nav's links are relative to the base, and the router takes their clicks.
-        await click(page, "Log");
+        await click(page, "Event log");
         await mounted(page, "pipeline-log");
         assert.deepEqual(await route(page), { path: base, tag: "pipeline-log" });
 
         await traverse(page, -1);
-        await mounted(page, "pipeline-about");
-        assert.deepEqual(await route(page), { path: `${base}about`, tag: "pipeline-about" });
+        await mounted(page, "pipeline-chat");
+        assert.deepEqual(await route(page), { path: `${base}chat`, tag: "pipeline-chat" });
         await traverse(page, 1);
         await mounted(page, "pipeline-log");
         assert.deepEqual(await route(page), { path: base, tag: "pipeline-log" });
@@ -78,17 +78,33 @@ for (const mount of ["/app", "/"]) {
           responses.filter(({ status }) => status >= 400),
           [],
         );
-        // Each load of the shell, then the entry and the about chunk under the base's assets/.
+        // Each load of the shell, then the render-blocking modules, the entry, and the chat chunk
+        // under the base's assets/.
         const assets = responses.filter(({ url }) => url.startsWith(`${origin}${base}assets/`));
         assert.ok(
           assets.some(({ url }) => /\/main-[\w-]+\.js$/.test(url)),
           "the entry loaded",
         );
+        for (const name of ["register", "preferences"]) {
+          assert.ok(
+            assets.some(({ url }) => new RegExp(`/${name}-[\\w-]+\\.js$`).test(url)),
+            `the ${name} module loaded`,
+          );
+        }
         assert.ok(
-          assets.some(({ url }) => /\/about-[\w-]+\.js$/.test(url)),
+          assets.some(({ url }) => /\/chat-[\w-]+\.js$/.test(url)),
           "the chunk loaded",
         );
-        assert.ok(responses.every(({ url }) => url.startsWith(`${origin}${base}`)));
+        // Every other response is under the base, but the API's, at its own mount, which the side
+        // pane's document list calls.
+        const api = `${origin}/api/`;
+        assert.ok(
+          responses.every(({ url }) => url.startsWith(`${origin}${base}`) || url.startsWith(api)),
+        );
+        assert.ok(
+          responses.some(({ url }) => url.startsWith(`${api}documents?`)),
+          "the document list loaded",
+        );
       } finally {
         await page.close();
       }

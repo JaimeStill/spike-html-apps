@@ -93,8 +93,9 @@ func (h *handler) conversation(w http.ResponseWriter, r *http.Request) error {
 }
 
 // message reads {"text": "..."}, adds the user's message to the history,
-// and streams the scripted reply, whose message joins the history once it
-// has streamed whole. Text exactly [Trigger] takes the failure path.
+// and streams the scripted reply, whose items join the history once it has
+// streamed whole. Text exactly [Trigger] takes the failure path, and text
+// exactly [RichTrigger] streams the rich reply.
 func (h *handler) message(w http.ResponseWriter, r *http.Request) error {
 	id, err := web.PathUUID(r, "id")
 	if err != nil {
@@ -108,18 +109,18 @@ func (h *handler) message(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	item, err := h.service.stream(r.Context(), w, rp)
+	items, err := h.service.stream(r.Context(), w, rp)
 	if err != nil {
 		h.ended(r, err)
 		return nil
 	}
-	h.service.complete(id, item)
+	h.service.complete(id, items)
 	return nil
 }
 
 // respond reads an Open Responses create-response body and streams the
 // scripted reply, keeping nothing. The last user input exactly [Trigger]
-// takes the failure path.
+// takes the failure path; the route never streams the rich reply.
 func (h *handler) respond(w http.ResponseWriter, r *http.Request) error {
 	rp, err := readCreate(w, r)
 	if err != nil {

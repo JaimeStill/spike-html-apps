@@ -1,6 +1,6 @@
-// The browser tier's reading of the pipeline app: which route a page shows, the lines its log
-// shows, parsed back into the events they render, and the navigations a person makes, through the
-// DevTools Protocol, as the sdk's router tier makes them. Each wait is the tooling's page wait,
+// The browser tier's reading of the pipeline app: which route a page shows, the events its log's
+// sl-event-log renders, read back from its shadow root, and the navigations a person makes, through
+// the DevTools Protocol, as the sdk's router tier makes them. Each wait is the tooling's page wait,
 // until, which polls an expression inside the page.
 
 import { until } from "@jaimestill/spike-html-apps-tooling/browser.js";
@@ -12,26 +12,24 @@ export interface Route {
   tag: string | null;
 }
 
-/** A run's stage event, as a log line renders it. */
-export interface StageEvent {
-  time: string;
+/** An event as the log's sl-event-log renders it: its type, its time's datetime (null when it
+ * shows none), its source, subject, and id, each the whole text its line keeps, and its data, the
+ * details' JSON parsed, undefined where it says it has none. */
+export interface Logged {
   type: string;
-  subject: string;
-  data: { stage: string; position: number; stage_count: number; document_id: string };
+  time: string | null;
+  source: string;
+  subject: string | null;
+  id: string;
+  data: unknown;
 }
 
-/** A line of the log: an event line, its cursor and the event it renders; a line that renders
- * no stage event, its text; or a failure's text. */
-export type Line =
-  | { cursor: string | null; text: string; event: StageEvent; error?: undefined }
-  | {
-      cursor: string | null;
-      unparsed: string;
-      text?: undefined;
-      event?: undefined;
-      error?: undefined;
-    }
-  | { error: string; cursor?: undefined; text?: undefined; event?: undefined };
+/** The event log's sl-event-log's shadow root, as a page expression. */
+export const LOG = "document.querySelector('pipeline-log sl-event-log')?.shadowRoot";
+
+/** The event log's status line's text, as a page expression. */
+export const LOG_STATUS =
+  "document.querySelector('pipeline-log .log-status')?.textContent.trim() ?? null";
 
 /** The page's URL path and the tag of the element its router mounted in <main>. */
 export const route = (page: Page): Promise<Route> =>
@@ -46,37 +44,28 @@ export const mounted = (page: Page, tag: string): Promise<unknown> =>
     `document.querySelector('main')?.firstElementChild?.localName === ${JSON.stringify(tag)}`,
   );
 
-/** A stage line as the log writes it: the event's time, type, and subject, then its data. */
-const stageLine =
-  /^(?<time>\S*) (?<type>\S+) run (?<subject>\S+): (?<stage>\S+) \((?<position>\d+)\/(?<stage_count>\d+)\) of document (?<document_id>\S+)$/;
-
-/** The log's lines: each event line's cursor and the event it renders, and each failure's text. */
-export async function lines(page: Page): Promise<Line[]> {
-  const items: { cursor: string | null; error: boolean; text: string }[] = await page.evaluate(
-    "[...document.querySelectorAll('pipeline-log li')].map((li) => ({ cursor: li.dataset.cursor ?? null, error: li.className === 'error', text: li.textContent }))",
-  );
-  return items.map(({ cursor, error, text }): Line => {
-    if (error) return { error: text };
-    const fields = text.match(stageLine)?.groups;
-    if (!fields) return { cursor, unparsed: text };
-    const { time, type, subject, stage, position, stage_count, document_id } = fields;
-    return {
-      cursor,
-      text,
-      event: {
-        time,
-        type,
-        subject,
-        data: { stage, position: Number(position), stage_count: Number(stage_count), document_id },
-      },
+/** The events the log shows, in its order, as its sl-event-log renders them. */
+export const logged = (page: Page): Promise<Logged[]> =>
+  page.evaluate(`[...(${LOG}?.querySelectorAll("li.event") ?? [])].map((li) => {
+    const pair = (label) => {
+      const dt = [...li.querySelectorAll(".meta dt")].find((dt) => dt.textContent === label);
+      return dt ? dt.nextElementSibling.textContent : null;
     };
-  });
-}
+    const pre = li.querySelector("details.data pre");
+    return {
+      type: li.querySelector(".type").textContent,
+      time: li.querySelector("time.when")?.getAttribute("datetime") ?? null,
+      source: pair("source"),
+      subject: pair("subject"),
+      id: pair("id"),
+      data: pre ? JSON.parse(pre.textContent) : undefined,
+    };
+  })`);
 
-/** Resolves to the log's lines once it shows `count` of them. */
-export async function linesOnce(page: Page, count: number): Promise<Line[]> {
-  await until(page, `document.querySelectorAll('pipeline-log li').length >= ${count}`);
-  return lines(page);
+/** Resolves to the events the log shows once it shows `count` of them. */
+export async function loggedOnce(page: Page, count: number): Promise<Logged[]> {
+  await until(page, `(${LOG}?.querySelectorAll("li.event").length ?? 0) >= ${count}`);
+  return logged(page);
 }
 
 /** Clicks the nav link with the text, as a mouse does, at its center. */
@@ -115,4 +104,25 @@ export async function openWith(
   await prepare(page);
   await page.goto(url);
   return page;
+}
+
+/** Sizes the page's viewport to `width` by `height`, as a window of that size is. */
+export async function resize(page: Page, width: number, height = 800): Promise<void> {
+  await page.cdp("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+}
+
+/** The accessible name the browser computes for the element `expression` finds, as a screen
+ * reader is told it: Chrome's accessibility tree, read through the DevTools Protocol. */
+export async function accessibleName(page: Page, expression: string): Promise<string> {
+  const { result } = await page.cdp("Runtime.evaluate", { expression });
+  const { nodes } = await page.cdp("Accessibility.getPartialAXTree", {
+    objectId: result.objectId,
+    fetchRelatives: false,
+  });
+  return nodes[0]?.name?.value ?? "";
 }

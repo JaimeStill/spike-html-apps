@@ -18,6 +18,22 @@
 // due, which [Service.Start] nudges when a run starts, so its first stage
 // completes at once.
 //
+// A run whose document's name matches one of [Config.Fail]'s rules, the
+// emulator's test seam for a failed run, fails at the rule's stage instead:
+// when that stage is due, Advance publishes the run's [RunFailed] event,
+// then records the stage failed with its reason, and the run, its status
+// [Failed], advances no further. The stages before it stay complete, the
+// stages after it pending, and no stage event is published for the failed
+// stage.
+//
+// A run whose document's name matches one of [Config.Hold]'s rules, the
+// test seam for a run under way, holds at the rule's stage: the stages
+// before it complete and publish as any run's do, and the held stage is
+// never due, so Advance publishes and records nothing for it and the run
+// stays [Running], that stage its first [Pending] one, for as long as the
+// process runs. A name both kinds of rule match stops at the earlier of
+// their stages, and fails when they name one stage.
+//
 // All state is in memory, guarded by one mutex; nothing outlives the
 // process.
 //
@@ -28,8 +44,10 @@
 //     reactor's source and handler.
 //   - [Routes]: the route group the composition root mounts.
 //   - [Run] and [Stage], the read shapes, with [Status] ([Running],
-//     [Complete]) and [StageState] ([Pending], [Done]).
-//   - [StageCompleted], the event type's last segments, and
-//     [StageCompletedData], the event's data.
+//     [Complete], [Failed]) and [StageState] ([Pending], [Done],
+//     [Faulted]).
+//   - [StageCompleted], the stage event type's last segments, and
+//     [StageCompletedData], the event's data; [RunFailed] and
+//     [RunFailedData], the failure event's.
 //   - [ErrNotFound]: an unknown run id, a 404.
 package run

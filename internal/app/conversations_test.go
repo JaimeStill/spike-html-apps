@@ -446,6 +446,83 @@ func TestConversations_TriggerFailsReply(t *testing.T) {
 	}
 }
 
+// The rich trigger streams the rich reply: a reasoning item, a
+// function_call and its output, then the Markdown message, each item's
+// events at its own output index, its deltas joining to its script. The
+// history then holds the user's message and exactly the items the stream
+// completed, as response.completed holds them, so a reload reads what the
+// stream showed. The stateless route streams the plain reply for the same
+// text: a function_call_output is no response output the spec has.
+func TestConversations_RichReplyStreamAndHistoryAgree(t *testing.T) {
+	_, addr, c := startConversations(t, deltaInterval)
+	conv := newConversation(t, c)
+
+	s := postStream(t, addr, "/api/conversations/"+conv.ID+"/messages", `{"text": "`+conversation.RichTrigger+`"}`)
+	checkFraming(t, s)
+	var done []conversation.Item
+	var added []string
+	texts := map[string]*strings.Builder{}
+	for _, f := range s.frames {
+		switch f.typ() {
+		case "response.output_item.added":
+			it := decodeAs[conversation.Item](t, f.data["item"])
+			if got := int(f.data["output_index"].(float64)); got != len(added) {
+				t.Errorf("%s added at output %d, want %d", it.Type, got, len(added))
+			}
+			added = append(added, it.Type)
+		case "response.output_item.done":
+			done = append(done, decodeAs[conversation.Item](t, f.data["item"]))
+		}
+		if d, ok := f.data["delta"].(string); ok {
+			if texts[f.typ()] == nil {
+				texts[f.typ()] = &strings.Builder{}
+			}
+			texts[f.typ()].WriteString(d)
+		}
+	}
+	if want := []string{"reasoning", "function_call", "function_call_output", "message"}; !slices.Equal(added, want) {
+		t.Fatalf("items added = %v, want %v", added, want)
+	}
+	for typ, want := range map[string]string{
+		"response.reasoning.delta":               conversation.RichReasoning,
+		"response.reasoning_summary_text.delta":  conversation.RichSummary,
+		"response.function_call_arguments.delta": conversation.RichArguments,
+		"response.output_text.delta":             conversation.RichReply,
+	} {
+		if b := texts[typ]; b == nil || b.String() != want {
+			t.Errorf("%s deltas = %v, want %q", typ, b, want)
+		}
+	}
+	if len(done) != 4 || done[1].Arguments != conversation.RichArguments || done[2].Output != conversation.RichOutput || done[2].CallID != done[1].CallID {
+		t.Errorf("done items = %+v, want the call's arguments and output as scripted", done)
+	}
+	completed := decodeAs[wireResponse](t, s.frames[len(s.frames)-1].data["response"])
+	if completed.Status != "completed" || len(completed.Output) != len(done) {
+		t.Fatalf("completed = %+v, want completed with the %d done items", completed, len(done))
+	}
+	for i := range done {
+		if !itemEqual(completed.Output[i], done[i]) {
+			t.Errorf("completed output %d = %+v, want %+v", i, completed.Output[i], done[i])
+		}
+	}
+
+	history := readConversation(t, c, conv.ID).History
+	wantUser := conversation.Item{Type: "message", Role: conversation.User, Content: []conversation.Part{{Type: "input_text", Text: conversation.RichTrigger}}}
+	if len(history) != 1+len(done) || !itemEqual(history[0], wantUser) {
+		t.Fatalf("history = %+v, want the user's message, then the %d done items", history, len(done))
+	}
+	for i, it := range done {
+		if !itemEqual(history[1+i], it) {
+			t.Errorf("history %d = %+v, want %+v", 1+i, history[1+i], it)
+		}
+	}
+
+	s = postStream(t, addr, "/api/responses", `{"input": "`+conversation.RichTrigger+`", "stream": true}`)
+	if got := s.types(); !slices.Equal(got, completedTypes()) {
+		t.Errorf("stateless %s: event types = %v, want the plain reply", conversation.RichTrigger, got)
+	}
+}
+
 // A message is refused before any stream: blank text, an unknown field,
 // or a body that is not JSON is a 400, an unknown conversation a 404.
 func TestConversations_MessageRejections(t *testing.T) {

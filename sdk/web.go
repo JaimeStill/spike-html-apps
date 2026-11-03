@@ -48,6 +48,15 @@ type ClientOptions struct {
 	// Entry is the manifest key of the client's entry, its source path
 	// relative to Vite's root, such as "src/main.ts".
 	Entry string
+	// RenderBlocking lists the manifest keys of modules the shell loads
+	// ahead of Entry with blocking="render", in the order given, each with
+	// its CSS and a modulepreload for each chunk it imports statically, as
+	// Entry's are. The browser paints nothing until each has run, so a
+	// module that writes on the root element before first paint, such as a
+	// stored theme choice, shows no default first. Module scripts run in
+	// document order, so each runs after the ones before it and Entry after
+	// them all. Nil or empty loads Entry alone.
+	RenderBlocking []string
 	// Config is the value the shell writes, JSON-encoded, as the content of
 	// its #app-config element; nil writes null.
 	Config any
@@ -58,7 +67,7 @@ type ClientOptions struct {
 // [ManifestPath] and the files it names. It reads and checks the manifest
 // once, here, and renders the shell once; it fails, naming the problem, when
 // Base is malformed, the manifest is missing or unreadable, or it has no
-// Entry key.
+// Entry key or no key RenderBlocking lists.
 //
 // The handler answers only GET and HEAD; any other method is a 405 problem
 // with Allow: GET, HEAD. A request path resolves, after path.Clean, to one
@@ -162,20 +171,33 @@ func (m manifest) dirs() []string {
 	return dirs
 }
 
-// entry resolves key's chunk: its file, the files of the chunks it imports
-// statically, transitively, for modulepreload links, and the CSS of it and
-// every one of those chunks, each once and in import order.
-func (m manifest) entry(key string) (file string, preload, css []string, err error) {
-	root, ok := m[key]
-	if !ok || root.File == "" {
-		return "", nil, nil, fmt.Errorf("sdk: NewClient: the build's manifest %s has no entry %q", ManifestPath, key)
+// assets is what the shell loads for a list of modules: each module's file,
+// in order, and the files of the chunks they import statically, for
+// modulepreload links, and the CSS of every one of them, each once.
+type assets struct {
+	scripts, preload, css []string
+}
+
+// resolve resolves each key's chunk, in order, into a: its file, then the
+// chunks it imports statically, transitively, and the CSS of it and every
+// one of those chunks, in import order. A file is named once across every
+// key, and a chunk a script loads is never also preloaded. It fails naming
+// the first key the manifest lacks.
+func (m manifest) resolve(keys ...string) (assets, error) {
+	var a assets
+	for _, key := range keys {
+		root, ok := m[key]
+		if !ok || root.File == "" {
+			return assets{}, fmt.Errorf("sdk: NewClient: the build's manifest %s has no entry %q", ManifestPath, key)
+		}
+		a.scripts = append(a.scripts, root.File)
 	}
-	seen := map[string]bool{key: true}
+	seen := map[string]bool{}
 	var walk func(c chunk)
 	walk = func(c chunk) {
 		for _, f := range c.CSS {
-			if !slices.Contains(css, f) {
-				css = append(css, f)
+			if !slices.Contains(a.css, f) {
+				a.css = append(a.css, f)
 			}
 		}
 		for _, k := range c.Imports {
@@ -184,12 +206,17 @@ func (m manifest) entry(key string) (file string, preload, css []string, err err
 			}
 			seen[k] = true
 			imported := m[k]
-			preload = append(preload, imported.File)
+			if !slices.Contains(a.scripts, imported.File) && !slices.Contains(a.preload, imported.File) {
+				a.preload = append(a.preload, imported.File)
+			}
 			walk(imported)
 		}
 	}
-	walk(root)
-	return root.File, preload, css, nil
+	for _, key := range keys {
+		seen[key] = true
+		walk(m[key])
+	}
+	return a, nil
 }
 
 // shellTemplate is the client's HTML shell. html/template escapes the base
@@ -197,8 +224,10 @@ func (m manifest) entry(key string) (file string, preload, css []string, err err
 // config arrives as template.JS, already JSON that json.Marshal has escaped
 // for HTML (<, >, and & as \u003c, \u003e, and \u0026), so its text can
 // never close the script element, and is written as it is. The asset paths
-// are relative, resolved against <base href>. The body is empty: the client
-// appends its own content.
+// are relative, resolved against <base href>. The render-blocking modules'
+// scripts precede the entry's, in their order, so the browser runs each
+// before it, and paints nothing until they have all run. The body is empty:
+// the client appends its own content.
 var shellTemplate = template.Must(template.New("shell").Parse(`<!doctype html>
 <html lang="en">
 <head>
@@ -213,6 +242,9 @@ var shellTemplate = template.Must(template.New("shell").Parse(`<!doctype html>
 <link rel="modulepreload" href="{{.}}">
 {{- end}}
 <script type="application/json" id="` + ConfigElementID + `">{{.Config}}</script>
+{{- range .Blocking}}
+<script type="module" blocking="render" src="{{.}}"></script>
+{{- end}}
 <script type="module" src="{{.Entry}}"></script>
 </head>
 <body></body>
@@ -221,20 +253,23 @@ var shellTemplate = template.Must(template.New("shell").Parse(`<!doctype html>
 
 // renderShell renders the shell for opts against m, once.
 func renderShell(m manifest, base string, opts ClientOptions) ([]byte, error) {
-	file, preload, css, err := m.entry(opts.Entry)
+	// The entry resolves last, so the blocking modules' CSS comes first, and
+	// its script after theirs.
+	a, err := m.resolve(append(slices.Clone(opts.RenderBlocking), opts.Entry)...)
 	if err != nil {
 		return nil, err
 	}
+	blocking, entry := a.scripts[:len(a.scripts)-1], a.scripts[len(a.scripts)-1]
 	config, err := json.Marshal(opts.Config)
 	if err != nil {
 		return nil, fmt.Errorf("sdk: NewClient: encode the config: %w", err)
 	}
 	var buf bytes.Buffer
 	err = shellTemplate.Execute(&buf, struct {
-		Base, Title, Entry string
-		CSS, Preload       []string
-		Config             template.JS
-	}{base, opts.Title, file, css, preload, template.JS(config)})
+		Base, Title, Entry     string
+		CSS, Preload, Blocking []string
+		Config                 template.JS
+	}{base, opts.Title, entry, a.css, a.preload, blocking, template.JS(config)})
 	if err != nil {
 		return nil, fmt.Errorf("sdk: NewClient: render the shell: %w", err)
 	}
