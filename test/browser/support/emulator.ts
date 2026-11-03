@@ -24,6 +24,16 @@ export const token = "browser-token";
 /** The order a run's stages pass in. */
 export const stageNames = ["upload", "metadata", "extraction", "chunks", "embeddings"];
 
+/** The hold rules every emulator the tier boots is configured with, EMULATOR_RUNS_HOLD: one per
+ * stage, held-at-<stage>.*:<stage>, so a document named held-at-extraction.brief.md starts a run
+ * that completes upload and metadata, then stays running with extraction under way for as long as
+ * the emulator runs. A case reads a run mid-way through it, however long the page takes to show
+ * it; a document no rule names runs to complete. */
+export const holdRules = stageNames.map((stage) => `held-at-${stage}.*:${stage}`).join(",");
+
+/** The name a hold rule holds at `stage`: `name` under the stage's held-at- prefix. */
+export const heldAt = (stage: string, name: string) => `held-at-${stage}.${name}`;
+
 /** How long a boot, a drain, or a run may take before the tier gives up on it. */
 const failsafe = 15_000;
 
@@ -94,7 +104,7 @@ export interface Emulator {
  * Boots the emulator and resolves once its readiness probe answers. Its app is at `mount`; its
  * WebSocket listener, like its CORS, accepts `origins`, by default its own origin, where its app
  * is served; `env` adds or overrides variables last. No overlay applies (EMULATOR_ENV is empty),
- * and the stages pass every 100 ms. Its TMPDIR, where the embedded NATS server keeps its store,
+ * the stages pass every 100 ms, and holdRules hold the runs of the documents heldAt names. Its TMPDIR, where the embedded NATS server keeps its store,
  * is a directory of its own, which stop() requires empty and removes.
  *
  * A reserved port is released before the emulator binds it, and the check's tiers reserve and bind
@@ -163,6 +173,7 @@ async function launch(
         EMULATOR_NATS_WEBSOCKET_PORT: String(wsPort),
         EMULATOR_CORS_ALLOWED_ORIGINS: (origins ?? [origin]).join(","),
         EMULATOR_RUNS_STAGE_INTERVAL: "100ms",
+        EMULATOR_RUNS_HOLD: holdRules,
         EMULATOR_APP_MOUNT: mount,
         ...env,
       },

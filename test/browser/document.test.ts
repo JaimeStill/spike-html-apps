@@ -1,15 +1,16 @@
-// The document view in the binary's build: a deep link to a document mid-run shows its stages as
-// they stand at once, then advances them live to complete with no reload, and a reload mid-run
-// does the same; its content shows in the artifact viewer by its type, Markdown, JSON, and text
-// fetched as text, a PDF and an image fetched as a Blob and shown natively, and a type the viewer
-// doesn't know fetched as a Blob, shown as text when its bytes are and as the can't-be-shown note
-// with a download link when they aren't, the viewer without a header of its own and its region
-// named; JSON reaches the viewer exactly as stored, and a .json that doesn't parse shows the
-// viewer's invalid-JSON note over its text; a content fetch that fails shows its problem's title,
-// and Try again loads it; an id no document has shows the view's own not-found state; and moving
-// between documents, by the list and by back and forward, swaps the view's document with no
-// loading state between, the list's entry following. Each case boots its own emulator, so its
-// store starts empty.
+// The document view in the binary's build: a deep link to a document mid-run, its run held by the
+// harness's hold rule, first paints its stages as they stand, the stage under way in the accent,
+// and a reload mid-run does the same, while a complete run shows each stage's time (the timeline
+// advancing live is failed.test.ts's live case, its page open before the upload); its content
+// shows in the artifact viewer by its type, Markdown, JSON, and text fetched as text, a PDF and an
+// image fetched as a Blob and shown natively, and a type the viewer doesn't know fetched as a
+// Blob, shown as text when its bytes are and as the can't-be-shown note with a download link when
+// they aren't, the viewer without a header of its own and its region named; JSON reaches the
+// viewer exactly as stored, and a .json that doesn't parse shows the viewer's invalid-JSON note
+// over its text; a content fetch that fails shows its problem's title, and Try again loads it; an
+// id no document has shows the view's own not-found state; and moving between documents, by the
+// list and by back and forward, swaps the view's document with no loading state between, the
+// list's entry following. Each case boots its own emulator, so its store starts empty.
 
 import assert from "node:assert/strict";
 import { after, afterEach, before, describe, test } from "node:test";
@@ -19,7 +20,7 @@ import type { Browser, Page } from "@jaimestill/spike-html-apps-tooling/browser.
 
 import { mounted, openWith, reload, route, traverse } from "./support/app.ts";
 import { clickAt, entries, entriesShown, entryOf, listReady } from "./support/documents.ts";
-import { stageNames, start } from "./support/emulator.ts";
+import { heldAt, stageNames, start } from "./support/emulator.ts";
 import { summaryPdf } from "./support/media.ts";
 import type { Emulator, StartOptions } from "./support/emulator.ts";
 
@@ -61,6 +62,15 @@ const TIMELINE = `${VIEW}?.querySelector('sl-stage-timeline')?.shadowRoot`;
 /** The viewer's shadow root, as a page expression. */
 const VIEWER = `${VIEW}.querySelector('sl-artifact-viewer').shadowRoot`;
 
+/** The timeline's states as a string of the stages' initials (p, a, c), as a page expression;
+ * empty while it shows none. */
+const SHOWN = `[...(${TIMELINE}?.querySelectorAll("li") ?? [])]
+  .map((li) => ["pending", "active", "complete"].find((s) => li.classList.contains(s))?.[0] ?? "?")
+  .join("")`;
+
+/** The timeline of a run held at extraction: two stages complete, the third under way. */
+const HELD = "ccapp";
+
 /** The stages the timeline shows, each its name and its state, in order. */
 const stages = (page: Page): Promise<{ name: string; state: string }[]> =>
   page.evaluate(`[...${TIMELINE}.querySelectorAll("li")].map((li) => ({
@@ -72,22 +82,14 @@ const stages = (page: Page): Promise<{ name: string; state: string }[]> =>
 const timelineShown = (page: Page) =>
   until(page, `${TIMELINE}?.querySelectorAll("li").length === ${stageNames.length}`);
 
-/** How many of the stages are complete. */
-const completeOf = (shown: { state: string }[]) =>
-  shown.filter(({ state }) => state === "complete").length;
-
 /** Records, inside the page, the timeline's states each time they change, every animation frame,
- * into `window.timeline`, each a string of the stages' initials (p, a, c). Installed on a new
- * document, ahead of the app's scripts, so its first entry is the first state painted: a sampler
- * started after the page opened began behind it, and on a loaded machine the run had advanced, or
- * finished, before its first sample. It samples frames, as HEADINGS below does, so only what a
- * person sees is recorded. */
+ * into `window.timeline`, each SHOWN's string. Installed on a new document, ahead of the app's
+ * scripts, so its first entry is the first state painted: a sampler started after the page opened
+ * began behind it, and missed what the page painted first. It samples frames, as HEADINGS below
+ * does, so only what a person sees is recorded. */
 const WATCH = `window.timeline = [];
 (function sample() {
-  const root = ${TIMELINE};
-  const shown = [...(root?.querySelectorAll("li") ?? [])]
-    .map((li) => ["pending", "active", "complete"].find((s) => li.classList.contains(s))?.[0] ?? "?")
-    .join("");
+  const shown = ${SHOWN};
   if (shown && window.timeline.at(-1) !== shown) window.timeline.push(shown);
   requestAnimationFrame(sample);
 })();`;
@@ -97,12 +99,6 @@ const watch = (page: Page) => page.cdp("Page.addScriptToEvaluateOnNewDocument", 
 
 /** Marks the page's window, so a reload, a new window without the mark, would show. */
 const mark = (page: Page) => page.evaluate("void (window.unreloaded = true)");
-
-/** The timeline's states a run passes through, from its first stage complete: the stages complete
- * so far, then the active one, then those pending. */
-const RUN = stageNames.map((_, i) =>
-  stageNames.map((__, j) => (j <= i ? "c" : j === i + 1 ? "a" : "p")).join(""),
-);
 
 /** Resolves once the run has `count` stages complete, by the API, failing on a run complete. */
 async function reached(runId: string, count: number) {
@@ -118,31 +114,32 @@ async function reached(runId: string, count: number) {
 }
 
 describe("a document's stages", () => {
-  test("by a deep link mid-run, show as they stand at once, then advance live to complete", async (t) => {
-    // Stages half a second apart, so the run is mid-way when the page opens.
-    await boot({ env: { EMULATOR_RUNS_STAGE_INTERVAL: "500ms" } });
-    const doc = await emulator!.upload("brief.md", { type: "text/markdown", body: "# Brief" });
-    const before = await reached(doc.run_id, 2);
+  test("by a deep link mid-run, show as they stand at once, the stage under way in the accent", async (t) => {
+    // A run held at extraction: upload and metadata complete, extraction under way, for as long as
+    // the case needs, so the page opens on it mid-run however long it takes.
+    const { origin } = await boot();
+    const doc = await emulator!.upload(heldAt("extraction", "brief.md"), {
+      type: "text/markdown",
+      body: "# Brief",
+    });
+    await reached(doc.run_id, 2);
     const page = await open(`documents/${doc.id}`, watch);
     await mark(page);
     await timelineShown(page);
     const first = await stages(page);
-    t.diagnostic(
-      `${before} complete before the page opened; shown at once: ${JSON.stringify(first)}`,
-    );
+    t.diagnostic(`shown at once: ${JSON.stringify(first)}`);
     assert.deepEqual(
       first.map(({ name }) => name),
       stageNames,
     );
     await until(page, "window.timeline.length > 0");
-    const painted: string = await page.evaluate("window.timeline[0]");
-    assert.ok(
-      [...painted].filter((s) => s === "c").length >= before,
-      `the first state painted, ${painted}, the stages as they stood when the page opened`,
+    assert.deepEqual(
+      await page.evaluate("window.timeline"),
+      [HELD],
+      "the first state painted is the run as it stands, and the only one",
     );
-    assert.ok(completeOf(first) < stageNames.length, "the run is still mid-way when shown");
     // The stage after the last complete one is the active one, in the accent, from the component.
-    assert.equal(first[completeOf(first)].state, "active");
+    assert.equal(first[2].state, "active");
     const color: string = await page.evaluate(
       `getComputedStyle(${TIMELINE}.querySelector("li.active .label")).color`,
     );
@@ -155,43 +152,48 @@ describe("a document's stages", () => {
       return color;
     })()`);
     assert.equal(color, accent, "the active stage's label in the accent");
+    assert.equal(
+      await page.evaluate(`${VIEW}.querySelector(".document-run").textContent.trim()`),
+      "In progress: stage 3 of 5, extraction",
+    );
 
-    await until(page, `window.timeline.at(-1) === "ccccc"`, 10_000);
-    const seen: string[] = await page.evaluate("window.timeline");
-    t.diagnostic(seen.join(" → "));
-    assert.ok(seen.length >= 2, `the stages advanced in place: ${seen.join(", ")}`);
-    assert.deepEqual(seen, RUN.slice(RUN.indexOf(seen[0])), "each state in order, none skipped");
+    // A run no rule holds, complete, by a link from the same page: every stage complete, each with
+    // its completion time.
+    const done = await emulator!.upload("notes.md", { type: "text/markdown", body: "# Notes" });
+    await emulator!.complete(done.run_id);
+    await page.evaluate(
+      `navigation.navigate(${JSON.stringify(`${origin}${emulator!.base}documents/${done.id}`)}).finished.then(() => true)`,
+    );
+    await until(page, `window.timeline.at(-1) === "ccccc"`);
     assert.equal(await page.evaluate("window.unreloaded"), true, "the page never reloaded");
     assert.equal(
       await page.evaluate(`${VIEW}.querySelector(".document-run").textContent.trim()`),
       "Complete: all 5 stages",
     );
-    // Every stage complete shows its completion time.
     assert.equal(
       await page.evaluate(`${TIMELINE}.querySelectorAll("li time").length`),
       stageNames.length,
     );
   });
 
-  test("after a reload mid-run, show as they stand at once, then advance live to complete", async () => {
-    await boot({ env: { EMULATOR_RUNS_STAGE_INTERVAL: "500ms" } });
-    const doc = await emulator!.upload("notes.txt");
+  test("after a reload mid-run, show as they stand at once", async () => {
+    // A run held at chunks: three stages complete, the fourth under way, before and after the
+    // reload alike.
+    await boot();
+    const doc = await emulator!.upload(heldAt("chunks", "notes.txt"));
     const page = await open(`documents/${doc.id}`);
-    await timelineShown(page);
-    const before = await reached(doc.run_id, 3);
+    await reached(doc.run_id, 3);
+    await until(page, `${SHOWN} === "cccap"`);
     await watch(page);
     await reload(page);
     await mark(page);
     await timelineShown(page);
-    const first = await stages(page);
-    assert.ok(completeOf(first) >= before, `${completeOf(first)} shown, ${before} before reload`);
     await until(page, "window.timeline.length > 0");
-    const painted: string = await page.evaluate("window.timeline[0]");
-    assert.ok(
-      [...painted].filter((s) => s === "c").length >= before,
-      `the first state painted after the reload, ${painted}, ${before} complete before it`,
+    assert.deepEqual(
+      await page.evaluate("window.timeline"),
+      ["cccap"],
+      "the first state painted after the reload is the run as it stands, and the only one",
     );
-    await until(page, `window.timeline.at(-1) === "ccccc"`, 10_000);
     assert.equal(await page.evaluate("window.unreloaded"), true, "no second reload");
   });
 });

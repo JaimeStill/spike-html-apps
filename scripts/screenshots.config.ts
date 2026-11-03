@@ -30,8 +30,10 @@
 // as test:browser does. The start boots it with the tooling's process helper on free loopback
 // ports, the app at /app, its stages a second apart so a capture finds runs mid-way, its upload
 // limit 2 MB so a larger file is refused, its fail rule failing a document named fail-at-… at
-// extraction, so a capture shows a failed run, and its replies a word every 150 ms, so a capture
-// finds one mid-stream.
+// extraction, so a capture shows a failed run, its hold rule holding the run under way's
+// document, field-report.md, at extraction, so its capture finds that stage active however long
+// the capture takes to reach it, and its replies a word every 150 ms, so a capture finds one
+// mid-stream.
 //
 // The states run in order, each in a fresh tab, every profile and scheme of one state before the
 // next, against the one emulator: the empty log and the empty side pane first, before any upload,
@@ -408,7 +410,8 @@ async function showDocument(page: Page, id: string) {
   await wait(200);
 }
 
-/** A run under way: a document uploaded as the state opens, shown with its third stage active. */
+/** A run under way: a document uploaded as the state opens, shown with its third stage active,
+ * where the hold rule keeps it. */
 const documentLive: Step = async (page) => {
   void seeded();
   const { id } = await upload(
@@ -952,6 +955,7 @@ const description: Description = {
           EMULATOR_RUNS_STAGE_INTERVAL: "1s",
           EMULATOR_DOCUMENTS_MAX_SIZE: "2000000",
           EMULATOR_RUNS_FAIL: "fail-at-*:extraction",
+          EMULATOR_RUNS_HOLD: "field-report.md:extraction",
           EMULATOR_CONVERSATIONS_DELTA_INTERVAL: "150ms",
         },
       });
