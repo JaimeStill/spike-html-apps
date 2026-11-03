@@ -251,7 +251,7 @@ don't add, move, or ignore it.
 
 ## Progress
 
-slices 4/4 committed · standards — · spec — · editor —
+slices 4/4 committed · standards ✓ · spec ✓ · editor ✓
 
 ## Decisions
 
@@ -1163,6 +1163,28 @@ slices 4/4 committed · standards — · spec — · editor —
 - answer: the size budget is reported, not set; the experiment's final review sets it.
 - answer: the 11 pending edits to this goal's own roadmap entries are dropped, since sync deletes
   its table; a backlog goal `nats-credentials` is added at sync.
+- answer: the measure reads each layer's tag from the consumer template's package.json, so the
+  tags are written in one place.
+- answer: npm installs first unguarded, in a project of its own, to record its EALLOWGIT refusal,
+  then under `allow-git=root`.
+- answer: the tree row compares each layer's files with its whole tag tree, since the tag's tree
+  is the pack; it ignores bun's `.bun-tag` and any node_modules a manager nests in a package.
+- answer: the peers row also checks that the sdk's two NATS peers, nats-core and jetstream,
+  resolve to the consumer's own.
+- answer: the page row is no on any uncaught page exception. The noctis check holds only when both
+  `--bg` and the body's computed background change.
+- answer: spike-html-packages' `scripts/unconfigured.sh`, which empties each manager's user config,
+  is rewritten inside `scripts/consumers.ts`, with its provenance line.
+- answer: the first run's page row was no under all three managers, because the template's
+  `sl-entry` had no `updated_at`, a defect of the template, not of a layer; the template was fixed
+  before the passing run.
+- answer: the session settled four gaps' deciders: Firefox and Safari go to the experiment.html
+  intake, a connection lost for good to the capstone, and the 1.5 s stage margin closes with the
+  spike.
+- answer: the standards review extended `scripts/currency.sh` to read the consumer template's
+  package.json too, so its pins are held current.
+- answer: the answer section in the pending edits is condensed; the primitives baselines stay in
+  the README.
 
 ## Pending edits
 

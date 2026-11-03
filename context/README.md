@@ -163,6 +163,8 @@ The mise tasks beside the check:
 - **Pipeline app:** the primitives composed live over the emulator, with its shortcuts, theme
   menu, and walkthrough (`mise run screenshots`).
 - **External client:** an app hosted apart over two services (`mise run demo`).
+- **Consumption measure:** `mise run consumers`, which installs the layers by tag into a consumer
+  outside the spike under npm, pnpm, and bun, and checks each install, build, and page.
 - **Test seams:** the emulator's fail and hold rules, and the chat's `/fail` and `/rich`.
 - **Conventions:** `conventions.md`, the development principles, design conventions, and process
   conventions the spike's repositories follow, for experiment.html's intake to adopt.
@@ -234,9 +236,7 @@ spike-ai-pipeline repositories, which the roadmap's `path` and `[workspace.paths
 ## The answer
 
 The question: what does a client application on experiment.html's stack look like, and do its
-layers hold up when they compose the capstone's UI primitives, live over a backend? Its answer
-bears on v1.client's app architecture and on whether an external-client goal follows 1.0, and the
-capstone's UI starts from its releases.
+layers hold up when they compose the capstone's UI primitives, live over a backend?
 
 **Three layers released by tag, a foundation, Lit shadow components that take properties and send
 events, and an SDK of router, API client, token provider, and a resumable event sequence over NATS
@@ -247,13 +247,13 @@ over the emulator in one app and over two services in an external client.**
    the token provider, and the domain service. Proven by the sdk's unit tier
    (`test/unit/api.test.ts`, `auth.test.ts`, and `declarations.test.ts` against v0.1.0's
    declarations) and its browser tier (`test/browser/router.test.ts`, `upload.test.ts`), and by
-   the root's browser tier, which drives them through both apps. Proven by tests alone.
+   the root's browser tier, which drives them through both apps.
 2. **The foundation's Intl formatters,** against foundation v0.1.0's `format.d.ts`. Proven by the
-   foundation's `test/unit/format.test.ts` and `declarations.test.ts`. Proven by tests alone.
+   foundation's `test/unit/format.test.ts` and `declarations.test.ts`.
 3. **The event-sequence interface** and its NATS-over-WebSocket adapter. Proven by the sdk's
    `test/unit/nats.test.ts` against a pinned nats-server (2.15.2) and `events.test.ts`, and live
-   against the emulator by the root's `test/browser/live.test.ts`. Proven by tests alone; "NATS
-   over WebSocket, for spike-ai-pipeline" below records it for the capstone.
+   against the emulator by the root's `test/browser/live.test.ts`. "NATS over WebSocket, for
+   spike-ai-pipeline", below, records it for the capstone.
 4. **The Go serving half,** `NewClient` in the root's `sdk` package, at `/app` and at the
    server's root. Proven by `sdk/web_test.go`, the integration tier (`integration/`, the app at
    each mount), and the browser tier's `test/browser/base.test.ts`, and running under
@@ -287,8 +287,7 @@ Items 1 to 3 are proven by tests alone. Items 4 to 8 are proven by tests and see
 9 by an on-demand measure, and item 10 by the architect's acceptance.
 
 The spike's conventions, the development principles, design conventions, and process conventions
-its repositories follow, are `context/conventions.md`, for experiment.html's intake to adopt. This
-answer is evidence for that intake; the spike decides nothing itself.
+its repositories follow, are `context/conventions.md`, for experiment.html's intake to adopt.
 
 ### NATS over WebSocket, for spike-ai-pipeline
 
@@ -325,7 +324,7 @@ emulator's embedded nats-server.
 
 ### Consumption by tag
 
-`mise run consumers` ran on 2026-11-03 (UTC), at commit 2a20b12, with node 26.13.0, npm 12.2.1,
+`mise run consumers` ran on 2026-11-03 (UTC), at commit 169fa53, with node 26.13.0, npm 12.2.1,
 pnpm 12.16.1, bun 1.4.4, and Vite 8.3.5, over foundation v0.3.0, components v0.10.2, sdk v0.4.0,
 and noctis v0.1.1. Every row was yes (evidence 9):
 
@@ -367,8 +366,7 @@ Each gap is recorded, not closed, and names who decides it:
   Vite build rewrites them through vite-plugin-standard-css-modules, so the measured consumer path
   works. The experiment.html intake decides, as for Firefox.
 - **Neither browser is run:** the browser tier and the tooling speak only the DevTools protocol,
-  and Playwright was rejected for the browser tier; both gaps are recorded by named feature, and
-  the experiment.html intake decides them.
+  and Playwright was rejected for the browser tier, so both gaps are recorded by named feature.
 - **Real auth:** one static token, handed to the browser in the shell's config. The broker's token
   rides in its URL, since go-messaging's `nats.Config` has no credentials field, and the broker's
   `Start` error prints that URL. v1.auth decides; the credentials field is the backlog goal
