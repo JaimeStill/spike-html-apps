@@ -48,7 +48,8 @@ Items 1 to 8 and 10 are built; the `answer` task proves item 9.
 8. An external client, `apps/external/`, hosted apart, calling two emulator instances
    cross-origin under CORS the spike owns, with a base and token provider for each.
 9. Consumption by tag from outside the spike, and the gaps: Firefox and WebKit, real auth, real
-   inference, and persistence.
+   inference, and persistence. The dated table and the gaps are in "The answer", under
+   "Consumption by tag" and "The gaps".
 10. Quality at every layer, judged as a finished product: the foundation renders
     spike-html-design's native styling and every profile without regression; each component is
     finished in every state and profile, with visible focus, motion that honours reduced motion,
@@ -128,6 +129,10 @@ The mise tasks beside the check:
   `--all` captures every built-in profile. The external client's description,
   `scripts/screenshots-external.config.ts`, runs by hand, as its header says.
 - `mise run build:app` and `mise run build:external` build each app with Vite.
+- `mise run consumers` installs the four layer packages by their tags into a new consumer outside
+  the repository, under npm, pnpm, and bun (pinned in mise beside pnpm), builds it with Vite, and
+  loads the build in the pinned chrome-headless-shell, printing a dated table. It reads the
+  network, so it is never part of the check; "Consumption by tag" records its run.
 
 ## Capabilities
 
@@ -228,4 +233,65 @@ spike-ai-pipeline repositories, which the roadmap's `path` and `[workspace.paths
 
 ## The answer
 
-Pending: the `answer` task writes it.
+Pending: the `answer` task's last slice writes the question, the answer, and evidence 1 to 10.
+
+### Consumption by tag
+
+`mise run consumers` ran on 2026-11-03 (UTC), at commit 2a20b12, with node 26.13.0, npm 12.2.1,
+pnpm 12.16.1, bun 1.4.4, and Vite 8.3.5, over foundation v0.3.0, components v0.10.2, sdk v0.4.0,
+and noctis v0.1.1. Every row was yes (evidence 9):
+
+| manager | install | version and tree | peers | build | page |
+| ------- | ------- | ---------------- | ----- | ----- | ---- |
+| npm     | yes     | yes              | yes   | yes   | yes  |
+| pnpm    | yes     | yes              | yes   | yes   | yes  |
+| bun     | yes     | yes              | yes   | yes   | yes  |
+
+Each manager observed the same, word for word:
+
+- **Version and tree:** each layer installed at its tag's version with the tag's files, compared
+  byte for byte: foundation 0.3.0, 62 files; components 0.10.2, 43; sdk 0.4.0, 17; and noctis
+  0.1.1, 6.
+- **Peers:** the foundation that the components and noctis peer, and the nats-core and jetstream
+  that the sdk peers, each resolved to the consumer's own.
+- **Build:** Vite 8.3.5's build exits 0, writing 3 files.
+- **Page:** all 12 components' tags are defined, each rendering in its shadow root with its
+  adopted sheets. The foundation's styling applies: `--bg` is `#fffcf0` and the body's background
+  `rgb(255, 252, 240)`, in its system-ui font stack. noctis registers beside flexoki; selected, it
+  changes `--bg` to `#f4f6f6`, the body's background to `rgb(244, 246, 246)`, and its text from
+  `rgb(16, 15, 15)` to `rgb(0, 86, 97)`. The router mounts `/` in `<main>`; the client reads
+  `/api/json` as a success and `/api/problem` as a failure, 422 Unprocessable Entity; and the
+  sdk's `events` and `events/nats` entries load.
+
+The guard: npm 12.2.1 refuses git dependencies (EALLOWGIT) unless the consumer's project `.npmrc`
+sets `allow-git=root`, under which it installs; pnpm and bun install under their defaults.
+
+### The gaps
+
+Each gap is recorded, not closed, with who decides it where the spike has named one:
+
+- **Firefox 147:** no `blocking="render"` (web-features 3.45.0), which `NewClient`'s shell writes
+  on its render-blocking modules (`sdk/web.go`, the shell template), so the stored theme can flash
+  before first paint.
+- **Safari 26.2 (WebKit):** no CSS module scripts, `import … with { type: "css" }` (web-features
+  3.45.0). The layers import their sheets that way, so unbundled consumption fails in Safari; a
+  Vite build rewrites them through vite-plugin-standard-css-modules, so the measured consumer path
+  works.
+- **Neither browser is run:** the browser tier and the tooling speak only the DevTools protocol,
+  and Playwright was rejected for the browser tier; both gaps are recorded by named feature.
+- **Real auth:** one static token, handed to the browser in the shell's config. The broker's token
+  rides in its URL, since go-messaging's `nats.Config` has no credentials field, and the broker's
+  `Start` error prints that URL. v1.auth decides; the credentials field is the backlog goal
+  `nats-credentials`.
+- **Real inference:** a scripted Open Responses stream ("The emulator"). The capstone decides.
+- **Persistence:** all state in memory. The capstone's backend decides.
+- **A recreated stream:** a stored cursor at or below the new stream's last event resumes partway
+  in, undetected; the NATS adapter detects only a malformed cursor or one past the last event. The
+  capstone's backend decides.
+- **A connection lost for good:** the NATS adapter reconnects across a server restart within
+  nats-core's defaults, and each read resumes with no gap or duplicate; a connection lost for
+  good, failing every read, is untested.
+- **The live stage tests' margin:** "advances live" and the failed run's live case boot their
+  emulators with stages 1.5 s apart, and rely on that margin to catch each state. The architect
+  accepted the margin as the limit of watching a live advance through the real API; a
+  broker-level seam stays ruled out.
