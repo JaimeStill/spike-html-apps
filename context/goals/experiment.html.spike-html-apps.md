@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** brief ready
-- **Task:** pipeline
-- **Branch:** pipeline
+- **State:** idle
+- **Task:** none
+- **Branch:** none
 
 ## Tasks
 
@@ -12,286 +12,8 @@
 4. [x] emulator
 5. [x] primitives
 6. [x] tooling
-7. [ ] pipeline
+7. [x] pipeline
 8. [ ] answer
-
-## Task brief · experiment.html.spike-html-apps · pipeline
-
-**Problem.** The root's pipeline app is a stub: a text log of stage events and an About page.
-Nothing yet composes the eleven primitives, binds the shortcuts, or shows the full sequence
-(upload, stages live, chat, search, artifact) as one product. No external client exists, so
-evidence 6, 8, and 10 are unproven. Three defects stand in the way, and each is fixed at its
-source:
-- The foundation v0.2.0 shortcut module fires single-key bindings typed in a text field inside a
-  shadow root, and swallows the character.
-- sl-composer has no public way to send, so an app that sends on Enter would copy its private
-  rules.
-- The tooling's screenshot command can capture only its own static server, so it can't capture an
-  app that the emulator or any other server serves.
-The task releases tooling v0.3.0, foundation v0.2.1, and components v0.4.0, then builds the
-pipeline app and the external client in the root on those tags.
-
-**Behaviors**
-
-Tooling v0.3.0
-1. A screenshot description's server may be a start function instead of the static server's
-   options. The function resolves to an origin and a stop. The bin calls it once, after arguments,
-   `--help`, and unknown pages are checked (so `--help` and every exit 2 start nothing) and before
-   the first capture. Pages resolve against that origin. The bin calls stop once at the end, on any
-   failure, and on SIGINT or SIGTERM. A start that rejects fails the run, naming its error. The
-   static form is unchanged.
-2. The package exports a process helper:
-   - It starts a command with its args, working directory, and environment, in a process group of
-     its own.
-   - It resolves once a URL the caller names answers 2xx. It rejects if the command exits first, or
-     at its timeout; both rejections carry the command's output, and the timeout also ends the
-     group.
-   - Its stop sends the whole group SIGTERM, then SIGKILL after a drain timeout, and resolves to
-     the exit code.
-   - The group is killed if the calling process exits without stopping it.
-   - The output stays readable for errors.
-   - It works with any server or task runner, including one whose server is a grandchild, such as
-     `mise run dev` or `ng serve`. After stop, no process the command started is left.
-3. The package exports freePort, a free loopback port.
-4. Its code and tests name no consumer, it has no runtime dependency, its README documents both
-   server forms and the helper, and CHANGELOG `[0.3.0]` lists them under Added.
-
-Foundation v0.2.1
-5. A single-key binding never fires while the key is typed in a text field (input, textarea,
-   select, contenteditable), including fields inside open shadow roots at any depth, and the
-   character is typed. Escape in such a field, outside a modal, blurs it, as it does in light DOM.
-   Everything else the shortcut module does is unchanged. CHANGELOG `[0.2.1]` lists it under Fixed.
-
-Components v0.4.0
-6. sl-composer gains a public send() that does exactly what activating its send button does:
-   - nothing while the text is blank, or the composer is busy or disabled;
-   - otherwise it clears the field, then sends `send` with the text, then refocuses the field.
-   The composer still binds no key. CHANGELOG `[0.4.0]` lists send() under Added.
-
-Root: serving
-7. NewClient's options gain a list of manifest keys whose modules the shell loads with
-   `blocking="render"` ahead of the entry, in the order given, each with its CSS. A key missing
-   from the manifest fails NewClient, naming it. The pipeline app loads the foundation's full
-   registration and preferences modules this way, so a stored theme choice is on the root element
-   before first paint.
-8. The browser tier's emulator harness runs on the tooling's process helper and freePort. It keeps
-   only its relaunch, up to 5 launches, when a boot fails with "address in use".
-
-Root: pipeline app (evidence 6, 10)
-9. The app is embedded in the emulator binary and served at `/app` and at the root, as today, on
-   foundation v0.2.1, components v0.4.0, sdk v0.2.0, and Lit 3.3.3. The app tier's ESLint table
-   admits lit, with a violation-tree case.
-10. Layout and routes:
-    - A two-pane workspace. A header holds the title, a search field, a help button, and the theme
-      menu. A side pane holds the upload dropzone and the paginated document list.
-    - A routed main pane shows one view: a document (its stage timeline and its content in the
-      artifact viewer), the chat, the search results for `?q=`, or the event log. The About route
-      is dropped.
-    - Deep links, reloads, and back and forward reach each view at either mount.
-    - Below a width, the panes stack into one column.
-11. Upload: files chosen or dropped upload with per-file progress and cancel. A finished upload
-    joins the list, and a failed one shows its problem's title.
-12. Live: one NATS sequence from the shell's config drives the stage timeline and each list
-    entry's run status as events arrive, with no reload. The event log shows the stream through
-    sl-event-log and resumes from its stored cursor with no gap and no duplicate.
-13. Chat:
-    - Enter calls the composer's send() and Shift+Enter inserts a newline.
-    - A reply streams into the thread as it arrives, with the composer busy.
-    - Stop, or Escape while a reply streams (in the composer included), aborts the reply.
-    - `/fail` shows the failed item.
-14. Search: submitting the field opens the search view with the query marked in each match.
-    Opening a match opens its document.
-15. Artifact: the document's content shows as Markdown, JSON, or text by its content type, or as
-    unsupported, with loading and error states.
-16. Shortcuts: `/` focuses search, `?` opens the help dialog listing every binding, `t` opens the
-    theme menu, and Escape cancels a streaming reply or closes a dialog. None of them fires inside
-    a text field, the composer's included.
-17. Theme: the menu offers every built-in profile (the full entries). The stored choice holds
-    across reloads and tabs.
-18. Every view and state is finished in every built-in profile, light and dark: visible focus,
-    motion that honours reduced motion, and no layout shift as live data arrives.
-
-Root: external client (evidence 8)
-19. A second app in the app tier, built by Vite to static files and never embedded in the binary.
-    At start it fetches services.json relative to the page. The file lists two services, each with
-    a name, an API base, and a NATS WebSocket URL, stream, and token. A missing or malformed file
-    shows an error naming it.
-20. Each service gets its own panel:
-    - its own sdk client, with its base and its token provider;
-    - its own NATS sequence with its token;
-    - its document list, upload with progress (preflighted), search, and live stage events.
-    One service's events never appear in the other's panel.
-21. The client is hosted on an origin of its own. Each emulator admits that origin in its CORS and
-    its WebSocket allowed origins. A service that doesn't list the origin fails its own panel with
-    the network problem, and the other panel keeps working.
-
-Root: review
-22. `mise run screenshots` runs the tooling bin over the root's TypeScript description.
-    - Its start function builds nothing. It boots the emulator binary through the process helper,
-      with the app at `/app`.
-    - Its states walk the full sequence (upload, stages live, chat, search, artifact) and the help
-      dialog and theme menu, at a wide and a narrow viewport.
-    - A run captures light and dark at the default profile; `--all` gives every built-in profile.
-    - A `mise run` task hosts the external client with Vite's preview beside two emulators, for the
-      demo.
-
-Layers: amended at resume (architect)
-23. Foundation and sdk: each unit tier's brotli budget check is removed, with
-    `test/unit/budget.ts` and its cases, and no prose names a budget. No release: a test-only
-    change gets no CHANGELOG entry and no tag (checkpoint Q1, architect).
-24. Components v0.9.1: while sl-chat-thread's constrained frame is at its end, it keeps following
-    when its last item grows without a Lit update; growth above the last item is left native
-    (checkpoint Q2, architect) (a `<details>` opening, an image loading),
-    keeping the frame's end in view under every motion preference, as it does for new content. A
-    reader scrolled up keeps their place. A browser-tier case fails on v0.9.0 and passes on the
-    fix. CHANGELOG `[0.9.1]` lists it under Fixed.
-25. Root: components `#v0.9.1`, its currency silent; the
-    narrow streaming capture shows the whole opened function call. Evidence 7 in
-    `context/README.md` and the conventions note's "Measure size at the end" say no layer
-    enforces a budget.
-
-**Test seams.** In the tooling, the bin as a command line and the helper's exports, in its own
-browser tier: fixture start functions, and a fixture task-runner command whose server is a
-grandchild. In the foundation and the components, each one's existing browser tier: shadow-root
-fields and composer send(). In the root:
-- NewClient's Go unit tests.
-- The browser tier against the emulator binary: the pipeline app at both mounts; the external
-  client on its own origin over two emulators; the harness.
-- `mise run screenshots`.
-
-**Slices**
-1. tooling: eslint 10.14.0, once its release age clears (about 2026-10-31T14:12Z). Done when
-   currency exits 0 and the check passes.
-2. Tooling start function and process helper (1–4). Demo: the package's tiers, including a
-   `mise run` fixture whose server is a grandchild, every group process gone after stop, and the
-   bin over a start-function description.
-3. **Checkpoint: tooling v0.3.0.** A checkpoint brief. Accepting it authorizes the publish and
-   the merge, which waits for the PR's checks to register. The release workflow cuts the tag, and
-   the session confirms the tag and the GitHub release. A failed release is fixed forward on
-   `pipeline-fix`. No foundation slice starts before the tag exists.
-4. foundation: eslint 10.14.0 and tooling `#v0.3.0`. Done when currency exits 0 and the check
-   passes.
-5. Shortcuts in shadow-root fields (5). Demo: browser-tier cases for nested open shadow roots.
-6. **Checkpoint: foundation v0.2.1**, as slice 3's.
-7. components: eslint 10.14.0, tooling `#v0.3.0`, foundation devDependency `#v0.2.1` (peer stays
-   `^0.2.0`). Done when currency exits 0 and the check passes.
-8. Composer send() (6). Demo: browser-tier cases, and the composer's screenshots unchanged.
-9. **Checkpoint: components v0.4.0**, as slice 3's.
-10. root: eslint 10.14.0. Done when currency exits 0 and the check passes.
-11. root onto the tags (8, 9): foundation `#v0.2.1`, components `#v0.4.0`, tooling `#v0.3.0`,
-    lit 3.3.3, the ESLint table, and the harness on the helper. Demo: check.
-12. Render-blocking modules and the workspace frame (7, 10, 16, 17): the header, panes, routes,
-    help, and theme menu. Demo: check, a stored theme with no default first paint, and the
-    shortcuts in and out of fields.
-13. Documents pane (11, 12): upload, list, live status. Design-review stop on screenshots.
-14. Document view (12, 15): timeline live, artifact. Design-review stop.
-15. Chat (13). Design-review stop.
-15a. foundation: remove the budget (23). Demo: check. Merged with no tag.
-15b. sdk: remove the budget (23). Demo: check. Merged with no tag.
-15c. components: the following fix (24).
-    Demo: the browser-tier case red then green, the chat thread's screenshots unchanged.
-    **Checkpoint: components v0.9.1.**
-15d. root onto components v0.9.1 (25). Demo: check, currency silent, the narrow streaming capture.
-16. Search and events (12, 14). Design-review stop.
-17. External client (19–21) and its demo task. Demo: the browser tier over two emulators, and
-    the demo task.
-18. Walkthrough (18, 22). Demo: `mise run screenshots` light and dark, and `--all`. The
-    architect's acceptance of the walkthrough in the session brief is the design review.
-
-Slices 10–18 merge at SHIP with no tag.
-
-**Rejected.**
-- An app-side workaround for the shortcut defect.
-- The app copying the composer's send rules.
-- Plain custom elements for the app's views.
-- A render-blocking entry, or a default-theme first paint.
-- Routed full-page views.
-- Serving the external client with NewClient.
-- An external client that makes API calls only.
-- Absolute-URL pages on tooling v0.2.0.
-- A declared-command server form.
-- Stdout-line or TCP-port readiness.
-- A config.js module, or build-time values, for the external client's services.
-- noctis in the app.
-- Moving the other repositories' pins in this task.
-
-**Out of scope.**
-- The sdk's and noctis's trailing pins (each one's next currency pass).
-- The keys defect in the reference repositories.
-- Firefox and WebKit, real auth, persistence, real inference.
-- Emulator API changes.
-- Inline screenshots in a Neovim `:terminal`.
-- Consumption by tag and the answer (task `answer`).
-
-**Door.** One-way: tooling v0.3.0, foundation v0.2.1, and components v0.4.0, each cut at its
-checkpoint. Two-way: the root's work, which merges with no tag and can be reverted.
-
-**Release.** spike-html-apps-tooling `v0.3.0`, spike-html-apps-foundation `v0.2.1`,
-spike-html-apps-components `v0.4.0`, in that order; the root consumes all three. Amended at
-resume: spike-html-apps-components `v0.9.1`.
-
-**Sequencing note.** The tooling releases first, because every layer takes it as a
-devDependency. With that order, each layer's currency is silent at its own checkpoint, and the
-components take both new tags before they release. CI cuts each tag after its merge, so the
-session confirms each tag rather than pushing it.
-
-## Progress
-
-slices 18/18, each UI slice through its design review, the walkthrough accepted as the review of
-slices 13–18 · standards: per layer release, the root's done (526bd80) · spec: closing, no gaps ·
-editor: done
-
-- Released this task, each tag and GitHub release confirmed:
-  - spike-html-apps-tooling v0.3.0 (PR #4).
-  - spike-html-apps-foundation v0.2.1 (PR #5), v0.2.2 (PR #6), v0.2.3 (PR #7, 6979663), and
-    v0.3.0 (PR #8, 373e357). Its budget's removal merged with no tag (PR #9).
-  - spike-html-apps-components v0.4.0 (PR #7), v0.5.0 (PR #8), v0.6.0 (PR #9), v0.6.1 (PR #10,
-    cc7fca1), v0.7.0 (PR #11, adbec2f), v0.8.0 (PR #12, 125e3ce), v0.9.0 (PR #13, a45eccc),
-    v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a), and v0.10.2
-    (PR #17, 19d4f59).
-  - spike-html-apps-sdk v0.3.0 (PR #6, 34cd8b9) and v0.4.0 (PR #8, c36dc72). Its budget's
-    removal merged with no tag (PR #7).
-  - spike-html-apps-noctis v0.1.1 (PR #3).
-- The root, at 1bdb598 on `pipeline` and unpublished, is on tooling `#v0.3.0`, foundation
-  `#v0.3.0`, components `#v0.10.2`, sdk `#v0.4.0`, and Lit 3.3.3. It holds:
-  - the pipeline app at `apps/pipeline/`: the two-pane workspace, the side pane's uploads and
-    live document list, the document view, the chat, the search view, the event log, the
-    shortcuts, and the theme menu, its stored choice loaded by NewClient's render-blocking
-    modules before first paint;
-  - the external client at `apps/external/`, over two emulators, and `mise run demo`;
-  - the emulator's fail rule (8e82226), hold rule (3b833b7), and `/rich` reply (06c6ef4);
-  - `mise run screenshots` over the pipeline app's walkthrough, every `--page` standing alone
-    (5ac876c);
-  - the flaky tests fixed at their races: NATS (1018dfe), upload (45cfef2), document moves
-    (bdae1db), and stage timelines (dd85c7b, acae7fd);
-  - `context/conventions.md`, for the experiment's intake.
-
-## Handoff
-
-- Next move: validation, `mise run check` and the end-of-task bundle measurement (whole-bundle
-  gzip and brotli of the layers and the pipeline app's build, beside the figures measured before
-  components v0.8.0 and Material Web's published sizes). Then the session brief, which carries
-  the open decision on the live stage tests, and SHIP: the root merges with no tag, and every
-  tag in Release is already out.
-- No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
-  holds the `pipeline` branch.
-- Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
-  release age clears; a plain bump at the next change.
-- Held: globals 17.14.0 in the root and components, at 17.13.0 until pnpm's release age clears
-  (about 2026-11-02T11:01Z); then a plain bump in each, and in the foundation, sdk, noctis, and
-  tooling at their next change.
-- Open findings, each left for a later change and recorded under Decisions: tooling's CHANGELOG
-  lacks its empty `[Unreleased]`; the screenshot bin's terminal output doesn't survive tmux
-  scrollback; the sdk's `src/api.ts` and `src/router.ts` headers still name
-  `test/unit/declarations.test.js`; the foundation's shadow-root key tests have no `select` case;
-  several walkthrough states are captured wide only; a full screenshot run lists `notes.txt` and
-  `release-notes.md` twice.
-- Working notes: the architect's "accept" covers every checkpoint brief open at the time. `mise
-  run screenshots` captures the walkthrough (`--page <name>` for one page, `--all` for every
-  profile, `--output directory --dir <dir>` to keep the files). `mise run serve` shows the app at
-  127.0.0.1:8080/app: `EMULATOR_RUNS_FAIL='fail-at-*:extraction'` fails a run and
-  `EMULATOR_RUNS_HOLD='held-*:extraction'` holds one, and `/rich` and `/fail` in the chat take
-  their scripted replies.
 
 ## Decisions
 
@@ -1151,8 +873,31 @@ editor: done
   - the walkthrough, its findings fixed, is accepted as the design review of slices 13–18.
 - pipeline: the live stage tests, "advances live" in `test/browser/documents.test.ts` and the
   failed run's live case in `test/browser/failed.test.ts`, still depend on stage timing within a
-  margin: 64 of 64 runs passed under 22 CPU burners, every state caught.
-  DECISION PENDING (architect): [the session fills in whether this margin is accepted.]
+  margin: 64 of 64 runs passed under 22 CPU burners, every state caught. Decided (architect, in
+  the session brief): widen the margin through configuration and record the dependency; both
+  cases boot their emulators with stages 1.5 s apart (c499406), 64/64 under load again, each red
+  against a broken live update. A timing dependency with a wide margin is the real-API limit
+  accepted for watching a live advance; a broker-level seam stays ruled out.
+- pipeline: shipped. The session brief accepted; the root merged with no tag. Released this
+  task, each tag and GitHub release confirmed: tooling v0.3.0 (PR #4); foundation v0.2.1 (PR #5),
+  v0.2.2 (PR #6), v0.2.3 (PR #7), v0.3.0 (PR #8), its budget's removal with no tag (PR #9);
+  components v0.4.0 (PR #7) through v0.10.2 (PR #17); sdk v0.3.0 (PR #6), v0.4.0 (PR #8), its
+  budget's removal with no tag (PR #7); noctis v0.1.1 (PR #3). The root is on tooling `#v0.3.0`,
+  foundation `#v0.3.0`, components `#v0.10.2`, sdk `#v0.4.0`, Lit 3.3.3, and globals 17.14.0;
+  it holds both apps, the emulator's fail and hold rules and `/rich` reply, `mise run serve`,
+  `demo`, and `screenshots`, and `context/conventions.md` for the intake. Size at ship: all 12
+  components with Lit, marked, and their foundation modules, one minified file, 151.0 kB min,
+  39.2 kB gzip, 34.5 kB brotli (Material Web's all.js with Lit: 72.1 kB gzip); the pipeline app's
+  entry 70.1 kB gzip.
+- pipeline: held at ship: eslint-plugin-boundaries 7.4.1 in the root (published
+  2026-11-02T08:08Z) until pnpm's release age clears, a plain bump at the next change; globals
+  17.14.0, taken in the root, a plain bump in the components, foundation, sdk, noctis, and
+  tooling at their next change.
+- pipeline: open findings at ship, each for a later change: tooling's CHANGELOG lacks its empty
+  `[Unreleased]`; the screenshot bin's terminal images don't survive tmux scrollback; the sdk's
+  `src/api.ts` and `src/router.ts` headers name `test/unit/declarations.test.js`; the
+  foundation's shadow-root key tests have no `select` case; several walkthrough states are
+  captured wide only; a full screenshot run lists `notes.txt` and `release-notes.md` twice.
 - pipeline: spec review (closing): no gaps against behaviors 1–25 as amended. Behavior 16's
   composer clause gained a root case (1bdb598).
 - pipeline: tooling v0.3.0's CHANGELOG dropped its empty `[Unreleased]` header and link, which the
