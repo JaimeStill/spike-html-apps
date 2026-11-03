@@ -3,7 +3,9 @@
 // which node runs the same way, against node's types (@types/node) and the test tooling's
 // declarations, without emitting. allowJs: the unit tier imports eslint.config.js's table, whose
 // types tsc infers from the JavaScript; tsconfig.json checks that file itself. The suite runs on
-// node alone, so no DOM library: what it runs in the page is expression text.
+// node alone, so no DOM library: what it runs in the page is expression text. test/consumers/app/
+// is left out: it is the consumer mise run consumers copies out, installs, and builds there, a
+// browser app on noctis, which the root doesn't install.
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
@@ -14,5 +16,5 @@
     "checkJs": false
   },
   "include": ["test/**/*.ts", "scripts/**/*.ts"],
-  "exclude": []
+  "exclude": ["test/consumers/app"]
 }

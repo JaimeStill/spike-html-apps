@@ -3,8 +3,11 @@
 [settings]
 task.run_auto_install = false
 
-# The layers' Node toolchain, at their pins, and Go with golangci-lint at their latest.
+# The layers' Node toolchain, at their pins, and Go with golangci-lint at their latest; bun, at
+# its latest, is the third manager mise run consumers installs the layers under, beside npm, which
+# comes with node, and pnpm.
 [tools]
+bun = "1.4.4"
 go = "1.27.3"
 golangci-lint = "2.15.0"
 node = "26.13.0"
@@ -164,6 +167,16 @@ go build -o "$bin/server" ./cmd/server
 EMULATOR_BINARY="$bin/server" BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) \
   pnpm exec spike-html-apps-screenshots scripts/screenshots.config.ts "$@"
 '''
+dir = "{{config_root}}"
+
+# Never a dependency of check: the networked measure that the layers are consumed by their tags
+# from outside the spike. scripts/consumers.ts installs them into a new consumer in a scratch
+# directory of TMPDIR, under npm, pnpm, and bun, checks each install against the tags, builds it
+# with Vite, and loads the build in the pinned chrome-headless-shell, printing one dated table.
+[tasks.consumers]
+description = "Install foundation, components, sdk, and noctis by their git tags into a new consumer outside the repository, once each under npm, pnpm, and bun, then check each install against the tags, build it with Vite, and load the build in the pinned chrome-headless-shell, printing one dated table of yes and no rows (scripts/consumers.ts), exiting nonzero on any no; reads the network, writes nothing in the repository"
+depends = ["preflight browser"]
+run = "BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) node scripts/consumers.ts"
 dir = "{{config_root}}"
 
 [tasks."build:app"]
