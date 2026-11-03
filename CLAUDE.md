@@ -20,6 +20,10 @@ workflow; start from `context/README.md`.
   tasks are described in `context/README.md`, "The apps".
 - **Currency:** `mise run currency`: every mise tool, package.json pin, and go.mod go directive
   and direct requirement behind its latest; silent when all are current.
+- **Consumers:** `mise run consumers`, outside the check since it reads the network: the layers
+  installed by tag into a consumer outside the spike under npm, pnpm, and bun, then built and
+  loaded, printing a dated table of yes and no rows. "Consumption by tag" in `context/README.md`
+  records its run.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
   `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-apps`. Its goal record
   is `context/goals/experiment.html.spike-html-apps.md`.

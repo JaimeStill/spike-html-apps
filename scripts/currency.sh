@@ -59,25 +59,29 @@ latest_tag() {
 }
 
 # Each package.json pin against its latest: a github: tag against its repository's tags, a version
-# against the registry.
+# against the registry. The root's, and the consumer template's, test/consumers/app/, whose pins
+# mise run consumers installs.
 pins=$(node -p '
-  const { dependencies, devDependencies } = require("./package.json");
-  Object.entries({ ...dependencies, ...devDependencies })
-    .map(([name, pin]) => name + " " + pin)
+  ["package.json", "test/consumers/app/package.json"]
+    .flatMap((file) => {
+      const { dependencies, devDependencies } = require("./" + file);
+      return Object.entries({ ...dependencies, ...devDependencies })
+        .map(([name, pin]) => file + " " + name + " " + pin);
+    })
     .join("\n")
 ')
 typescript_eslint=$(node -p 'require("./package.json").devDependencies["typescript-eslint"]')
-while read -r package pin; do
+while read -r file package pin; do
   [[ -n "$package" ]] || continue
   if [[ $pin =~ ^github:([^#]+)#(v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
     latest_tag "${BASH_REMATCH[1]}"
     if [[ -n "$latest" ]] && behind "${BASH_REMATCH[2]}" "$latest"; then
-      report "package.json: $package ${BASH_REMATCH[2]} -> $latest"
+      report "$file: $package ${BASH_REMATCH[2]} -> $latest"
     fi
     continue
   fi
   if [[ ! $pin =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    report "package.json: $package $pin -> can't compare this form of pin"
+    report "$file: $package $pin -> can't compare this form of pin"
     continue
   fi
   latest=$(pnpm view "$package" version)
@@ -88,7 +92,7 @@ while read -r package pin; do
     latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
       sort -V | tail -n 1)
   fi
-  [[ $pin == "$latest" ]] || report "package.json: $package $pin -> $latest"
+  [[ $pin == "$latest" ]] || report "$file: $package $pin -> $latest"
 done <<<"$pins"
 
 # Each scan captures its output before reading it, so under set -e a scan that fails (a go list
