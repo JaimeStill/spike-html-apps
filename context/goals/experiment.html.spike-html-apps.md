@@ -251,7 +251,7 @@ don't add, move, or ignore it.
 
 ## Progress
 
-slices 2/4 committed · standards — · spec — · editor —
+slices 3/4 committed · standards — · spec — · editor —
 
 ## Decisions
 
