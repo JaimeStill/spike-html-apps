@@ -10,8 +10,11 @@ it holds, and the release or commit area that proves it.
   never work around it in a consumer. A workaround leaves the defect for every other consumer.
   *Proven:* foundation v0.2.1 and v0.2.3 (keys in shadow roots), v0.2.2 (`formatBytes`);
   components v0.4.0 (`sl-composer`'s `send()`), v0.7.0 (the artifact viewer's header, the stage
-  timeline's reason, the entry's status tone), v0.9.0 (the chat thread's following); sdk v0.3.0
-  (text bodies); tooling v0.3.0 (any server); the emulator's failure and rich-reply seams.
+  timeline's reason, the entry's status tone), v0.9.0 and v0.9.1 (the chat thread's following),
+  v0.10.0 (the search results' total and live region), v0.10.1 (`sl-pagination`'s page field),
+  v0.10.2 (`sl-event-log`'s lines); sdk v0.3.0 (text bodies), v0.4.0 (a typed error for a cursor
+  the stream never gave out); tooling v0.3.0 (any server); the emulator's failure, hold, and
+  rich-reply seams.
 - **Keep native behavior.** Use the browser's elements and behavior as they are, and never patch
   them. A patch drifts from the browser and from what users and assistive technology expect.
   *Proven:* foundation v0.3.0 (native `progress`'s track left as Chrome draws it); components
@@ -38,8 +41,15 @@ it holds, and the release or commit area that proves it.
 - **Fix a flaky test at its race.** Reproduce it under load, name the cause, and fix the race.
   Add no sleep or retry; change an assertion only to state what the system guarantees. A
   loosened test hides the race. *Proven:* the root's upload tests (chosen files kept until the
-  test process exits, 20/20 under load) and `TestNATS_TokenRequired` (asserts the refused
-  handshake, not one error string).
+  test process exits, 20/20 under load), `TestNATS_TokenRequired` (asserts the refused
+  handshake, not one error string), and the stage tests, which hold a run at a stage with the
+  emulator's hold rule rather than read it mid-way on time (acae7fd).
+- **Sample what the page paints, from its first frame.** A test that records a view's states
+  samples them on animation frames, from a script added ahead of the app's, and waits on its own
+  record before the next step. A wait through the DevTools protocol runs ahead of the frames, so
+  a record started late or read early misses states, and a DOM observer sees states no frame
+  paints. *Proven:* the root's document-moves case (bdae1db, 0 of 40 failing under load, from 9)
+  and stage timelines (dd85c7b, 0 of 64, from 2).
 - **Respect supply-chain cooldowns.** Hold a dependency inside pnpm's minimum release age and
   record the hold; never exclude it from the cooldown. The cooldown is the defense against a
   compromised release. *Proven:* eslint 10.14.0 and globals 17.14.0, held across the layers.
@@ -47,8 +57,7 @@ it holds, and the release or commit area that proves it.
   session, comparable to peer libraries' published sizes (Material Web's 72.1 kB gzip for
   `all.js` with Lit), rather than failing commits on a budget. A whole-bundle figure compares
   with what peers publish; a per-file budget doesn't. *Proven:* components v0.8.0 removed its budget
-  check, and the foundation and the sdk removed theirs (their PRs #9 and #7), with no release for a
-  test-only change.
+  check, and the foundation and the sdk removed theirs (their PRs #9 and #7).
 - **Keep palettes as published.** Make no contrast adjustments to a recorded palette. The
   palettes are proven usable as terminal themes, where every hue is text on the backgrounds.
   *Proven:* foundation v0.3.0.
@@ -99,18 +108,30 @@ it holds, and the release or commit area that proves it.
 
 - **Accept UI work by screenshot review, slice by slice.** The architect reviews each UI slice's
   screenshots (light and dark, wide and narrow, full page) before the next slice starts. Problems
-  surface while they are one slice deep. *Proven:* the pipeline app's slices 13 to 15, whose
-  reviews released foundation v0.2.2 and components v0.5.0 through v0.9.0.
+  surface while they are one slice deep. *Proven:* the pipeline app's slices 13 to 18 and its
+  walkthrough, whose reviews released foundation v0.2.2 and components v0.5.0 through v0.10.2.
 - **Release a layer at a checkpoint brief the architect accepts.** "Accept" covers every brief
   open at the time. A tag is never changed or re-cut, so each one waits for the architect. *Proven:*
   every layer release from tooling v0.3.0 on.
 - **Version in 0.x by the CHANGELOG.** A release with anything Added or any break is a minor;
-  otherwise it is a patch. Each CHANGELOG follows Keep a Changelog and keeps an empty
-  `[Unreleased]`. *Proven:* every layer's CHANGELOG.
+  otherwise it is a patch. Each CHANGELOG follows Keep a Changelog, keeps an empty
+  `[Unreleased]`, and dates each release in UTC. *Proven:* every layer's CHANGELOG; UTC dates
+  from components v0.9.1 (c70e715).
+- **Release only what changes the pack.** A change to tests or dev tooling alone gets no
+  CHANGELOG entry, no version bump, and no tag; it merges to main. The CHANGELOG records what
+  consumers install. *Proven:* the foundation's and the sdk's budget removals (their PRs #9 and
+  #7); the toolchain bumps and TypeScript tests across the layers in the tooling task.
 - **Emulator test seams are configuration or exact-text commands.** A failed run is
-  configuration (`EMULATOR_RUNS_FAIL`), and a chat message of exactly `/fail` or `/rich` takes a
-  scripted path; neither is client API. The client then tests against the real API alone.
-  *Proven:* the emulator's `run` and `conversation` domains.
+  configuration (`EMULATOR_RUNS_FAIL`), and so is a run held at a stage (`EMULATOR_RUNS_HOLD`),
+  which makes a partial state exact; a chat message of exactly `/fail` or `/rich` takes a
+  scripted path. None is client API, so the client tests against the real API alone. A test of a
+  live advance opens its page and waits until it is ready before it starts the run, so every
+  stage event arrives while the page watches. *Proven:* the emulator's `run` and `conversation`
+  domains (3b833b7); the root's deep-link, reload, and live stage tests (acae7fd).
+- **A screenshot page stands alone.** A page that shows documents ensures them by name through
+  the emulator's search and uploads only those missing. Then `--page` captures any page alone, a
+  full run uploads the documents it did before, and the empty states stay empty. *Proven:* the
+  root's walkthrough description (5ac876c).
 - **Read the reference repositories; never write them.** A defect found in one becomes a finding
   for its own goal. The references are other goals' evidence. *Proven:* the keys defect, ported
   from spike-html-packages-foundation's `src/keys.ts`.

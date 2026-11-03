@@ -21,6 +21,8 @@ when they compose the capstone's UI primitives, live over a backend?
 
 ## The evidence
 
+Items 1 to 8 and 10 are built; the `answer` task proves item 9.
+
 1. The SDK runtime: the router (URLPattern and the Navigation API; base, deep link, reload, back
    and forward), the API client (a Result that fails as an RFC 9457 problem, the title filled
    when go-web-sdk omits it; upload with progress; streamed responses), the anonymous token
@@ -38,13 +40,13 @@ when they compose the capstone's UI primitives, live over a backend?
    import, keyboard-operable, layout-only sheets, no key bound. New: chat thread, composer,
    upload dropzone with progress, stage timeline, event log, search results, artifact viewer
    (text, JSON, Markdown), and document list; carried over: status badge, entry, and pagination.
-6. A pipeline app composing them live over the emulator, embedded in its binary.
+6. A pipeline app, `apps/pipeline/`, composing them live over the emulator, embedded in its
+   binary.
 7. The layers clean at scale: zero direction violations, and no layer enforcing a budget. The
-   layers are measured as a whole bundle, gzip and brotli, against peer libraries' published
-   sizes at the experiment's final review before intake, which sets the resulting budget
-   (architect).
-8. An external client hosted apart, calling two emulator instances cross-origin under CORS the
-   spike owns, with a base and token provider for each.
+   experiment's final review before intake measures the layers as a whole bundle, gzip and
+   brotli, against peer libraries' published sizes, and sets the resulting budget (architect).
+8. An external client, `apps/external/`, hosted apart, calling two emulator instances
+   cross-origin under CORS the spike owns, with a base and token provider for each.
 9. Consumption by tag from outside the spike, and the gaps: Firefox and WebKit, real auth, real
    inference, and persistence.
 10. Quality at every layer, judged as a finished product: the foundation renders
@@ -86,19 +88,52 @@ four domains is a package under `domain/`, served under `/api`:
 It embeds nats-server with JetStream, on a temporary store directory because go-messaging's nats
 provider creates its stream with file storage. The core client listener binds 127.0.0.1, where
 the go-messaging broker that owns the `EMULATOR` stream connects. Browsers reach the WebSocket
-listener, which admits only the CORS allowed origins. Both listeners require one static token.
-The `sdk` package's `NewClient` serves the embedded pipeline app at `/app`, or at `/` as the
-router's not-found handler, and its shell hands the browser the API base, the WebSocket URL, the
-stream, and the token. No Postgres, blob storage, outbox, or containers: the spike proves the
-client, not the capstone's backend.
+listener. Both listeners require one static token (`nats.token`). `cors.allowed_origins` lists
+the browser origins allowed to call the emulator, one list for the CORS middleware and the
+WebSocket listener. `runs.instance` names the emulator in its stage events' source,
+`/emulator/<instance>`, so the events of two emulators are told apart; unset, it is a fresh UUID
+per process. The `sdk` package's `NewClient` serves the embedded pipeline app at `/app`, or at
+`/` as the router's not-found handler. Its shell loads the app's render-blocking modules ahead of
+the entry and hands the browser the API base, the WebSocket URL, the stream, and the token. No
+Postgres, blob storage, outbox, or containers: the spike proves the client, not the capstone's
+backend.
+
+## The apps
+
+The root's apps live under `apps/`. Each imports only its own files and the three layer packages,
+plus Lit, as the app tier's ESLint table enforces.
+
+- `apps/pipeline/`, the pipeline app: a two-pane workspace. The header holds the title, the
+  search field, the help button, the theme menu, and below 48rem the documents button. The side
+  pane holds the upload dropzone and the document list, in `sl-drawer`, docked at 48rem and wider
+  and a modal drawer below it. The main pane shows one routed view: the event log (`/`), the
+  chat (`/chat`), the search results (`/search?q=`), or a document's stage timeline and content
+  (`/documents/:document`). One NATS read drives the stage timeline, each list entry's run
+  status, and the event log. The foundation's full profile registration and preferences load as
+  render-blocking modules, so a stored theme is on the root element before first paint.
+  `pipeline.go` hands the build to `NewClient`.
+- `apps/external/`, the external client: static files Vite builds and no binary embeds. It
+  fetches `services.json` relative to its page and gives each listed service a panel with its own
+  sdk client, token, NATS read, document list, upload, search, and live stage events. It is
+  evidence only, for evidence 8; no implementation is outstanding beyond it.
+
+The mise tasks beside the check:
+
+- `mise run serve` builds the pipeline app and runs the emulator on localhost:8080, the app at
+  `/app`.
+- `mise run demo` builds both apps and hosts the external client with Vite's preview on
+  127.0.0.1:4180, beside two emulators on 8181 and 8182 that admit its origin.
+- `mise run screenshots` captures the pipeline app's walkthrough over an emulator it boots, light
+  and dark at the default profile. `--page <name>` captures one page, and each page stands alone;
+  `--all` captures every built-in profile. The external client's description,
+  `scripts/screenshots-external.config.ts`, runs by hand, as its header says.
+- `mise run build:app` and `mise run build:external` build each app with Vite.
 
 ## Capabilities
 
 - **Layers:** the foundation, components, and SDK repositories, each with its own check and
   released by tag.
-- **Size:** no layer enforces a budget. The layers are measured as a whole bundle, gzip and
-  brotli, at the experiment's final review before intake, which sets the resulting budget
-  (`conventions.md`).
+- **Size:** no layer enforces a budget; evidence 7 says how the layers are measured.
 - **Foundation:** the Intl formatters; spike-html-design's profiles, each a unit of a sheet and a
   registration module that a page or an outside package adds; the stored preference and the theme
   menu; and the conformance check for color, space, and type profiles.
@@ -111,7 +146,7 @@ client, not the capstone's backend.
 - **Emulator:** the in-memory pipeline service with embedded NATS, booted as a binary by the
   integration and browser tiers.
 - **Serving half:** `NewClient` in the root's `sdk` package, serving one build at a prefix and at
-  the root.
+  the root, with its render-blocking modules ahead of the entry.
 - **Primitives:** the components layer's twelve Lit shadow components (the capstone's eight new
   primitives, the three carried over, and `sl-drawer`, the responsive drawer), a Markdown renderer
   on marked's lexer, and `formatJson`. Each component has a specimen page of every state, which the
@@ -120,8 +155,10 @@ client, not the capstone's backend.
   screenshot command that every repository's browser tier and screenshot task run on, taken as a
   devDependency by tag. The tests are TypeScript in every repository, run under Node's type
   stripping.
-- **Pipeline app:** the primitives composed live over the emulator, with its shortcuts.
-- **External client:** an app hosted apart over two services.
+- **Pipeline app:** the primitives composed live over the emulator, with its shortcuts, theme
+  menu, and walkthrough (`mise run screenshots`).
+- **External client:** an app hosted apart over two services (`mise run demo`).
+- **Test seams:** the emulator's fail and hold rules, and the chat's `/fail` and `/rich`.
 - **Conventions:** `conventions.md`, the development principles, design conventions, and process
   conventions the spike's repositories follow, for experiment.html's intake to adopt.
 
@@ -142,20 +179,23 @@ The tasks, in the order they run; each cites the evidence it proves.
    (evidence 1, 3).
 4. `emulator`: the service, its domains, embedded NATS, the chat stream, `NewClient`, and CORS
    (evidence 3, 4).
-5. `primitives`: the eight new components, the Markdown renderer, and each layer's brotli budget,
-   released as components v0.3.0 (evidence 5, 7, 10).
+5. `primitives`: the eight new components and the Markdown renderer, released as components
+   v0.3.0 (evidence 5, 7, 10).
 6. `tooling`: spike-html-apps-tooling, released as v0.1.0 and v0.2.0, which the other five
    repositories take in place of their copies of the browser-test and screenshot code, and every
    repository's tests in TypeScript. It proves no evidence; the pipeline task's browser tier and
    screenshot review run on it.
 7. `pipeline`: the pipeline app, its shortcuts, the external client, and the full-sequence
-   walkthrough (evidence 6, 8, 10).
+   walkthrough, with the layer fixes they needed, released as tooling v0.3.0, foundation v0.2.1
+   to v0.3.0, components v0.4.0 to v0.10.2, sdk v0.3.0 and v0.4.0, and noctis v0.1.1 (evidence
+   6, 8, 10).
 8. `answer`: consumption by tag, the gaps, and the answer (evidence 9).
 
 ## Shortcuts
 
-Single keys only, for critical operations, ignored inside text fields: `/` focuses search, `?`
-opens the help dialog, `t` opens the theme menu, and Escape cancels a streaming reply or closes a
+Single keys only, for critical operations, ignored inside text fields, shadow-root fields
+included: `/` focuses search, `?` opens the help dialog, `t` opens the theme menu, `d` opens the
+documents drawer below its docking width, and Escape cancels a streaming reply or closes a
 dialog. The composer sends on Enter and inserts a newline on Shift+Enter. The app owns the key
 table; no component binds a key.
 

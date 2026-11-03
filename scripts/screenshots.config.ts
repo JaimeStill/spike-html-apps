@@ -35,16 +35,16 @@
 // the capture takes to reach it, and its replies a word every 150 ms, so a capture finds one
 // mid-stream.
 //
-// The states run in order, each in a fresh tab, every profile and scheme of one state before the
-// next, against the one emulator: the empty log and the empty side pane first, before any upload,
-// and each later state adding the documents it shows, so a later capture lists the documents the
-// earlier ones uploaded too, and --all's twelve passes of a state upload twelve times over; the
-// states that show the newest documents turn the list to its last page to find them. Each page
-// stands alone, as --page runs it: a state that shows documents an earlier page uploads in a full
-// run ensures them, found by name through the emulator's search and uploaded only when absent, so
-// the search's states find the documents the side pane's uploaded, or upload the two they show,
-// and a full run's later pages upload none of what its earlier ones did. The failed run and the document view's complete documents
-// are uploaded once a run, by the first state that shows them, whichever page it is on.
+// The states run in order against the one emulator, each in a fresh tab, every profile and scheme
+// of one state before the next. The empty log and the empty side pane come first, before any
+// upload. Each later state adds the documents it shows, so a later capture also lists the
+// documents earlier states uploaded, and --all's twelve passes of a state upload twelve times
+// over; the states that show the newest documents turn the list to its last page to find them.
+// Each page stands alone, as --page runs it: a state that shows documents an earlier page uploads
+// in a full run ensures them, finding each by name through the emulator's search and uploading it
+// only when absent. So the search's states alone upload the two documents they show, and in a
+// full run they find the side pane's and upload nothing. The failed run and the document view's
+// complete documents are uploaded once a run, by the first state that shows them, on any page.
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -237,45 +237,61 @@ session confirms each tag rather than pushing it.
 
 ## Progress
 
-slices 15/18, each through its design review (13, 14, 15 accepted). Released this task, each tag
-  and GitHub release confirmed: tooling v0.3.0; foundation v0.2.1, v0.2.2, v0.2.3, v0.3.0;
-  components v0.4.0, v0.5.0, v0.6.0, v0.6.1, v0.7.0, v0.8.0, v0.9.0 (PR #13, a45eccc), v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a), v0.10.2 (PR #17, 19d4f59); sdk v0.3.0
-  (PR #6), v0.4.0 (PR #8, c36dc72); noctis v0.1.1. Root at 091740c on `pipeline` (unpublished): slices 11–15 with their
-  review rounds, the emulator's failure trigger (8e82226) and `/rich` reply (06c6ef4), the flaky
-  NATS (1018dfe) and upload (45cfef2) tests fixed at their races, the conventions note (2cb7f80) ·
-  standards: per layer release, root not yet · spec — · editor —
+slices 18/18, each UI slice through its design review, the walkthrough accepted as the review of
+slices 13–18 · standards: per layer release, the root's done (526bd80) · spec: closing, no gaps ·
+editor: done
 
-- Slice 2 decided without the architect, for the session brief: `start(command, args, options)`
-  positional like spawn, `env` merged over process.env; `stop()` resolves to the exit code (128 +
-  signal), memoized, once no group member is alive; the group is also killed when SIGINT, SIGTERM,
-  or SIGHUP ends a caller with no listener of its own; the bin handles SIGINT/SIGTERM for every
-  output, exiting 130/143 after stopping the server (CHANGELOG Changed); a start's origin resolves
-  as a directory, so a base path like `/app` holds; a rejecting start is wrapped "the
-  description's server didn't start: <message>"; readiness polls with node:http(s) get, agent
-  false, 1 s per request, every 100 ms; a command exiting before ready also stops its group; the
-  group code moved from browser.ts to `src/group.ts`; the exports name the four public modules in
-  place of `./*.js`, so group.js isn't importable (standards review, escalation 1, settled by the
-  brief's export list); stop() has no bound past SIGKILL, left as is (review, escalation 2).
+- Released this task, each tag and GitHub release confirmed:
+  - spike-html-apps-tooling v0.3.0 (PR #4).
+  - spike-html-apps-foundation v0.2.1 (PR #5), v0.2.2 (PR #6), v0.2.3 (PR #7, 6979663), and
+    v0.3.0 (PR #8, 373e357). Its budget's removal merged with no tag (PR #9).
+  - spike-html-apps-components v0.4.0 (PR #7), v0.5.0 (PR #8), v0.6.0 (PR #9), v0.6.1 (PR #10,
+    cc7fca1), v0.7.0 (PR #11, adbec2f), v0.8.0 (PR #12, 125e3ce), v0.9.0 (PR #13, a45eccc),
+    v0.9.1 (PR #14, 2d672f0), v0.10.0 (PR #15, c76b6a1), v0.10.1 (PR #16, 3b8d01a), and v0.10.2
+    (PR #17, 19d4f59).
+  - spike-html-apps-sdk v0.3.0 (PR #6, 34cd8b9) and v0.4.0 (PR #8, c36dc72). Its budget's
+    removal merged with no tag (PR #7).
+  - spike-html-apps-noctis v0.1.1 (PR #3).
+- The root, at 1bdb598 on `pipeline` and unpublished, is on tooling `#v0.3.0`, foundation
+  `#v0.3.0`, components `#v0.10.2`, sdk `#v0.4.0`, and Lit 3.3.3. It holds:
+  - the pipeline app at `apps/pipeline/`: the two-pane workspace, the side pane's uploads and
+    live document list, the document view, the chat, the search view, the event log, the
+    shortcuts, and the theme menu, its stored choice loaded by NewClient's render-blocking
+    modules before first paint;
+  - the external client at `apps/external/`, over two emulators, and `mise run demo`;
+  - the emulator's fail rule (8e82226), hold rule (3b833b7), and `/rich` reply (06c6ef4);
+  - `mise run screenshots` over the pipeline app's walkthrough, every `--page` standing alone
+    (5ac876c);
+  - the flaky tests fixed at their races: NATS (1018dfe), upload (45cfef2), document moves
+    (bdae1db), and stage timelines (dd85c7b, acae7fd);
+  - `context/conventions.md`, for the experiment's intake.
 
 ## Handoff
 
-- Next move: the stage tests onto the hold rule (Q21 A), then the spec review, the editor,
-  validation, and the session brief. The hold rule is committed (3b833b7); the walkthrough is
-  accepted; the root is on components v0.10.2 (d19c12f).
+- Next move: validation, `mise run check` and the end-of-task bundle measurement (whole-bundle
+  gzip and brotli of the layers and the pipeline app's build, beside the figures measured before
+  components v0.8.0 and Material Web's published sizes). Then the session brief, which carries
+  the open decision on the live stage tests, and SHIP: the root merges with no tag, and every
+  tag in Release is already out.
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
   release age clears; a plain bump at the next change.
-- Held: globals 17.13.0 in the root and components until pnpm's release age clears (about
-  2026-11-02T11:01Z); then a plain bump in each, and in the foundation, sdk, noctis, and tooling at
-  their next change.
-- Working notes: the architect's "accept" covers every checkpoint brief open at the time; design
-  review stops show captures (light and dark, docked 1280×1200 and 375px full page) under
-  /tmp/…/scratchpad/review-<slice>/, which won't survive the session — re-capture with
-  `BROWSER_EXECUTABLE=$(mise which chrome-headless-shell) pnpm exec spike-html-apps-screenshots
-  scripts/screenshots.config.ts --output directory --dir <dir>`; `mise run serve` shows the app at
-  127.0.0.1:8080/app (`EMULATOR_RUNS_FAIL='fail-at-*:extraction'` for a failed run; `/rich` and
-  `/fail` in the chat).
+- Held: globals 17.14.0 in the root and components, at 17.13.0 until pnpm's release age clears
+  (about 2026-11-02T11:01Z); then a plain bump in each, and in the foundation, sdk, noctis, and
+  tooling at their next change.
+- Open findings, each left for a later change and recorded under Decisions: tooling's CHANGELOG
+  lacks its empty `[Unreleased]`; the screenshot bin's terminal output doesn't survive tmux
+  scrollback; the sdk's `src/api.ts` and `src/router.ts` headers still name
+  `test/unit/declarations.test.js`; the foundation's shadow-root key tests have no `select` case;
+  several walkthrough states are captured wide only; a full screenshot run lists `notes.txt` and
+  `release-notes.md` twice.
+- Working notes: the architect's "accept" covers every checkpoint brief open at the time. `mise
+  run screenshots` captures the walkthrough (`--page <name>` for one page, `--all` for every
+  profile, `--output directory --dir <dir>` to keep the files). `mise run serve` shows the app at
+  127.0.0.1:8080/app: `EMULATOR_RUNS_FAIL='fail-at-*:extraction'` fails a run and
+  `EMULATOR_RUNS_HOLD='held-*:extraction'` holds one, and `/rich` and `/fail` in the chat take
+  their scripted replies.
 
 ## Decisions
 
@@ -376,7 +392,7 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   components by the foundation task.
 - layers: the components keep the copied `8ch` and `4ch` widths. They size content rather than
   space it, so the token rule doesn't apply. Superseded for the entry's 8ch kind column by
-  foundation, escalation 4; the 4ch stands.
+  foundation, escalation 4, and for the 4ch page field by pipeline, Q14.
 - layers: the root's package currency scan doesn't read `github:` tag dependencies. The first task
   that makes the root depend on a layer by tag teaches it to, as spike-html-conventions'
   `scripts/currency.sh` does. Done by emulator.
@@ -754,7 +770,7 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - primitives: each layer's brotli budget lives in its own check, so the foundation and sdk join
   the task's repos. It sums each runtime `.js` and `.css` file's node:zlib brotli size,
   dependencies not counted, against the baseline plus 10%, rounded up to whole KB. Rejected:
-  size-limit.
+  size-limit. Superseded by pipeline: no layer enforces a budget.
 - primitives: a KB is 1,000 B, and each budget is a constant in the layer's release test, raised
   in the commit that needs more. Rejected: a package.json field, since package.json ships in the
   pack and the budget belongs to the check (implementer, slice 14).
@@ -904,234 +920,256 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - tooling: shipped. spike-html-apps-tooling v0.1.0 and v0.2.0 released; the root, foundation,
   components, sdk, and noctis on `#v0.2.0` with no copy of the driver, server, or screenshot
   scripts; all six repositories' tests in TypeScript; the descriptions `.ts` with profiles readers.
-- pipeline: defects are fixed at their source once found, never worked around in a consumer
-  (architect, round 1); a retro standards candidate, since no architecture principle covers it.
-- pipeline: foundation v0.2.1 fixes single-key bindings firing in shadow-root text fields. Rejected:
-  an app-side workaround (round 1).
-- pipeline: the app's views use Lit 3.3.3, admitted to the app tier's ESLint table (round 1).
-- pipeline: NewClient's shell loads named manifest modules with blocking="render" ahead of the
-  entry. Rejected: a render-blocking entry, and a default-theme first paint (round 1).
-- pipeline: the app registers every built-in profile; no noctis (round 1).
-- pipeline: the app is a two-pane workspace, with the document list beside a routed main pane (round
-  1).
-- pipeline: the external client is static files on a host of its own. Rejected: NewClient serving it
-  (round 1).
-- pipeline: the external client makes API calls and reads each service's live stage events over its
-  own NATS WebSocket, cross-origin (round 1).
-- pipeline: tooling v0.3.0 supports servers other than its static one. Rejected: absolute-URL pages
-  on v0.2.0 (round 1).
-- pipeline: a description's server may be a consumer-written start function resolving to an origin
-  and a stop. Rejected: a declared-command form (rounds 2, 3).
-- pipeline: tooling exports a process helper and freePort, shown working with any server or task
-  runner; the root's harness moves onto them and keeps only its relaunch. Reverses the tooling
-  task's decision (rounds 2, 3).
-- pipeline: the sdk's and noctis's pins outside this task move in each one's next currency pass; the
-  components move within this task, since they release here (round 2).
-- pipeline: the external client reads services.json beside its build. Rejected: config.js, and
-  build-time values (rounds 2, 3).
-- pipeline: sl-composer gains a public send() keeping its rules, released as components v0.4.0
-  (round 2).
-- pipeline: the root's capture description is TypeScript, as the other repositories' are (round 3).
-- pipeline: the keys defect came from spike-html-packages-foundation (5dd8a58) `src/keys.ts`, ported
-  from spike-html-design's keys module; the spike never writes reference repositories, so it is a
-  finding for their goals.
-- pipeline: held eslint at 10.13.0 in the root, tooling, foundation, and components: 10.14.0
-  (published 2026-10-30T14:12Z) hasn't cleared pnpm's minimum release age, and the architect chose
-  to proceed rather than wait; slices 1, 4, 7, and 10 drop to each repository's next currency
-  pass, so currency reports that line at each checkpoint (architect, BUILD).
-- pipeline: the foundation's IME guard no longer reads the deprecated `event.keyCode`; it is what
-  keys needs with keyCode gone: `key === "Process"` for Chrome and Firefox, and a compositionend
-  mark taken by the first keydown within 100 ms for WebKit's post-composition Enter or Escape, as
-  CodeMirror 6 does. Rejected: keeping keyCode 229 with a comment, and `"Process"` alone (architect,
-  foundation checkpoint).
-- pipeline: tooling v0.3.0's CHANGELOG dropped its empty `[Unreleased]` header and link, which the
-  foundation keeps; restore it at tooling's next change.
-- pipeline: the layers' CSS module scripts under Vite 8: adopt vite-plugin-standard-css-modules if
-  it builds and passes on Vite 8; otherwise the foundation exports a build-time sheets() plugin in
-  v0.2.2. Rejected: each Vite consumer carrying its own (architect, slice 12 escalation).
-- pipeline: slice 13 design review (architect): the side pane widens so most entries take two
-  lines; the app's light-DOM content takes the foundation's font tokens; formatBytes says "13
-  bytes", fixed in the foundation as v0.2.2; sl-entry drops its "file"/"directory" kind word, since
-  the meta line already shows it, released as components v0.4.1; below the stacking width the
-  documents pane becomes an overlay drawer the user opens and closes, so the main pane keeps the
-  view.
-- pipeline: the dropzone's progress line keeps formatBytes' mixed forms, "0 bytes of 18.4 kB"
-  (architect, foundation v0.2.2 checkpoint).
-- pipeline: the root declares rolldown at the version Vite resolves (1.2.15), since
-  vite-plugin-standard-css-modules imports rolldown/utils without declaring it and resolves it only
-  through pnpm's hidden hoist; no upstream issue, the use case being niche (architect).
-- pipeline: the narrow-screen drawer is a component, sl-drawer, released with the entry changes as
-  components v0.5.0: one native dialog, docked inline above its `dock` width and a modal drawer at
-  or below it, the content never re-parented; the app keeps its button, badge, `d` shortcut,
-  close-on-navigate, and open-on-drag (architect).
-- pipeline: the Release line grows by foundation v0.2.2 (formatBytes) and components v0.5.0
-  (sl-drawer; sl-entry's meta line and accessible name), each from slice 13's design review and
-  accepted at its own checkpoint (architect).
-- pipeline: sl-drawer is an `<aside>` landmark docked and a full-viewport modal `<dialog>` with its
-  own heading and Close button at or below `dock`, closing by Close, Escape, or close(); no
-  hand-detected scrim click; markup `open` honoured at or below dock (architect, drawer reviews).
-- pipeline: layout review (architect): the foundation's keys sees a modal open inside a shadow
-  root, released as foundation v0.2.3, so page shortcuts are quiet while the drawer is open and `d`
-  only opens it; sl-drawer docks at and above `dock` (`(width < dock)` is the drawer), released as
-  components v0.5.1, dropping the app's `47.99rem`; sl-drawer owns its heading in both modes, the
-  same header markup with the Close button only in drawer mode, so the app drops its own
-  "Documents" heading; the search field's placeholder is "Search" on narrow widths; an accent token
-  joins foundation v0.2.3 only if a review of the components shows it adds value.
-- pipeline: no contrast adjustments to the palettes: they stay as published, proven usable as
-  terminal themes where every hue is text on the backgrounds. Foundation v0.3.0 establishes an
-  accent token beside `--interaction-color`; v0.2.3 releases the keys fixes and the accent
-  documentation first (architect).
-- pipeline: the accent is a hook, `--accent-color`, the same mechanism as `--interaction-color`:
-  read as `var(--accent-color, var(--magenta))`, declared by no profile, set by a page on any
-  subtree. It marks what is current, active, or in progress; `--interaction-color` marks what you
-  can act on. Magenta, not purple (visited links), cyan (beside blue, near green; everforest's is
-  green), or a status hue. Moving to it: the active stage, the streaming dot, the selected entry's
-  frame, the app's in-flight badge and current nav link, and native `progress`; checkbox, radio,
-  range, links, focus, caret, selection, hover, and the drag-over zone stay on the primary.
-  Releases: foundation v0.3.0, components v0.6.0 (peer ^0.3.0, carrying the drawer's dock and
-  docked-heading changes in place of v0.5.1), noctis v0.1.1 (peer ^0.3.0) in this task, the root
-  on all of them (architect).
-- pipeline: eslint 10.14.0 cleared pnpm's release age (2026-10-31T14:12Z), so the hold ends: the
-  root, components, foundation, and noctis take it in this task; tooling, already released, takes
-  it in its next currency pass.
-- pipeline: integration's TestNATS_TokenRequired is flaky: the server can close the WebSocket before
-  the tokenless client's write lands, giving "broken pipe" in place of an authorization violation;
-  fixed in the root's next slice.
-- pipeline: foundation v0.2.3 (keys under a shadow-root modal; PR #7, 6979663) and v0.3.0 (the
-  `--accent-color` hook, magenta; PR #8, 373e357) released. The accent stays magenta: in
-  catppuccin and everforest light Chrome draws native progress's unfilled track dark for a light
-  accent, as everforest's blue range already does; that is native behavior and isn't patched, and
-  cyan would only even out catppuccin (architect).
-- pipeline: the Release line grows by foundation v0.2.3 and v0.3.0, components v0.6.0, and noctis
-  v0.1.1, each accepted at its own checkpoint (architect).
-- pipeline: root review (architect): sl-drawer's heading drops from page scale to a section size,
-  and sl-upload-dropzone gives an upload row's Cancel button room for its focus ring, whose outline
-  reached into the progress line below; both released as components v0.6.1. The docked heading
-  scrolls with the pane (its stable gutter kept), and the list needs no heading of its own.
-- pipeline: components v0.6.1 released (PR #10, cc7fca1): the drawer's heading at --text-l, its
-  scrolling body's scroll padding, the dropzone's Cancel focus room (architect).
-- pipeline: slice 14 review (architect): the sdk's client reads a body as text on request, so a
-  content view gets the bytes as stored (the sdk joins the task and releases); sl-artifact-viewer's
-  visible header becomes optional, its name kept as the region's accessible name (components
-  v0.6.2); the emulator gains a failure trigger for a run, a test seam rather than a client API,
-  an exception to the brief's "no emulator API changes".
-- pipeline: sdk v0.3.0 (a call reads a body as text, `{ as: "text" }`; PR #6, 34cd8b9) and
-  components v0.7.0 (the artifact viewer's `no-header` and every state named; a failed stage's
-  `failedAt` and `reason`; the entry's `status-tone`; PR #11, adbec2f) released (architect). The
-  Release line grows by both. "accept" covers every checkpoint brief open at the time (architect).
+- pipeline: a defect is fixed at its source once found, never worked around in a consumer
+  (architect, round 1). No architecture principle covers it, so it is a retro standards
+  candidate, recorded in `context/conventions.md`, "Fix a defect at its source".
+- pipeline: the brief's rounds (architect):
+  - foundation v0.2.1 fixes single-key bindings firing in shadow-root text fields. Rejected: an
+    app-side workaround (round 1).
+  - the app's views use Lit 3.3.3, admitted to the app tier's ESLint table (round 1).
+  - NewClient's shell loads named manifest modules with blocking="render" ahead of the entry.
+    Rejected: a render-blocking entry, and a default-theme first paint (round 1).
+  - the app registers every built-in profile, and no noctis (round 1).
+  - the app is a two-pane workspace, the document list beside a routed main pane (round 1).
+  - the external client is static files on a host of its own, making API calls and reading each
+    service's live stage events over its own NATS WebSocket, cross-origin. Rejected: NewClient
+    serving it (round 1).
+  - tooling v0.3.0 supports servers other than its static one. Rejected: absolute-URL pages on
+    v0.2.0 (round 1).
+  - a description's server may be a consumer-written start function resolving to an origin and a
+    stop. Rejected: a declared-command form (rounds 2, 3).
+  - the tooling exports a process helper and freePort, shown working with any server or task
+    runner, and the root's harness moves onto them, keeping only its relaunch. This reverses the
+    tooling task's decision (rounds 2, 3).
+  - the sdk's and noctis's pins move in each one's next currency pass; the components move within
+    this task, since they release here (round 2). Both later joined the task for releases of
+    their own: noctis for the accent's peer range, the sdk for text bodies.
+  - the external client reads services.json beside its build. Rejected: config.js, and build-time
+    values (rounds 2, 3).
+  - sl-composer gains a public send() keeping its rules, released as components v0.4.0 (round 2).
+  - the root's capture description is TypeScript, as the other repositories' are (round 3).
+- pipeline: the keys defect came from spike-html-packages-foundation (5dd8a58) `src/keys.ts`,
+  ported from spike-html-design's keys module. The spike never writes reference repositories, so
+  it is a finding for their goals.
+- pipeline: slice 2 decided without the architect, for the session brief:
+  - `start(command, args, options)` is positional, like spawn, with `env` merged over
+    process.env.
+  - `stop()` resolves to the exit code (128 + signal), memoized, once no group member is alive.
+    It has no bound past SIGKILL, left as is (review, escalation 2).
+  - the group is also killed when SIGINT, SIGTERM, or SIGHUP ends a caller with no listener of
+    its own. The bin handles SIGINT and SIGTERM for every output, exiting 130 or 143 after
+    stopping the server (CHANGELOG Changed).
+  - a start's origin resolves as a directory, so a base path like `/app` holds. A rejecting start
+    is wrapped "the description's server didn't start: <message>".
+  - readiness polls with node:http(s) get, agent false, 1 s per request, every 100 ms. A command
+    exiting before ready also stops its group.
+  - the group code moved from browser.ts to `src/group.ts`. The exports name the four public
+    modules in place of `./*.js`, so group.js isn't importable (standards review, escalation 1,
+    settled by the brief's export list).
+- pipeline: eslint 10.14.0 (published 2026-10-30T14:12Z) was held at 10.13.0 in the root,
+  tooling, foundation, and components until it cleared pnpm's minimum release age
+  (2026-10-31T14:12Z). The architect chose to proceed rather than wait, so slices 1, 4, 7, and 10
+  were deferred to each repository's next currency pass, and currency reported the line at each
+  checkpoint (architect, BUILD). Once it cleared, the root, components, foundation, and noctis
+  took it in this task; tooling, already released, takes it in its next currency pass.
+- pipeline: globals 17.14.0 (published 2026-11-01T11:01Z) is held at 17.13.0 in the root and the
+  components until pnpm's minimum release age clears, about 2026-11-02T11:01Z, with no cooldown
+  exclusion (architect).
+- pipeline: eslint-plugin-boundaries 7.4.1 (published 2026-11-02T08:08Z) is held at 7.4.0 in the
+  root until pnpm's minimum release age clears; a plain bump at the next change.
+- pipeline: the foundation's IME guard no longer reads the deprecated `event.keyCode`. It checks
+  `key === "Process"` for Chrome and Firefox, and a compositionend mark taken by the first keydown
+  within 100 ms for WebKit's post-composition Enter or Escape, as CodeMirror 6 does. Rejected:
+  keeping keyCode 229 with a comment, and `"Process"` alone (architect, foundation checkpoint).
+- pipeline: the layers' CSS module scripts under Vite 8 use vite-plugin-standard-css-modules,
+  which builds and passes there, so the foundation exports no `sheets()` plugin. Rejected: each
+  Vite consumer carrying its own (architect, slice 12 escalation). The root declares rolldown at
+  the version Vite resolves (1.2.15), since the plugin imports rolldown/utils without declaring
+  it and resolves it only through pnpm's hidden hoist. No upstream issue, the use case being niche
+  (architect).
+- pipeline: slice 13's design review (architect):
+  - the side pane widens so most entries take two lines, and the app's light-DOM content takes
+    the foundation's font tokens.
+  - formatBytes says "13 bytes", fixed in the foundation as v0.2.2. The dropzone's progress line
+    keeps formatBytes' mixed forms, "0 bytes of 18.4 kB" (foundation v0.2.2 checkpoint).
+  - sl-entry drops its "file"/"directory" kind word, since the meta line already shows it.
+  - below the stacking width the documents pane becomes a drawer the user opens and closes, so the
+    main pane keeps the view. The drawer is a component, sl-drawer: one native dialog, docked
+    inline at its `dock` width and wider, a modal drawer below it, the content never re-parented.
+    The app keeps its button, badge, `d` shortcut, close-on-navigate, and open-on-drag. The entry
+    changes and sl-drawer released together as components v0.5.0, in place of a v0.4.1.
+- pipeline: sl-drawer is an `<aside>` landmark when docked, and below `dock` a full-viewport modal
+  `<dialog>` with its own heading and Close button, closing by Close, Escape, or close(). It has
+  no hand-detected scrim click, and it honours a markup `open` below `dock` (architect, drawer
+  reviews).
+- pipeline: the layout review (architect):
+  - the foundation's keys sees a modal open inside a shadow root, released as foundation v0.2.3,
+    so page shortcuts are quiet while the drawer is open and `d` only opens it.
+  - sl-drawer docks at and above `dock` (`(width < dock)` is the drawer), so the app drops its
+    `47.99rem`. sl-drawer owns its heading in both modes, the same header markup with the Close
+    button only in drawer mode, so the app drops its own "Documents" heading. Both released in
+    components v0.6.0, in place of a v0.5.1.
+  - the search field's placeholder is "Search" on narrow widths.
+- pipeline: the Release line grows beyond the brief's by foundation v0.2.2, v0.2.3, and v0.3.0,
+  components v0.5.0 through v0.10.2, sdk v0.3.0 and v0.4.0, and noctis v0.1.1, each from a design
+  review or a defect found at its source and accepted at its own checkpoint (architect). Progress
+  lists each release with its PR.
+- pipeline: the palettes take no contrast adjustments. They stay as published, proven usable as
+  terminal themes, where every hue is text on the backgrounds (architect).
+- pipeline: the accent is a hook, `--accent-color`, the same mechanism as `--interaction-color`
+  (architect):
+  - it is read as `var(--accent-color, var(--magenta))`, declared by no profile, and set by a page
+    on any subtree. It marks what is current, active, or in progress; `--interaction-color` marks
+    what you can act on.
+  - it is magenta, not purple (visited links), cyan (beside blue, near green; everforest's is
+    green), or a status hue. In catppuccin and everforest light, Chrome draws native progress's
+    unfilled track dark for a light accent, as everforest's blue range already does. That is
+    native behavior and isn't patched, and cyan would only even out catppuccin.
+  - the active stage, the streaming dot, the selected entry's frame, the app's in-flight badge and
+    current nav link, and native `progress` move to it. Checkbox, radio, range, links, focus,
+    caret, selection, hover, and the drag-over zone stay on the primary.
+  - it released as foundation v0.3.0, after v0.2.3 released the keys fixes and the accent
+    documentation; components v0.6.0 and noctis v0.1.1 peer `^0.3.0`, and the root takes all of
+    them.
+- pipeline: integration's TestNATS_TokenRequired was flaky: the server can close the WebSocket
+  before the tokenless client's write lands, giving "broken pipe" in place of an authorization
+  violation. Fixed at its race in the next slice, asserting the refused handshake (1018dfe).
+- pipeline: the root review (architect): sl-drawer's heading drops from page scale to a section
+  size, `--text-l`; its scrolling body gains scroll padding; and sl-upload-dropzone gives an
+  upload row's Cancel button room for its focus ring, whose outline reached into the progress
+  line below. All three released as components v0.6.1. The docked heading scrolls with the pane,
+  its stable gutter kept, and the list needs no heading of its own.
+- pipeline: slice 14's review (architect):
+  - the sdk's client reads a body as text on request, `{ as: "text" }`, so a content view gets the
+    bytes as stored. The sdk joined the task and released it as sdk v0.3.0.
+  - sl-artifact-viewer's visible header becomes optional (`no-header`), its name kept as the
+    region's accessible name, and every state is named. Released in components v0.7.0, in place of
+    a v0.6.2, with a failed stage's `failedAt` and `reason` and the entry's `status-tone`.
+  - the emulator gains a failure trigger for a run, a test seam rather than a client API, and an
+    exception to the brief's "no emulator API changes".
+  - "accept" covers every checkpoint brief open at the time.
 - pipeline: sl-artifact-viewer formats valid JSON from the text's own tokens: re-indented, keys in
-  their order, number literals as written, duplicate keys kept; never parsed and re-printed, which
-  reordered integer-like keys, rewrote numbers (1.0, 1e3, integers past 2^53), and dropped
-  duplicates. Released in components v0.8.0 (architect, slice 14 escalation). globals 17.14.0
-  waits out pnpm's minimum release age; no cooldown exclusion.
-- pipeline: sl-artifact-viewer renders natively what the browser can: application/pdf in an iframe
-  (the browser's PDF viewer), image/* in an img, audio/* and video/* in native controls; text/html
-  stays text (it would run in the app's origin); anything else keeps "can't be shown" and offers
-  its download. The viewer takes a Blob and owns its object URL (created, revoked on change and
-  removal), so no server endpoint changes and the external client's tokens still work. Every
-  component that shows JSON uses formatJson. Released as components v0.8.0 (architect). The
-  document view's status line and the list's status tones are accepted as built (architect).
-- pipeline: the components' 45,000 B brotli budget is removed; size is measured at the end of the
-  session, as whole-bundle gzip and brotli comparable to Material Web's published sizes (72.1 kB
-  gzip for all.js, with Lit), rather than enforced per commit (architect). Measured before
-  v0.8.0: components 36.9 kB gzip / 31.5 kB brotli whole, Lit's core 6.2 / 5.6, the foundation
-  38.3 / 32.6, the pipeline app's build 112.8 / 93.6.
-- pipeline: formatJson formats to a depth of 64 and leaves deeper subtrees as written, so output
+  their order, number literals as written, duplicate keys kept. It never parses and re-prints,
+  which reordered integer-like keys, rewrote numbers (1.0, 1e3, integers past 2^53), and dropped
+  duplicates. formatJson formats to a depth of 64 and leaves deeper subtrees as written, so output
   stays near the input's size at any depth; a lazily expanded JSON tree is a component candidate
-  for the answer task, not built now (architect). sl-artifact-viewer shows text before it gives
-  up: native types first, then any text (malformed text/* types, textual application types, SVG
-  and XML as source, unknown types whose bytes are UTF-8 text), and "can't be shown" only for
-  binary content; the MIME-token rule governs only what gets an object URL (architect).
-- pipeline: held globals at 17.13.0 in the root and components: 17.14.0 (published
-  2026-11-01T11:01Z) is inside pnpm's minimum release age until about 2026-11-02T11:01Z; no cooldown
-  exclusion.
-- pipeline: components v0.8.0 released (PR #12, 125e3ce): native rendering from a Blob, text
-  before "can't be shown", formatJson with its depth limit, the budget check removed (architect).
-- pipeline: slice 14, the document view, accepted at its design review, including a real PDF
-  rendered by Chrome's own viewer from a Blob (architect).
-- pipeline: slice 15 review (architect): sl-chat-thread follows its newest item from the end,
+  for the answer task, not built now. Every component that shows JSON uses formatJson (architect,
+  slice 14 escalation).
+- pipeline: sl-artifact-viewer renders natively what the browser can: application/pdf in an iframe
+  (the browser's PDF viewer), image/* in an img, audio/* and video/* in native controls. It shows
+  text before it gives up: malformed text/* types, textual application types, SVG and XML as
+  source, and unknown types whose bytes are UTF-8 text. text/html stays text, since it would run
+  in the app's origin. Only binary content keeps "can't be shown", with its download offered. The
+  viewer takes a Blob and owns its object URL (created, revoked on change and removal), so no
+  server endpoint changes and the external client's tokens still work; the MIME-token rule
+  governs only what gets an object URL (architect). The JSON and rendering decisions released as
+  components v0.8.0.
+- pipeline: the PDF iframe takes no sandbox. Chrome 156 refuses to render a PDF in a sandboxed
+  iframe (`sandbox=""`, `allow-scripts allow-same-origin`, and `allow-same-origin` all show the
+  blocked page, checked by screenshot in the v0.8.0 standards review), and its object URL can only
+  carry `application/pdf`.
+- pipeline: the document view's status line and the list's status tones are accepted as built.
+  Slice 14, the document view, is accepted at its design review, including a real PDF rendered by
+  Chrome's own viewer from a Blob (architect).
+- pipeline: no layer enforces a size budget (architect). The components' 45,000 B brotli budget
+  was removed in v0.8.0, and the foundation's and the sdk's checks were removed to match, merged
+  with no release, since a test-only change gets no CHANGELOG entry or tag, as f50a62a ruled for
+  the budget's addition (checkpoint Q1, resume of slice 16). Size is measured at the end of the
+  session as whole-bundle gzip and brotli, comparable to Material Web's published sizes (72.1 kB
+  gzip for all.js, with Lit), and the whole-bundle size is evaluated at the experiment's final
+  review and optimization just before intake, which sets the resulting budget. Measured before
+  components v0.8.0: components 36.9 kB gzip / 31.5 kB brotli whole, Lit's core 6.2 / 5.6, the
+  foundation 38.3 / 32.6, and the pipeline app's build 112.8 / 93.6.
+- pipeline: slice 15's review (architect): sl-chat-thread follows its newest item from the end,
   released when the reader scrolls up and resumed at the end, so the app drops its own scroll
-  logic; sl-composer keeps keyboard focus off a disabled control after Stop (both a components
-  release); the emulator's scripted reply can carry reasoning, a function call with its output,
-  and Markdown, a test seam like the failure trigger, and the app folds those events; the flaky
-  upload-progress test is fixed at its race.
-- pipeline: components v0.9.0 released (PR #13, a45eccc): the thread follows its newest item, the
-  composer keeps focus off a disabled control, event-log follows under zoom, the reasoning summary
-  on its line (architect).
-- pipeline: the PDF iframe takes no sandbox: Chrome 156 refuses to render a PDF in a sandboxed
-  iframe (`sandbox=""`, `allow-scripts allow-same-origin`, `allow-same-origin` all show the blocked
-  page, checked by screenshot in the v0.8.0 standards review), and its object URL can only carry
-  `application/pdf`.
-- pipeline: the foundation's and the sdk's brotli budget checks are removed to match the
-  components', merged with no release (a test-only change gets no CHANGELOG entry or tag, as
-  f50a62a ruled for the budget's addition; checkpoint Q1); the whole-bundle size is evaluated at the experiment's
-  final review and optimization just before intake, which sets the resulting budget (architect,
-  resume of slice 16).
-- pipeline: scope widened by the architect: sl-chat-thread keeps following when an item at its
-  end grows, fixed at its source as components v0.9.1 (`context/conventions.md`, "Fix a defect at
-  its source").
-- pipeline: sl-chat-thread follows only its last item's growth; a fold opened above the end keeps
-  the reader's place, natively (checkpoint Q2). A reattached thread measures against its current
-  height; a frame resized by its consumer keeps the browser's own scroll handling.
-- pipeline: release CHANGELOG sections are dated in UTC.
-- pipeline: slice 16 design review (architect): Q3, a stored cursor the stream never gave out is
-  forgotten and the one read restarts from the oldest at once, with no reload, since nothing has
-  shown and nothing can duplicate; Q4, the components' four defects found by slices 15d and 16
-  release together as v0.10.0 (a minor: the search results' total is Added).
-- pipeline: components v0.10.0 checkpoint (architect): Q6, a total counts only while matches are
-  shown, so an empty page reads "No matches"; Q7, the ready count names the query its matches
-  answered, while searching and none keep the current query; Q8, an in-page types module under
-  `types:browser` guards LogEvent.time's optionality. Q5: the sdk rejects a cursor the stream never
-  gave out with a typed error, released as sdk v0.4.0; the root tests the type, never the message.
-- pipeline: Q10 (architect): "No matches" names the query the empty items answered, the idle
-  prompt with none, so a query set alone never changes the search results' live region. Q11: the
-  sdk's UnknownCursorError promises only what the NATS adapter detects (a malformed cursor, or one
-  past the stream's last event); a recreated stream isn't detected, and a stored cursor at or below
-  its last event resumes partway in. A gap for the answer task, beside real auth and persistence;
-  the capstone's backend decides it.
-- pipeline: slice 17's review (architect): the external client validates that the web client
-  architecture connects to several services without being embedded in any; the spike records its
-  details as evidence, with no implementation outstanding beyond it (Q12). The wiring both apps
-  hold (the domain services, the run feed, the status wording, the upload lifecycle, the timeline
-  mapping) is recorded as it is, not as a layer candidate. The walkthrough covers the pipeline app
-  only; the client's capture description stays a manual command (Q13).
+  logic; sl-composer keeps keyboard focus off a disabled control after Stop. Both released in
+  components v0.9.0, with event-log following under zoom and the reasoning summary on its line.
+  The emulator's scripted reply can carry reasoning, a function call with its output, and
+  Markdown (`/rich`), a test seam like the failure trigger, and the app folds those events. The
+  flaky upload-progress test is fixed at its race.
+- pipeline: sl-chat-thread keeps following when its last item grows without a Lit update, fixed
+  at its source as components v0.9.1 (architect, scope widened at resume). Growth above the last
+  item, such as a fold opened above the end, keeps the reader's place natively (checkpoint Q2). A
+  reattached thread measures against its current height; a frame resized by its consumer keeps
+  the browser's own scroll handling.
+- pipeline: a release's CHANGELOG section is dated in UTC.
+- pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
+  cursor, since the sdk forbids comparing cursors, and earlier runs' statuses come from the API;
+  search reads the first page of 96; search has no nav link, the header field being its way in.
+- pipeline: slice 16's design review and the components v0.10.0 checkpoint (architect):
+  - Q3: a stored cursor the stream never gave out is forgotten, and the one read restarts from the
+    oldest event at once, with no reload, since nothing has shown and nothing can duplicate.
+  - Q4: the components' four defects found by slices 15d and 16 release together as v0.10.0, a
+    minor, since the search results' total is Added.
+  - Q5: the sdk rejects a cursor the stream never gave out with a typed error,
+    UnknownCursorError, released as sdk v0.4.0. The root tests the type, never the message.
+  - Q6: a total counts only while matches are shown, so an empty page reads "No matches".
+  - Q7: the ready count names the query its matches answered; searching and none keep the
+    current query.
+  - Q8: an in-page types module under `types:browser` guards LogEvent.time's optionality.
+  - Q10: "No matches" names the query the empty items answered, and the idle prompt names none,
+    so a query set alone never changes the search results' live region.
+  - Q11: UnknownCursorError promises only what the NATS adapter detects, a malformed cursor or one
+    past the stream's last event. A recreated stream isn't detected, and a stored cursor at or
+    below its last event resumes partway in. It is a gap for the answer task, beside real auth and
+    persistence, and the capstone's backend decides it.
 - pipeline: slice 17 decided without the architect: services.json is `{ services: [{ name,
   apiBase, nats: { url, stream, token } }] }`; each panel sends its token as `Authorization` on
   API calls too, so every cross-origin call is preflighted; a panel's feed reads from the oldest
-  on every load, with no cursor; an entry or a match selected follows its stages.
-- pipeline: slice 18 (architect, Q14): sl-pagination's page field, `inline-size: 4ch`, clips a
-  two-digit page at regular spacing ("1:" for "13"), so the layers task's "the 4ch stands" is
-  revised: the field fits three digits and the input's padding at every spacing, released as
-  components v0.10.1, the root onto it.
-- pipeline: Q15 (architect): at 20rem, four mono pagination states wrap their controls to a
-  second row with v0.10.1's field, the component's designed narrow layout; accepted.
-- pipeline: Q16 (architect): the emulator gains a configured hold rule beside its fail rule
-  (`EMULATOR_RUNS_HOLD`, a document name pattern and a stage), so the stage tests that leaned on
-  its fixed timing hold a run where they read it, fixed at the race's cause; no client API.
-- pipeline: Q17 (architect): a screenshot page that needs documents ensures them by name through
-  the emulator's search API and uploads only those missing, so every `--page` stands alone, a
-  full run uploads what it did, and the empty states stay empty (5ac876c).
-- pipeline: walkthrough feedback (architect): a run in progress reads "processing 3/5", not
-  "underway" (Q18, both apps); a new search clears the listed matches at once, the status
-  "Searching for …" alone until its answer (Q19 B, both apps; the component keeps its kept-while-
-  loading behavior for other consumers); sl-event-log puts an event's source, subject, and id each
-  on its own line, released as components v0.10.2.
-- pipeline: Q20 (architect): sl-event-log's pairs are a `--space-3xs` step apart at 30rem and
-  wider, `--space-2xs` under it; a margin between pairs, since the 30rem query can't restyle the
-  container it measures.
-- pipeline: the walkthrough accepted by the architect, its findings fixed (8739e58, components
-  v0.10.2): the design review of slices 13–18.
-- pipeline: Q21 (architect): the hold rule (3b833b7) makes a partial state exact; a live advance
-  is guarded by starting the run once the page is ready, so every stage event arrives while it
-  watches. The deep-link and reload tests assert the held first frame exactly; no broker-level
-  injection. The screenshot description holds its run-under-way document too.
-- pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
-  tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
-  Unicode-placeholder mode is built for tmux. Not in this task.
-- pipeline: slice 16 decided without the architect: the one read starts after the tab's stored
-  cursor (the sdk forbids comparing cursors), earlier runs' statuses come from the API; search
-  reads the first page of 96; search has no nav link, the header field is its way in.
-- pipeline: globals 17.13.0 stays held until pnpm's release age clears (architect).
+  event on every load, with no cursor; an entry or a match selected follows its stages.
+- pipeline: slice 17's review (architect): the external client validates that the web client
+  architecture connects to several services without being embedded in any. The spike records its
+  details as evidence, with no implementation outstanding beyond it (Q12). The wiring both apps
+  hold (the domain services, the run feed, the status wording, the upload lifecycle, the timeline
+  mapping) is recorded as it is, not as a layer candidate. The walkthrough covers the pipeline app
+  only, and the client's capture description stays a manual command (Q13).
+- pipeline: slice 18 and the walkthrough (architect):
+  - Q14: sl-pagination's page field, `inline-size: 4ch`, clips a two-digit page at regular
+    spacing ("1:" for "13"), revising the layers decision that the 4ch stands. The field fits
+    three digits and the input's padding at every spacing, released as components v0.10.1, and
+    the root takes it.
+  - Q15: at 20rem, four mono pagination states wrap their controls to a second row with v0.10.1's
+    field, the component's designed narrow layout; accepted.
+  - Q16: the emulator gains a configured hold rule beside its fail rule (`EMULATOR_RUNS_HOLD`, a
+    document name pattern and a stage), so the stage tests that leaned on its fixed timing hold a
+    run where they read it, fixing the race at its cause; no client API (3b833b7).
+  - Q17: a screenshot page that needs documents ensures them by name through the emulator's
+    search API and uploads only those missing, so every `--page` stands alone, a full run uploads
+    what it did, and the empty states stay empty (5ac876c).
+  - Q18: a run in progress reads "processing 3/5", not "underway", in both apps.
+  - Q19 B: a new search clears the listed matches at once, its status "Searching for …" alone
+    until its answer, in both apps. The component keeps its kept-while-loading behavior for other
+    consumers.
+  - sl-event-log puts an event's source, subject, and id each on its own line. Q20: its pairs are
+    a `--space-3xs` step apart at 30rem and wider and `--space-2xs` under it, as a margin between
+    pairs, since the 30rem query can't restyle the container it measures. Released as components
+    v0.10.2 (8739e58).
+  - Q21: the hold rule makes a partial state exact, and a live advance is guarded by starting the
+    run once the page is ready, so every stage event arrives while it watches. The deep-link and
+    reload tests assert the held first frame exactly (acae7fd), with no broker-level injection,
+    and the screenshot description holds its run-under-way document too.
+  - the walkthrough, its findings fixed, is accepted as the design review of slices 13–18.
+- pipeline: the live stage tests, "advances live" in `test/browser/documents.test.ts` and the
+  failed run's live case in `test/browser/failed.test.ts`, still depend on stage timing within a
+  margin: 64 of 64 runs passed under 22 CPU burners, every state caught.
+  DECISION PENDING (architect): [the session fills in whether this margin is accepted.]
+- pipeline: spec review (closing): no gaps against behaviors 1–25 as amended. Behavior 16's
+  composer clause gained a root case (1bdb598).
+- pipeline: tooling v0.3.0's CHANGELOG dropped its empty `[Unreleased]` header and link, which the
+  foundation keeps; restore it at the tooling's next change.
+- pipeline: findings, not in this task:
+  - for the tooling: the screenshot bin's terminal output (kitten icat through tmux's
+    passthrough) doesn't survive tmux scrollback; the captures and the run are sound. kitty's
+    Unicode-placeholder mode is built for tmux.
+  - for the foundation: its shadow-root key tests cover input, textarea, and contenteditable but
+    not a `select`, a test-only change for its next change.
+  - several walkthrough states are captured wide only (the Markdown, JSON, and PDF artifacts, and
+    most side-pane states), accepted with the walkthrough.
+  - a full screenshot run lists `notes.txt` and `release-notes.md` twice, because the side pane's
+    uploading and docked states upload them on each scheme's pass.
+  - the sdk's `src/api.ts` and `src/router.ts` headers still name
+    `test/unit/declarations.test.js`, now `.ts` (the tooling task's finding); sdk v0.3.0 and v0.4.0
+    left them, so its next release corrects them.
 
 ## Pending edits
 
@@ -1173,11 +1211,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - go-messaging backlog candidate: `nats.Config` has no credentials field, so an authenticated
   server's token rides in the URL, and `Start`'s error prints that URL.
 - v1.client, NewClient's measured shape, for the answer task: `NewClient(dist fs.FS,
-  ClientOptions{Base, Title, Entry, Config})`, reading Vite's manifest once. At the root it is
-  the router's not-found handler, so it answers only what no module or native route claims;
-  under a prefix it is a handler module, and the bare prefix redirects (301) to prefix/. A path
-  under the manifest's directories, a dotfile path, or a last segment with an extension, with no
-  file behind it, is a 404 problem, never the shell.
+  ClientOptions{Base, Title, Entry, RenderBlocking, Config})`, reading Vite's manifest once;
+  RenderBlocking lists the manifest keys whose modules the shell loads with `blocking="render"`
+  ahead of the entry. At the root it is the router's not-found handler, so it answers only what
+  no module or native route claims; under a prefix it is a handler module, and the bare prefix
+  redirects (301) to prefix/. A path under the manifest's directories, a dotfile path, or a last
+  segment with an extension, with no file behind it, is a 404 problem, never the shell.
 - standards-lab `context/roadmap.toml`, the `emulator` task's summary: name what it built: the
   four domains and the stateless responses route, proven with spike-ai-pipeline-client v0.4.0's
   GenerateStream; embedded NATS with the token on both listeners; NewClient and CORS in the
@@ -1192,9 +1231,10 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   context, among them a control block-size token, status colour tokens, a disabled text-field
   look, a dark-aware `<progress>` track, a "keep whole" rule, ellipsis truncation, the
   scrolling-frame recipe, `formatJson`, and `formatBytes(0)`'s wording.
-- primitives baselines, for the answer task (evidence 7): brotli per file, quality 11, text
-  mode, KB = 1,000 B: foundation 43,595 B over 39 files, budget 48 KB; components 36,070 B over
-  23 files, budget 40 KB; sdk 11,669 B over 7 files, budget 13 KB.
+- primitives baselines, for the answer task (evidence 7), from the budgets the pipeline task
+  removed: brotli per file, quality 11, text mode, KB = 1,000 B: foundation 43,595 B over 39
+  files, budget 48 KB; components 36,070 B over 23 files, budget 40 KB; sdk 11,669 B over 7
+  files, budget 13 KB.
 - standards-lab `context/roadmap.toml`, backlog idea for a later spike-html-apps-tooling release:
   inline screenshots in a Neovim `:terminal`, sending kitty graphics through `nvim_ui_send` over
   `$NVIM` and printing icat's unicode placeholders (tooling, escalation 1).
@@ -1216,12 +1256,14 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
   `:terminal` it shows none, since the buffer reports no pixel size and libvterm doesn't pass the
   graphics through, so `--output browser` opens a gallery instead.
 - standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: `["spike-html-apps",
-  "spike-html-apps-foundation", "spike-html-apps-components", "spike-html-apps-tooling"]`.
-- v1.client, the NewClient pending edit: the measured shape gains the list of render-blocking
-  manifest modules.
-- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
-  `spike-html-apps-noctis` (its peer range moves to foundation ^0.3.0 in this task).
-- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: also
-  `spike-html-apps-sdk` (its client reads a body as text, released in this task).
+  "spike-html-apps-foundation", "spike-html-apps-components", "spike-html-apps-tooling",
+  "spike-html-apps-noctis", "spike-html-apps-sdk"]`. noctis joined for its peer range on
+  foundation ^0.3.0, and the sdk for its client reading a body as text.
+- standards-lab `context/roadmap.toml`, the `pipeline` task's summary: name what it built: the
+  pipeline app over the emulator, with its shortcuts and theme menu; the external client over two
+  emulators and `mise run demo`; the walkthrough as `mise run screenshots`; the emulator's fail
+  and hold rules and rich reply as test seams; no layer enforcing a budget; and the releases:
+  tooling v0.3.0, foundation v0.2.1 to v0.3.0, components v0.4.0 to v0.10.2, sdk v0.3.0 and
+  v0.4.0, and noctis v0.1.1.
 - the answer task carries context/conventions.md into the spike's answer, for the experiment's
   intake to adopt (architect).

@@ -9,10 +9,15 @@ workflow; start from `context/README.md`.
 - **Check:** `mise run check`, after `mise run install`: ESLint (with the app tier's direction
   table over apps/, and its violation tree under `node --test`), Prettier, shellcheck, tsc over
   the sources and over the TypeScript tests (`tsconfig.test.json`), and go-web-sdk-template's
-  seven Go steps over the root module. It then builds the pipeline app with
-  Vite (`build:app`) and boots the emulator binary on reserved loopback ports for the integration
-  tier and for the browser tier, which runs in the pinned chrome-headless-shell. It reads no
-  network.
+  seven Go steps over the root module. It then builds both apps with Vite (`build:app`,
+  `build:external`) and boots the emulator binary on reserved loopback ports for the integration
+  tier and for the browser tier, which runs in the pinned chrome-headless-shell and hosts the
+  external client on an origin of its own. It reads no network.
+- **Apps:** the pipeline app, `apps/pipeline/`, embedded in the emulator binary, and the external
+  client, `apps/external/`, static files hosted apart. `mise run serve` runs the emulator with the
+  app at `/app`, `mise run demo` hosts the external client beside two emulators, and `mise run
+  screenshots` captures the pipeline app's walkthrough (`--page <name>`, `--all`). The apps and
+  tasks are described in `context/README.md`, "The apps".
 - **Currency:** `mise run currency`: every mise tool, package.json pin, and go.mod go directive
   and direct requirement behind its latest; silent when all are current.
 - **Goals:** this spike's tasks live in the coordinator's roadmap,
