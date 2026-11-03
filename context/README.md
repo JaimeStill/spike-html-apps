@@ -21,7 +21,7 @@ when they compose the capstone's UI primitives, live over a backend?
 
 ## The evidence
 
-Items 1 to 8 and 10 are built; the `answer` task proves item 9.
+All ten are built; "The answer" names where each is proven.
 
 1. The SDK runtime: the router (URLPattern and the Navigation API; base, deep link, reload, back
    and forward), the API client (a Result that fails as an RFC 9457 problem, the title filled
@@ -233,7 +233,95 @@ spike-ai-pipeline repositories, which the roadmap's `path` and `[workspace.paths
 
 ## The answer
 
-Pending: the `answer` task's last slice writes the question, the answer, and evidence 1 to 10.
+The question: what does a client application on experiment.html's stack look like, and do its
+layers hold up when they compose the capstone's UI primitives, live over a backend? Its answer
+bears on v1.client's app architecture and on whether an external-client goal follows 1.0, and the
+capstone's UI starts from its releases.
+
+**Three layers released by tag, a foundation, Lit shadow components that take properties and send
+events, and an SDK of router, API client, token provider, and a resumable event sequence over NATS
+WebSocket, composed by apps of their own files and served by a Go `NewClient`; they hold, live
+over the emulator in one app and over two services in an external client.**
+
+1. **The SDK runtime:** the router, the API client with upload progress and streamed responses,
+   the token provider, and the domain service. Proven by the sdk's unit tier
+   (`test/unit/api.test.ts`, `auth.test.ts`, and `declarations.test.ts` against v0.1.0's
+   declarations) and its browser tier (`test/browser/router.test.ts`, `upload.test.ts`), and by
+   the root's browser tier, which drives them through both apps. Proven by tests alone.
+2. **The foundation's Intl formatters,** against foundation v0.1.0's `format.d.ts`. Proven by the
+   foundation's `test/unit/format.test.ts` and `declarations.test.ts`. Proven by tests alone.
+3. **The event-sequence interface** and its NATS-over-WebSocket adapter. Proven by the sdk's
+   `test/unit/nats.test.ts` against a pinned nats-server (2.15.2) and `events.test.ts`, and live
+   against the emulator by the root's `test/browser/live.test.ts`. Proven by tests alone; "NATS
+   over WebSocket, for spike-ai-pipeline" below records it for the capstone.
+4. **The Go serving half,** `NewClient` in the root's `sdk` package, at `/app` and at the
+   server's root. Proven by `sdk/web_test.go`, the integration tier (`integration/`, the app at
+   each mount), and the browser tier's `test/browser/base.test.ts`, and running under
+   `mise run serve`.
+5. **Eleven primitives,** with `sl-drawer` beside them. Proven by the components' browser tier
+   (`test/browser/*.test.ts`), which renders each specimen page in every profile, light and dark,
+   and seen on the specimen pages (`demo/`, under the components' `mise run demo`).
+6. **The pipeline app,** `apps/pipeline/`, composing them live over the emulator. Proven by the
+   root's browser tier (`test/browser/`), and running under `mise run serve` and in
+   `mise run screenshots`' walkthrough.
+7. **The layers clean at scale:** zero direction violations, under the check's ESLint over each
+   layer's sources and over `apps/`, whose tables each layer's `test/unit/layers.test.ts` and the
+   root's `test/unit/apps.test.ts` prove flag every forbidden import. Size is measured, not
+   enforced: at ship, all 12 components with Lit, marked, and their foundation modules, one
+   minified file, are 151.0 kB min, 39.2 kB gzip, and 34.5 kB brotli, beside Material Web's
+   `all.js` with Lit at 72.1 kB gzip. The primitives task's baselines, brotli per file at quality
+   11, text mode, KB = 1,000 B, were foundation 43,595 B over 39 files, components 36,070 B over
+   23, and sdk 11,669 B over 7, under budgets of 48, 40, and 13 KB that the pipeline task
+   removed (architect). The budget is left to the experiment's final review before intake.
+8. **The external client,** `apps/external/`, over two emulators cross-origin under the spike's
+   CORS. Proven by `test/browser/external.test.ts` and `instances.test.ts`, with the CORS
+   middleware by `sdk/middleware_test.go`, and running under `mise run demo`.
+9. **Consumption by tag** from outside the spike, under npm, pnpm, and bun, and the gaps. Proven
+   by `mise run consumers`, run on demand since it reads the network, on 2026-11-03 ("Consumption
+   by tag", below); the gaps are recorded under "The gaps".
+10. **Quality at every layer,** judged as a finished product. Proven by the architect's acceptance
+    of the screenshots at each UI task's design review: the foundation's and the components'
+    specimen captures, and the pipeline app's walkthrough.
+
+Items 1 to 3 are proven by tests alone. Items 4 to 8 are proven by tests and seen running, item
+9 by an on-demand measure, and item 10 by the architect's acceptance.
+
+The spike's conventions, the development principles, design conventions, and process conventions
+its repositories follow, are `context/conventions.md`, for experiment.html's intake to adopt. This
+answer is evidence for that intake; the spike decides nothing itself.
+
+### NATS over WebSocket, for spike-ai-pipeline
+
+spike-ai-pipeline's capstone weighs NATS over WebSocket against a backend relay on latency,
+ordering, auth, ports, and native-tier use (its evidence 15). This is the NATS side as built and
+proven here: sdk v0.4.0's `./events.js` interface and its `./events/nats.js` adapter, reading the
+emulator's embedded nats-server.
+
+- **Ordering and resume:** each read is one JetStream ordered consumer of its own; with no cursor
+  it starts at the oldest event the stream keeps. The cursor is the event's stream sequence, a
+  decimal string the caller treats as opaque. A read resumed from the last cursor after a reload
+  continues with no gap and no duplicate (`live.test.ts`). A malformed cursor, or one past the
+  stream's last event, fails the read with `UnknownCursorError`, and the pipeline app then
+  restarts from the oldest event. Across a server restart the connection reconnects within
+  nats-core's defaults, 10 attempts 2 s apart, and each read resumes after the last event it
+  delivered (`nats.test.ts`). A recreated stream and a connection lost for good are gaps.
+- **Auth:** one static token, `nats.token`, required on both listeners. The shell's config hands
+  it to the browser, and the token provider gives it to the adapter, which asks for a refresh once
+  when the server refuses it; a refused token pauses the read and says why (`live.test.ts`). Real
+  auth is a gap.
+- **Ports:** the WebSocket listener has a port of its own, 4223 in `config.json`, beside HTTP's
+  8080 and the core listener's 4222. Its origin check reads `cors.allowed_origins`, the CORS
+  middleware's list, and refuses a page from an origin the list doesn't name (`live.test.ts`).
+  Chrome's Local Network Access check blocks a page that DevTools Fetch serves from opening
+  loopback WebSockets, so the browser tier serves such pages through a loopback proxy
+  (`test/browser/support/proxy.ts`).
+- **Native-tier use:** the adapter runs in Node too: the sdk's unit tier reads over WebSocket
+  against nats-server, every connection the server holds a WebSocket one. The emulator's own
+  broker, go-messaging's nats provider, connects over the core listener on 127.0.0.1 and owns the
+  stream.
+- **Latency:** not measured. The capstone measures it, against a relay on one backend.
+- **Cost:** `./events/nats.js` takes `@nats-io/nats-core` and `@nats-io/jetstream` at `^3.4.0` as
+  the sdk's optional peers; every other subpath loads without them.
 
 ### Consumption by tag
 
@@ -268,17 +356,19 @@ sets `allow-git=root`, under which it installs; pnpm and bun install under their
 
 ### The gaps
 
-Each gap is recorded, not closed, with who decides it where the spike has named one:
+Each gap is recorded, not closed, and names who decides it:
 
 - **Firefox 147:** no `blocking="render"` (web-features 3.45.0), which `NewClient`'s shell writes
   on its render-blocking modules (`sdk/web.go`, the shell template), so the stored theme can flash
-  before first paint.
+  before first paint. The experiment.html intake decides, as it decides what the layers graduate
+  as and the browsers they support.
 - **Safari 26.2 (WebKit):** no CSS module scripts, `import … with { type: "css" }` (web-features
   3.45.0). The layers import their sheets that way, so unbundled consumption fails in Safari; a
   Vite build rewrites them through vite-plugin-standard-css-modules, so the measured consumer path
-  works.
+  works. The experiment.html intake decides, as for Firefox.
 - **Neither browser is run:** the browser tier and the tooling speak only the DevTools protocol,
-  and Playwright was rejected for the browser tier; both gaps are recorded by named feature.
+  and Playwright was rejected for the browser tier; both gaps are recorded by named feature, and
+  the experiment.html intake decides them.
 - **Real auth:** one static token, handed to the browser in the shell's config. The broker's token
   rides in its URL, since go-messaging's `nats.Config` has no credentials field, and the broker's
   `Start` error prints that URL. v1.auth decides; the credentials field is the backlog goal
@@ -290,8 +380,9 @@ Each gap is recorded, not closed, with who decides it where the spike has named 
   capstone's backend decides.
 - **A connection lost for good:** the NATS adapter reconnects across a server restart within
   nats-core's defaults, and each read resumes with no gap or duplicate; a connection lost for
-  good, failing every read, is untested.
+  good, failing every read, is untested. The capstone decides, as the adapter's first real
+  consumer.
 - **The live stage tests' margin:** "advances live" and the failed run's live case boot their
   emulators with stages 1.5 s apart, and rely on that margin to catch each state. The architect
   accepted the margin as the limit of watching a live advance through the real API; a
-  broker-level seam stays ruled out.
+  broker-level seam stays ruled out. It closes with the spike, as a property of its test harness.

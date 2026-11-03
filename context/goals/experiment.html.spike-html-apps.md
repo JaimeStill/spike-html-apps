@@ -1166,79 +1166,45 @@ slices 3/4 committed · standards — · spec — · editor —
 
 ## Pending edits
 
-- v1.client: `NewClient`, proven in spike-html-apps' `sdk` package, moves to go-web-service's
-  `sdk/` and then go-web-sdk; the answer task fills in the result.
-- v1.middleware: the CORS middleware measured for an external client; the answer task fills in
-  what it needed.
-- standards-lab `context/ai-strategy.md`, the capstone bullet: the capstone's UI builds on the
-  spike-html-apps layer tags and the SDK's event-sequence interface; the answer task names the
-  tags.
-- standards-lab `context/roadmap.toml`, the spike-ai-pipeline summary: the same clause.
-- standards-lab `context/roadmap.toml`, the `layers` task's summary: the task releases v0.1.0 of
-  each layer, at a staged checkpoint per layer.
-- standards-lab `context/roadmap.toml`, the `foundation` task's summary: in place of "Releases
-  foundation v0.1.0, with components following its minor", it names the profile units,
-  conformance for color, space, and type, and the releases: foundation v0.2.0, components v0.2.0
-  on the foundation's formatters and peering `^0.2.0`, and the extension repository
-  spike-html-apps-noctis at v0.1.0.
-- standards-lab `context/roadmap.toml`, the `sdk` task's summary: "tested against a fake" becomes
-  "tested against a pinned nats-server", and in place of "Releases sdk v0.1.0" it names upload
-  with progress and the streamed response on the client, the router's change event and failure
-  handling, and the release of sdk v0.2.0 (layers released v0.1.0).
-- standards-lab `context/roadmap.toml`, the `primitives` task's summary: name what it built: the
-  eight components, the Markdown renderer on marked 18.1.2, the sl-entry and sl-pagination rename,
-  each layer's brotli budget in its own check (evidence 7), and the release of components v0.3.0.
-- standards-lab `context/roadmap.toml`, the `emulator` task's `repos`: add spike-html-apps-sdk,
-  so a defect the adapter's live cases find is fixed in that task.
-- standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", the live-transport
-  bullet: the sdk proves the adapter against a pinned nats-server, and the emulator proves it end
-  to end.
-- standards-lab `context/roadmap.toml`: add spike-html-apps-noctis to the `foundation` task's
-  `repos` (the goal's `repos` gained it in the tooling plan).
-- standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, -noctis, and
-  -tooling.
-- v1.middleware, facts for the answer task: rs/cors's latest tag is v1.11.1 (2024-08) while
-  main stays active, with #220 (credentialed wildcard) and #222 (malformed origins) open;
-  jub0bs/cors is the alternative to weigh; herald's CORS middleware (`HERALD_CORS_*`) is prior
-  art.
-- go-messaging backlog candidate: `nats.Config` has no credentials field, so an authenticated
-  server's token rides in the URL, and `Start`'s error prints that URL.
-- v1.client, NewClient's measured shape, for the answer task: `NewClient(dist fs.FS,
+- standards-lab `context/roadmap.toml`, the v1.client summary, its "Recorded inputs": add
+  `NewClient`, proven in spike-html-apps' `sdk` package: `NewClient(dist fs.FS,
   ClientOptions{Base, Title, Entry, RenderBlocking, Config})`, reading Vite's manifest once;
   RenderBlocking lists the manifest keys whose modules the shell loads with `blocking="render"`
   ahead of the entry. At the root it is the router's not-found handler, so it answers only what
   no module or native route claims; under a prefix it is a handler module, and the bare prefix
   redirects (301) to prefix/. A path under the manifest's directories, a dotfile path, or a last
-  segment with an extension, with no file behind it, is a 404 problem, never the shell.
-- standards-lab `context/roadmap.toml`, the `emulator` task's summary: name what it built: the
-  four domains and the stateless responses route, proven with spike-ai-pipeline-client v0.4.0's
-  GenerateStream; embedded NATS with the token on both listeners; NewClient and CORS in the
-  spike's `sdk` package; the integration tier; and the browser tier in pinned
-  chrome-headless-shell, running the adapter's live cases and two instances. The `repos` edit
-  above adds spike-html-apps-sdk.
-- standards-lab `context/roadmap.toml`, the `primitives` task's `repos`: add
-  spike-html-apps-foundation and spike-html-apps-sdk, for each layer's budget test.
+  segment with an extension, with no file behind it, is a 404 problem, never the shell. It moves
+  to go-web-service's `sdk/`, then go-web-sdk.
+- standards-lab `context/roadmap.toml`, the v1.middleware summary: CORS's trigger has fired, an
+  external client calling two services (spike-html-apps). What it needed: one allowed-origins list
+  shared by the CORS middleware and the NATS WebSocket listener; Authorization and Content-Type
+  allowed; a preflight on every upload sent with a progress listener; and the caller naming the
+  methods. rs/cors reads an empty list as admitting every origin, which the spike's wrapper turns
+  into a pass-through. rs/cors's latest tag is v1.11.1 (2024-08) while main stays active, with
+  #220 (credentialed wildcard) and #222 (malformed origins) open; jub0bs/cors is the alternative
+  to weigh; herald's CORS middleware (`HERALD_CORS_*`) is prior art.
+- standards-lab `context/ai-strategy.md`, the capstone bullet: the capstone's UI builds on
+  spike-html-apps' foundation v0.3.0, components v0.10.2, and sdk v0.4.0, with the SDK's
+  event-sequence interface at `./events.js` and its adapter at `./events/nats.js`, and cites
+  spike-html-apps' NATS-over-WebSocket record, under "The answer" in its README.
+- standards-lab `context/roadmap.toml`, the spike-ai-pipeline summary: the same clause.
+- standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", the live-transport
+  bullet: the sdk proves the adapter against a pinned nats-server, and the emulator proves it end
+  to end. Its record sits in spike-html-apps' "The answer", under "NATS over WebSocket, for
+  spike-ai-pipeline".
+- standards-lab `references.toml`: add spike-html-apps-foundation, -components, -sdk, -noctis, and
+  -tooling.
+- standards-lab `context/roadmap.toml`, backlog: goal `nats-credentials`: go-messaging's
+  `nats.Config` gains a credentials field, and `Start`'s error stops printing a token in its URL.
 - standards-lab `context/roadmap.toml`, backlog: a foundation-extension entry (the architect's
   request during primitives): a later foundation minor that takes the patterns the components
   keep locally, staged from the "Foundation candidates" note in spike-html-apps-components'
   context, among them a control block-size token, status colour tokens, a disabled text-field
   look, a dark-aware `<progress>` track, a "keep whole" rule, ellipsis truncation, the
   scrolling-frame recipe, `formatJson`, and `formatBytes(0)`'s wording.
-- primitives baselines, for the answer task (evidence 7), from the budgets the pipeline task
-  removed: brotli per file, quality 11, text mode, KB = 1,000 B: foundation 43,595 B over 39
-  files, budget 48 KB; components 36,070 B over 23 files, budget 40 KB; sdk 11,669 B over 7
-  files, budget 13 KB.
 - standards-lab `context/roadmap.toml`, backlog idea for a later spike-html-apps-tooling release:
   inline screenshots in a Neovim `:terminal`, sending kitty graphics through `nvim_ui_send` over
   `$NVIM` and printing icat's unicode placeholders (tooling, escalation 1).
-- standards-lab `context/roadmap.toml`, the `tooling` task's summary: in place of "released as
-  v0.1.0 by tag", it names the releases, tooling v0.1.0 and v0.2.0 (`--help`, the reserved
-  facet flag `help`, and the browser's ending waiting for its process group before removing its
-  profile), and the TypeScript sources built into `dist/`. The root, the foundation, the
-  components, the sdk, and noctis move onto `#v0.2.0`, dropping their copies of the driver,
-  server, and screenshot scripts; the foundation's, components', and noctis's capture
-  descriptions are `scripts/screenshots.config.ts`; and all six repositories' tests are
-  TypeScript under Node's type stripping, type-checked by `tsconfig.test.json`.
 - standards-lab `context/html-artifacts.md`, "Experiment: spike-html-apps", its first paragraph:
   "in four repositories: the root ... and three layer repositories" becomes six, adding the
   extension repository spike-html-apps-noctis and spike-html-apps-tooling, the browser-test and
@@ -1248,15 +1214,53 @@ slices 3/4 committed · standards — · spec — · editor —
   screenshot bin. It shows captures with `kitten icat --transfer-mode=stream`, and inside a Neovim
   `:terminal` it shows none, since the buffer reports no pixel size and libvterm doesn't pass the
   graphics through, so `--output browser` opens a gallery instead.
-- standards-lab `context/roadmap.toml`, the `pipeline` task's `repos`: `["spike-html-apps",
-  "spike-html-apps-foundation", "spike-html-apps-components", "spike-html-apps-tooling",
-  "spike-html-apps-noctis", "spike-html-apps-sdk"]`. noctis joined for its peer range on
-  foundation ^0.3.0, and the sdk for its client reading a body as text.
-- standards-lab `context/roadmap.toml`, the `pipeline` task's summary: name what it built: the
-  pipeline app over the emulator, with its shortcuts and theme menu; the external client over two
-  emulators and `mise run demo`; the walkthrough as `mise run screenshots`; the emulator's fail
-  and hold rules and rich reply as test seams; no layer enforcing a budget; and the releases:
-  tooling v0.3.0, foundation v0.2.1 to v0.3.0, components v0.4.0 to v0.10.2, sdk v0.3.0 and
-  v0.4.0, and noctis v0.1.1.
-- the answer task carries context/conventions.md into the spike's answer, for the experiment's
-  intake to adopt (architect).
+- standards-lab `context/html-artifacts.md`: under "## Answers · experiment.html", after
+  "### Answer · experiment.html.spike-html-packages", add:
+
+  ```
+  ### Answer · experiment.html.spike-html-apps
+
+  **Question:** What does a client application on experiment.html's stack look like, and do its
+  layers hold up when they compose the capstone's UI primitives, live over a backend?
+
+  **Answer:** Three layers released by tag, a foundation, Lit shadow components that take
+  properties and send events, and an SDK of router, API client, token provider, and a resumable
+  event sequence over NATS WebSocket, composed by apps of their own files and served by a Go
+  `NewClient`; they hold, live over the emulator in one app and over two services in an external
+  client.
+
+  1. The SDK runtime: the router, the API client with upload progress and streamed responses,
+     the token provider, and the domain service. Proven only by tests: the sdk's unit and browser
+     tiers and the root's browser tier.
+  2. The foundation's Intl formatters, against foundation v0.1.0's `format.d.ts`. Proven only by
+     tests: the foundation's `test/unit/format.test.ts`.
+  3. An event-sequence interface in the SDK, resumable by an opaque cursor, with a
+     NATS-over-WebSocket adapter. Proven only by tests: the sdk's `test/unit/nats.test.ts`
+     against a pinned nats-server, and the root's `test/browser/live.test.ts` against the
+     emulator. The README records it for spike-ai-pipeline's capstone.
+  4. The Go serving half, `NewClient`, at `/app` and at the server's root. Proven by
+     `sdk/web_test.go`, the integration tier, and `test/browser/base.test.ts`, and by a running
+     demo: `mise run serve`.
+  5. Eleven primitives as Lit shadow components. Proven by the components' browser tier, every
+     specimen page in every profile, and by the specimen pages under the components'
+     `mise run demo`.
+  6. A pipeline app composing them live over the emulator. Proven by the root's browser tier,
+     and by `mise run serve` and `mise run screenshots`.
+  7. The layers clean at scale: zero direction violations, proven by tests, each tier's ESLint
+     table with `test/unit/apps.test.ts` and each layer's `layers.test.ts`. Size at ship, all
+     12 components with Lit, marked, and their foundation modules: 151.0 kB min, 39.2 kB gzip,
+     34.5 kB brotli, beside Material Web's 72.1 kB gzip. The budget is left to the experiment's
+     final review before intake.
+  8. An external client hosted apart, over two services under the spike's CORS. Proven by
+     `test/browser/external.test.ts` and `instances.test.ts`, and by a running demo:
+     `mise run demo`.
+  9. Consumption by tag from outside the spike, under npm, pnpm, and bun, and the gaps, each
+     naming who decides it. Proven by `mise run consumers` on 2026-11-03; npm needs
+     `allow-git=root`.
+  10. Quality at every layer, judged as a finished product. Proven by the architect's acceptance
+      of the screenshots at each UI task's design review.
+
+  The spike's conventions are its `context/conventions.md`, for the intake to adopt.
+
+  [The answer](https://github.com/JaimeStill/spike-html-apps/blob/main/context/README.md#the-answer) · [spike-html-apps](https://github.com/JaimeStill/spike-html-apps)
+  ```
