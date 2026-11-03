@@ -10,9 +10,11 @@ v1.client's app architecture and on whether an external-client goal follows 1.0,
 capstone's UI starts from its releases. The spike decides nothing itself; GitHub Pages hosting is
 spike-html-hosting's.
 
-The spike is the sub-goal `experiment.html.spike-html-apps` in the coordinator's roadmap,
-`standards-lab/context/roadmap.toml`, where its tasks live. Its question is framed in
-`standards-lab/context/html-artifacts.md`, under "Experiment: spike-html-apps".
+The spike was the sub-goal `experiment.html.spike-html-apps` in the coordinator's roadmap,
+`standards-lab/context/roadmap.toml`. It has answered and synced, so its roadmap entry is gone.
+Its question is framed in `standards-lab/context/html-artifacts.md`, under "Experiment:
+spike-html-apps", and its answer section sits there under "Answers · experiment.html", for
+experiment.html's intake.
 
 ## The question
 

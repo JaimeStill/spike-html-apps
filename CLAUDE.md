@@ -24,9 +24,10 @@ workflow; start from `context/README.md`.
   installed by tag into a consumer outside the spike under npm, pnpm, and bun, then built and
   loaded, printing a dated table of yes and no rows. "Consumption by tag" in `context/README.md`
   records its run.
-- **Goals:** this spike's tasks live in the coordinator's roadmap,
-  `standards-lab/context/roadmap.toml`, under `experiment.html.spike-html-apps`. Its goal record
-  is `context/goals/experiment.html.spike-html-apps.md`.
+- **Status:** answered and synced. The answer is "The answer" in `context/README.md`, and its
+  answer section is in `standards-lab/context/html-artifacts.md`, under "Answers ·
+  experiment.html", for experiment.html's intake. The goal's roadmap entry and goal record are
+  gone.
 - **Repositories:** the root, the three layer repositories spike-html-apps-foundation,
   -components, and -sdk, the extension repository spike-html-apps-noctis, and
   spike-html-apps-tooling, the browser-test and screenshot tooling the others share. Each but the
