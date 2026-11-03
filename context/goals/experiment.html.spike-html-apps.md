@@ -259,9 +259,9 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 
 ## Handoff
 
-- Next move: the emulator's hold rule (Q16) and the stage tests on it; then the spec review, the
-  editor, validation, and the session brief. The root is on components v0.10.2 (d19c12f); every
-  walkthrough finding is fixed and re-captured; the walkthrough awaits the architect's acceptance.
+- Next move: the stage tests onto the hold rule (Q21 A), then the spec review, the editor,
+  validation, and the session brief. The hold rule is committed (3b833b7); the walkthrough is
+  accepted; the root is on components v0.10.2 (d19c12f).
 - No WIP slice. No escalation waiting. Every layer repository is on main and clean; only the root
   holds the `pipeline` branch.
 - Held: eslint-plugin-boundaries 7.4.1 in the root, published 2026-11-02T08:08Z, until pnpm's
@@ -1119,6 +1119,12 @@ slices 15/18, each through its design review (13, 14, 15 accepted). Released thi
 - pipeline: Q20 (architect): sl-event-log's pairs are a `--space-3xs` step apart at 30rem and
   wider, `--space-2xs` under it; a margin between pairs, since the 30rem query can't restyle the
   container it measures.
+- pipeline: the walkthrough accepted by the architect, its findings fixed (8739e58, components
+  v0.10.2): the design review of slices 13–18.
+- pipeline: Q21 (architect): the hold rule (3b833b7) makes a partial state exact; a live advance
+  is guarded by starting the run once the page is ready, so every stage event arrives while it
+  watches. The deep-link and reload tests assert the held first frame exactly; no broker-level
+  injection. The screenshot description holds its run-under-way document too.
 - pipeline: finding, for the tooling: the screenshot bin's terminal output (kitten icat through
   tmux's passthrough) doesn't survive tmux scrollback; captures and the run are sound. kitty's
   Unicode-placeholder mode is built for tmux. Not in this task.
