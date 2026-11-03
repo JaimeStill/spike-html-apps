@@ -1,8 +1,8 @@
 # goal · experiment.html.spike-html-apps
 
-- **State:** idle
-- **Task:** none
-- **Branch:** none
+- **State:** building
+- **Task:** answer
+- **Branch:** answer
 
 ## Tasks
 
@@ -14,6 +14,244 @@
 6. [x] tooling
 7. [x] pipeline
 8. [ ] answer
+
+## Task brief · answer
+
+```
+Problem       Evidence 9 is unproven: the layers have been consumed by tag only inside the spike
+              and only under pnpm. The gaps exist only as scattered lines in the goal record,
+              spike-ai-pipeline's capstone has no record of NATS over WebSocket to weigh against
+              a backend relay, and the spike has no answer. This is the spike's last task, so the
+              intake and the capstone read whatever it leaves.
+Behaviors     1. The root's currency command is silent with eslint-plugin-boundaries at 7.4.1,
+                 and the check passes, the app tier's violation tree included.
+              2. A consumer measure, run on demand and never by the check, installs
+                 foundation v0.3.0, components v0.10.2, sdk v0.4.0 with its two NATS peers, and
+                 noctis v0.1.1 by their git tags into a new consumer outside every spike
+                 repository, once each under npm, pnpm, and bun. It reads the network, writes
+                 nothing in the repository, and removes its scratch space when it ends.
+              3. Each install holds each layer package at its tag's version, its files equal to
+                 the tag's tree file for file, and the components' and noctis's foundation peer
+                 resolved to the consumer's own foundation.
+              4. Each install's Vite build succeeds, and the built app, served and loaded in the
+                 pinned chrome-headless-shell, shows the following:
+                 - every component's tag is defined and renders in its shadow root;
+                 - the foundation's styling applies;
+                 - noctis is registered and, once selected, changes the color tokens;
+                 - the sdk's router mounts a route;
+                 - the sdk's client reads a JSON response as a success and a problem response
+                   as a failure, both from the measure's own server.
+              5. The measure prints one dated Markdown table:
+                 - the header carries the date and the node, npm, pnpm, bun, and Vite versions;
+                 - each row is one manager and one measure (install, version and tree, peers,
+                   build, page), answered yes or no with what it observed;
+                 - the command exits nonzero when any row is no.
+                 Its comparison logic (tree equality, the version check) is tested offline in
+                 the check.
+              6. The spike's README records that table under evidence 9 with its date, along with
+                 the guard any manager needed.
+              7. The README records each gap and who decides it:
+                 - Firefox (no blocking="render", so the stored theme can flash before first
+                   paint);
+                 - WebKit (no CSS module scripts, so unbundled consumption fails, while a Vite
+                   build rewrites them), both cited to web-features 3.45.0;
+                 - real auth (one static token, and the broker's token in its URL);
+                 - real inference (a scripted Open Responses stream);
+                 - persistence (memory only);
+                 - a recreated stream that a stored cursor can't detect;
+                 - an untested connection lost for good;
+                 - the live stage tests' timing margin.
+              8. The README's answer carries a NATS-over-WebSocket record for spike-ai-pipeline:
+                 ordering, auth, ports, and native-tier use as built and proven, with latency
+                 left to the capstone, which measures it against a relay on one backend.
+              9. The README's "The answer" states the spike's question, a one-line answer, and
+                 evidence 1–10, each naming where it is proven (a test, a mise task, a running
+                 demo, or the architect's acceptance), and says which items are proven by tests
+                 alone. Evidence 7 reports:
+                 - the whole-bundle size at ship (151.0 kB min, 39.2 kB gzip, 34.5 kB brotli,
+                   beside Material Web's 72.1 kB gzip);
+                 - the primitives baselines;
+                 - the budget, left to the experiment's final review.
+                 The answer carries the spike's conventions for the intake to adopt.
+             10. The goal record's pending edits carry the answer section and the filled-in
+                 edits, and no longer carry edits to this goal's own roadmap entries.
+Test seams    The consumer measure's table (behaviors 2–5), with its comparison logic under the
+              check's unit tier. Behaviors 6–10 are written records, checked at review.
+Slices        0. Currency: eslint-plugin-boundaries 7.4.1, currency silent, check green.
+              1. The consumer measure: the command, its offline unit tests, and one passing run.
+              2. Consumption and gaps recorded: the dated table under evidence 9, and the gaps.
+              3. The answer: the NATS-over-WebSocket record, "The answer", the README's
+                 evidence status, and the pending edits.
+Out of scope  - an offline consumer tier in the check;
+              - jsDelivr and unbundled import-map consumption;
+              - running Firefox or WebKit;
+              - measuring latency;
+              - setting a size budget;
+              - any layer release;
+              - globals 17.14.0 in the layer repositories;
+              - the open findings for the tooling, foundation, and sdk;
+              - test/documents/, which stays untracked and untouched.
+Door          two-way: only the root changes and nothing is tagged. The sync's coordinator
+              edits land as a pull request that can be reverted.
+```
+
+There is no Release line: the task releases nothing.
+
+### Slice notes
+
+Every slice is done when `mise run check` passes, after `mise run install`, in
+`/home/jaime/experiments/spike-html-apps`. `test/documents/` is untracked and must stay as it is:
+don't add, move, or ignore it.
+
+**Slice 0 · eslint-plugin-boundaries 7.4.1**
+
+- Bump the `package.json` devDependency `eslint-plugin-boundaries` from 7.4.0 to 7.4.1, then run
+  `pnpm install`.
+- Afterwards, check that `pnpm-workspace.yaml` gained no `minimumReleaseAgeExclude` entry. pnpm
+  writes one itself for a young dependency; remove it if one appears.
+- 7.4.1 newly checks imports written as `typeof import()`, as template literals inside casts, and
+  as `import x = require()`:
+  - `test/unit/apps.test.ts` with `test/unit/apps-tree.ts` must still match its violation tree
+    exactly;
+  - if a new violation appears in `apps/`, fix the import at its source rather than widening the
+    table;
+  - if the tree test's expected set changes, escalate.
+- Done when `mise run currency` prints nothing and the check passes.
+
+**Slice 1 · `mise run consumers`**
+
+- **Pins:** add `bun = "1.4.4"` to `mise.toml` `[tools]`. npm comes with node; pnpm is already
+  pinned.
+- **Task:** `[tasks.consumers]` depends on `preflight` and `browser`, and runs
+  `node scripts/consumers.ts` with `BROWSER_EXECUTABLE=$(mise which chrome-headless-shell)`.
+  - Its description says it reads the network and writes nothing in the repository.
+  - It is not a dependency of `check`.
+- **Prior art:** spike-html-packages' `scripts/live.js` and `scripts/consumers.sh`. Copied or
+  adapted code carries one provenance line, "Adapted from spike-html-packages (<sha>): <path>".
+- **Scratch:** `mkdtemp(tmpdir()/spike-html-apps-consumers-)`, removed in `finally` and on
+  SIGINT/SIGTERM.
+- **Consumer template:** `test/consumers/app/` holds a `package.json` with no lockfile,
+  `index.html`, `main.ts`, and `vite.config.ts`.
+  - `package.json` dependencies: the four layers as
+    `github:JaimeStill/spike-html-apps-<layer>#<tag>`, and the NATS peers at 3.4.0.
+  - Its devDependencies: vite 8.3.5, vite-plugin-standard-css-modules 0.3.0, and rolldown 1.2.16.
+    rolldown is declared because the plugin imports it without declaring it.
+  - Exclude the template from ESLint, `tsconfig.test.json`, and Prettier if needed, since it
+    imports noctis, which the root doesn't install.
+  - `main.ts` imports:
+    - the foundation's page entry and its profiles;
+    - noctis's `noctis.js` and `noctis.css`;
+    - every component's module;
+    - the sdk's `router.js`, `api.js`, `auth.js`, `events.js`, and `events/nats.js`.
+  - It mounts one route that renders every component.
+- **Installs:**
+  - npm, with a project `.npmrc` setting `allow-git=root`; record whether npm refuses without it;
+  - pnpm;
+  - bun.
+
+  Each runs with the user's own config neutralized, as spike-html-packages'
+  `scripts/unconfigured.sh` does, and resolves fresh.
+- **Rows per manager:**
+  1. The install exits 0.
+  2. Each layer's version equals its tag.
+  3. Each layer's files equal its tag's tree, compared against a `git clone --depth 1 --branch
+     <tag>` and ignoring each manager's own metadata.
+  4. The foundation that components and noctis resolve is the consumer's one foundation, at the
+     same real path.
+  5. `vite build` exits 0.
+  6. The page, served by tooling's `server.js` and opened with `browser.js`'s `launch` and
+     `until`, passes these checks:
+     - every `sl-*` tag is defined, with a shadow root;
+     - a foundation token on `:root` is non-empty;
+     - selecting noctis changes `--bg-1`;
+     - the router's outlet holds the route;
+     - `client.get` of a JSON path is ok, and of a problem path is a failure with its title.
+       The measure's own server answers both paths.
+- **Output:** a header `### Consumption by tag, <UTC date>` with the tool versions and tags, then
+  the Markdown table. The command exits 1 on any no.
+- **Offline tests:** `scripts/consumers/compare.ts` holds the tree comparison and the version
+  check. `test/unit/consumers.test.ts` covers them against small fixtures: equal, missing, extra,
+  differing bytes, and wrong version.
+- **Done when** the check passes and one run prints every row yes. A no caused by a layer defect
+  escalates, since no layer release is planned.
+
+**Slice 2 · consumption and gaps** (`context/README.md`)
+
+- Evidence 9 points to the answer, which holds the dated table and any guard a manager needed.
+- The gaps paragraph covers:
+  - Firefox 147: no `blocking="render"` (`sdk/web.go:246`);
+  - Safari 26.2: no CSS module scripts, which matters for unbundled use only;
+  - the browser tier speaks only the DevTools protocol, so neither browser is run;
+  - real auth: the static token, and the broker's token in its URL, for v1.auth to decide;
+  - real inference: the scripted stream, for the capstone to decide;
+  - persistence: memory only;
+  - a recreated stream a stored cursor can't detect (goal record:834-837);
+  - an untested connection lost for good (339-341);
+  - the 1.5 s stage margin the live stage tests rely on (874-880).
+
+**Slice 3 · the answer and the pending edits**
+
+- **README "The answer"** replaces "Pending", modelled on spike-html-packages' "The answer". It
+  holds:
+  - the question and a bold one-line answer;
+  - evidence 1–10, each with where it is proven:
+    1. the sdk's api, auth, router, and upload tests, plus the root browser tier;
+    2. the foundation's format tests;
+    3. the sdk's nats tests and the root's `live.test.ts`;
+    4. `sdk/web_test.go` and `base.test.ts`, plus `mise run serve`;
+    5. the components' browser tier and specimen pages;
+    6. the root browser tier, serve, and screenshots;
+    7. the zero violations in `apps.test.ts`, the size at ship, and the baselines, with the
+       budget deferred;
+    8. `external.test.ts` and `instances.test.ts`, plus `mise run demo`;
+    9. `mise run consumers`, dated;
+    10. the architect's acceptance of the screenshots;
+  - which items tests alone prove;
+  - a pointer to `context/conventions.md`;
+  - the evidence intro updated to say all ten are built.
+- **NATS-over-WebSocket record**, a subsection for spike-ai-pipeline, covering:
+  - ordering and resume: one JetStream ordered consumer per read, an opaque sequence cursor, no
+    gap and no duplicate on resume, `UnknownCursorError`, and nats-core's reconnect defaults;
+  - auth: one static token on both listeners, handed out through the shell's config;
+  - ports: a WebSocket listener of its own (4223), whose origin check shares the CORS list, and
+    the Local Network Access workaround in the test harness (goal record:459-462);
+  - native-tier use: Node in the sdk's unit tier, and the emulator's own broker;
+  - latency: deferred to the capstone;
+  - cost: two optional peers.
+- **Pending edits** in the goal record, from line 919:
+  - Drop the 11 edits to this goal's own roadmap entries: 929-944, 948-949, 965-972, 986-993,
+    and 1003-1012.
+  - Merge 921-922 with 958-964 into the v1.client summary: NewClient as proven, and its path to
+    go-web-service's `sdk/`, then go-web-sdk.
+  - Merge 923-924 with 952-955 into the v1.middleware summary: CORS's trigger has fired, with
+    what the external client needed; rs/cors v1.11.1's state; and jub0bs/cors as the
+    alternative to weigh.
+  - Amend 925-927: the capstone bullet in `ai-strategy.md` names the tags foundation v0.3.0,
+    components v0.10.2, and sdk v0.4.0, and cites the NATS record.
+  - Keep 928, 950-951, 973-978, 983-985, and 994-1002.
+  - Extend 945-947 with where the NATS record sits.
+  - Replace 956-957 with the `nats-credentials` backlog goal.
+  - Remove 979-982 and 1013-1014 once the answer carries them.
+  - Add the html-artifacts.md answer section,
+    "### Answer · experiment.html.spike-html-apps".
+
+### Sync (for the session brief)
+
+```
+### Sync
+  coordinator   context/html-artifacts.md: answer section for spike-html-apps; first paragraph,
+                  live-transport bullet, "Settled for the spikes" review bullet
+                context/ai-strategy.md: capstone bullet names the layer tags and the NATS record
+                roadmap.toml: spike-ai-pipeline summary clause; v1.client and v1.middleware
+                  summaries; backlog nats-credentials, foundation-extension, Neovim screenshots;
+                  remove experiment.html.spike-html-apps (active and its table)
+                references.toml: spike-html-apps-foundation, -components, -sdk, -noctis, -tooling
+  next          experiment.html.spike-html-hosting · staged on accept
+```
+
+## Progress
+
+slices 0/4 committed · standards — · spec — · editor —
 
 ## Decisions
 
@@ -915,6 +1153,16 @@
   - the sdk's `src/api.ts` and `src/router.ts` headers still name
     `test/unit/declarations.test.js`, now `.ts` (the tooling task's finding); sdk v0.3.0 and v0.4.0
     left them, so its next release corrects them.
+- answer: consumption by tag is proven by a networked, dated `mise run consumers` outside the
+  check, under npm, pnpm, and bun (bun added to mise); an offline consumer tier was rejected, since
+  the check reads no network and the spike closes here.
+- answer: Firefox and WebKit are recorded as gaps by named feature (web-features 3.45.0), not run;
+  the tooling speaks DevTools only, and Playwright was rejected for the browser tier.
+- answer: the NATS-over-WebSocket record for spike-ai-pipeline sits in this README's "The answer",
+  cited from ai-strategy.md's capstone bullet; latency is left to the capstone.
+- answer: the size budget is reported, not set; the experiment's final review sets it.
+- answer: the 11 pending edits to this goal's own roadmap entries are dropped, since sync deletes
+  its table; a backlog goal `nats-credentials` is added at sync.
 
 ## Pending edits
 
