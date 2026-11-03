@@ -26,7 +26,7 @@ import {
   throttle,
   uploads,
 } from "./support/documents.ts";
-import { stageNames, start } from "./support/emulator.ts";
+import { liveStageInterval, stageNames, start } from "./support/emulator.ts";
 import { proxy } from "./support/proxy.ts";
 import type { Emulator, StartOptions } from "./support/emulator.ts";
 
@@ -259,8 +259,9 @@ describe("an upload", () => {
 
 describe("a listed document's run", () => {
   test("advances live as its stages run, with no reload", async (t) => {
-    // Stages a third of a second apart, so each status is rendered long enough to be seen.
-    await boot({ env: { EMULATOR_RUNS_STAGE_INTERVAL: "300ms" } });
+    // Stages liveStageInterval apart, so each entry is listed before its run's second stage
+    // completes, and each status is rendered long enough to be seen; its comment says why.
+    await boot({ env: { EMULATOR_RUNS_STAGE_INTERVAL: liveStageInterval } });
     const page = await open();
     await page.evaluate(WATCH);
 

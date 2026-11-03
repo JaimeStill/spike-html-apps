@@ -25,7 +25,7 @@ import {
   listReady,
   uploads,
 } from "./support/documents.ts";
-import { stageNames, start } from "./support/emulator.ts";
+import { liveStageInterval, stageNames, start } from "./support/emulator.ts";
 import type { Emulator, Run } from "./support/emulator.ts";
 
 let browser: Browser;
@@ -185,8 +185,9 @@ const listed = (page: Page, name: string, status: string, timeout?: number) =>
 
 describe("a run that fails", () => {
   test("reaches failed live in the list and the document view, beside one that completes", async (t) => {
-    // Stages 700 ms apart, so the view is open before the run fails at its third.
-    await boot("700ms");
+    // Stages liveStageInterval apart, so the entries are listed and the view is open before the
+    // run fails at its third; its comment says why.
+    await boot(liveStageInterval);
     const page = await open("chat");
     // The record starts before the uploads, so the timeline is sampled from its first frame: a
     // sampler started once the view showed began behind a run that may have moved on.

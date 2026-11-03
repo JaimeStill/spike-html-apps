@@ -21,6 +21,17 @@ const root = join(import.meta.dirname, "../../..");
 /** The nats token every emulator the tier boots is configured with. */
 export const token = "browser-token";
 
+/** The stage interval, EMULATOR_RUNS_STAGE_INTERVAL, the cases that watch a run advance live
+ * boot with: documents.test.ts's "advances live" and failed.test.ts's failed-live case. Each
+ * uploads, then samples the list or the view as the run moves, so each claims the page shows a
+ * stage the run had not yet passed when its entry was listed; and listing a new entry takes the
+ * list's 200 ms debounce and a read of the API, while the run's first stage completes at once and
+ * each after it one interval later. That is a timing dependency, the real API's limit, accepted
+ * with a wide margin: a second and a half per stage lists the entry, and opens its view, well
+ * before the next stage completes, even under load, at a few seconds a case. Every other case
+ * keeps start's 100 ms, or the interval its own comment gives. */
+export const liveStageInterval = "1500ms";
+
 /** The order a run's stages pass in. */
 export const stageNames = ["upload", "metadata", "extraction", "chunks", "embeddings"];
 
