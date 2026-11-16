@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@jaimestill/spike-html-apps-components':
         specifier: github:JaimeStill/spike-html-apps-components#v0.10.2
-        version: https://codeload.github.com/JaimeStill/spike-html-apps-components/tar.gz/b324455cd698823c846f51d083ff27183f71d75c(@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55)
+        version: https://codeload.github.com/JaimeStill/spike-html-apps-components/tar.gz/b324455cd698823c846f51d083ff27183f71d75c(@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9)
       '@jaimestill/spike-html-apps-foundation':
-        specifier: github:JaimeStill/spike-html-apps-foundation#v0.3.0
-        version: https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55
+        specifier: github:JaimeStill/spike-html-apps-foundation#v0.3.1
+        version: https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9
       '@jaimestill/spike-html-apps-sdk':
         specifier: github:JaimeStill/spike-html-apps-sdk#v0.4.0
         version: https://codeload.github.com/JaimeStill/spike-html-apps-sdk/tar.gz/91e151a0602f22dcc4849a2df427780ef03fbb83(@nats-io/jetstream@3.4.0)(@nats-io/nats-core@3.4.0)
@@ -176,9 +176,9 @@ packages:
     peerDependencies:
       '@jaimestill/spike-html-apps-foundation': ^0.3.0
 
-  '@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55':
-    resolution: {gitHosted: true, integrity: sha512-bGAtgg4E8Dqi4takgffAWSoUKiRMa8UTZuPy3yy2ZCWcbd8GlU+rhdXM1FwUNe5dPDTqPsbfTHcKxYdP9UjKZA==, tarball: https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55}
-    version: 0.3.0
+  '@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9':
+    resolution: {gitHosted: true, integrity: sha512-g0RY4eqvwhGEvzrOKtXvFSkJxlLffC4sPKtV95Co7jBBKWxTF1cbaV24cDEk6uylognMhvVHUh8uEcVfJXLZHw==, tarball: https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9}
+    version: 0.3.1
 
   '@jaimestill/spike-html-apps-sdk@https://codeload.github.com/JaimeStill/spike-html-apps-sdk/tar.gz/91e151a0602f22dcc4849a2df427780ef03fbb83':
     resolution: {gitHosted: true, integrity: sha512-hEdfOC9LFbB6XuTRobEuhcLerN0KJz1KwfQPjGAZnsYOe5l2+k5anEuTmYDQqzs/8qoXiPYQqp7+lKfkl3aScw==, tarball: https://codeload.github.com/JaimeStill/spike-html-apps-sdk/tar.gz/91e151a0602f22dcc4849a2df427780ef03fbb83}
@@ -1311,13 +1311,13 @@ snapshots:
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
-  '@jaimestill/spike-html-apps-components@https://codeload.github.com/JaimeStill/spike-html-apps-components/tar.gz/b324455cd698823c846f51d083ff27183f71d75c(@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55)':
+  '@jaimestill/spike-html-apps-components@https://codeload.github.com/JaimeStill/spike-html-apps-components/tar.gz/b324455cd698823c846f51d083ff27183f71d75c(@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9)':
     dependencies:
-      '@jaimestill/spike-html-apps-foundation': https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55
+      '@jaimestill/spike-html-apps-foundation': https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9
       lit: 3.3.3
       marked: 18.1.2
 
-  '@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/ff723d1597cab408fe81d7e35ab52bfa33cd9c55': {}
+  '@jaimestill/spike-html-apps-foundation@https://codeload.github.com/JaimeStill/spike-html-apps-foundation/tar.gz/084790f4a7fc78f9df6e2d803fa92d822ea0bbc9': {}
 
   '@jaimestill/spike-html-apps-sdk@https://codeload.github.com/JaimeStill/spike-html-apps-sdk/tar.gz/91e151a0602f22dcc4849a2df427780ef03fbb83(@nats-io/jetstream@3.4.0)(@nats-io/nats-core@3.4.0)':
     optionalDependencies:
