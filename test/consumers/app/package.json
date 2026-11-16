@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.10.2",
+    "@jaimestill/spike-html-apps-components": "github:JaimeStill/spike-html-apps-components#v0.10.3",
     "@jaimestill/spike-html-apps-foundation": "github:JaimeStill/spike-html-apps-foundation#v0.3.1",
     "@jaimestill/spike-html-apps-noctis": "github:JaimeStill/spike-html-apps-noctis#v0.1.1",
     "@jaimestill/spike-html-apps-sdk": "github:JaimeStill/spike-html-apps-sdk#v0.4.0",

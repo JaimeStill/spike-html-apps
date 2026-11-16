@@ -1,6 +1,6 @@
 // The side pane's documents in the drawer, in the binary's build. At 375px and 480px, below the
 // app's stacking width, 48rem, the drawer is closed as the page loads; the header's documents
-// button opens it modally, focus on its Close, and Close and Escape close it, focus back on the
+// button opens it modally, focus on its heading, and Close and Escape close it, focus back on the
 // button; d opens it, and is quiet while it is open, the page's bindings resting under a modal
 // dialog, and types itself in the search field; choosing an entry navigates and closes it; an
 // upload carries on with the drawer closed, the button's badge counting it while in flight, in the
@@ -121,13 +121,13 @@ for (const width of [375, 480]) {
       assert.equal(await page.evaluate(`${DRAWER}.open`), false);
     });
 
-    test("opens modally from the button, focus on Close; Close and Escape close it, focus back on the button", async () => {
+    test("opens modally from the button, focus on its heading; Close and Escape close it, focus back on the button", async () => {
       const page = await open(width);
       for (const closeBy of ["Close", "Escape"]) {
         await clickAt(page, BUTTON);
         await modal(page);
         const opened = await shown(page);
-        assert.equal(opened.focus, "close", `opened for ${closeBy}: focus on Close`);
+        assert.equal(opened.focus, "heading", `opened for ${closeBy}: focus on the heading`);
         assert.equal(opened.expanded, "true");
         assert.equal(
           await page.evaluate(`${CLOSE}.textContent.replace(/\\s+/g, " ").trim()`),

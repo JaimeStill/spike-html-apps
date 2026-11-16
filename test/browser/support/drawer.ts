@@ -14,13 +14,17 @@ export const BUTTON = "document.querySelector('.workspace-documents button')";
 /** The drawer's Close button, as a page expression. */
 export const CLOSE = `${DRAWER}.shadowRoot.querySelector('dialog header button')`;
 
+/** The drawer's dialog's heading, which takes first focus as the dialog opens, as a page
+ * expression. */
+export const HEADING = `${DRAWER}.shadowRoot.querySelector('dialog header h2')`;
+
 /** The drawer and its button as the page shows them: the drawer's mode and whether its dialog is
  * open modally, where focus is, and the button's visibility, expanded state, badges, and live
  * region's text. */
 export interface Shown {
   mode: "docked" | "drawer";
   modal: boolean;
-  focus: "close" | "button" | "search" | "body" | "other";
+  focus: "heading" | "button" | "search" | "body" | "other";
   button: boolean;
   expanded: string | null;
   badges: string[];
@@ -35,7 +39,7 @@ export const shown = (page: Page): Promise<Shown> =>
     const dialog = drawer.shadowRoot.querySelector("dialog");
     const el = document.activeElement;
     const focus =
-      el === drawer && drawer.shadowRoot.activeElement === ${CLOSE} ? "close"
+      el === drawer && drawer.shadowRoot.activeElement === ${HEADING} ? "heading"
       : el === button ? "button"
       : el?.matches("input[name=q]") ? "search"
       : el === document.body ? "body" : "other";
