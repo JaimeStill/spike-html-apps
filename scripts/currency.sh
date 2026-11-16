@@ -5,6 +5,10 @@
 # everything current it prints nothing and exits 0. It reads the network and writes nothing. Run it
 # through `mise run currency`, which sets GOWORK=off and GO_MODULES.
 #
+# A hold is recorded here, beside the scan it narrows: typescript and rolldown are compared against
+# the newest version their dependent's range accepts, and the go.mod requirements in go_held at
+# their held versions are skipped, each with its reason.
+#
 # A package.json pin is a version, compared against the registry's latest, or a github: tag,
 # github:<owner>/<repo>#vX.Y.Z (the layer packages and the tooling), compared against the
 # repository's highest vX.Y.Z tag in `git ls-remote --tags`, which neither the registry nor `pnpm
@@ -71,6 +75,7 @@ pins=$(node -p '
     .join("\n")
 ')
 typescript_eslint=$(node -p 'require("./package.json").devDependencies["typescript-eslint"]')
+vite=$(node -p 'require("./package.json").devDependencies.vite')
 while read -r file package pin; do
   [[ -n "$package" ]] || continue
   if [[ $pin =~ ^github:([^#]+)#(v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
@@ -92,6 +97,15 @@ while read -r file package pin; do
     latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
       sort -V | tail -n 1)
   fi
+  # rolldown is held to the newest version vite's dependency range accepts (vite 8.3.8 pins
+  # ~1.2.18), since it is declared at the version Vite resolves; a release past the range would
+  # install a second rolldown beside Vite's.
+  if [[ $package == rolldown ]]; then
+    range=$(pnpm view "vite@$vite" dependencies.rolldown)
+    accepted=$(pnpm view "rolldown@$range" version --json)
+    latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
+      sort -V | tail -n 1)
+  fi
   [[ $pin == "$latest" ]] || report "$file: $package $pin -> $latest"
 done <<<"$pins"
 
@@ -101,12 +115,28 @@ done <<<"$pins"
 # read by node, not jq; without its GitHub Actions scan, since the root runs no CI.
 go_minor=$(MISE_LOG_LEVEL=error mise latest go | cut -d. -f1,2)
 
+# Direct requirements held at a version, as `path version`: a held requirement at its held
+# version isn't reported; at any other version it is, so the hold is revisited. go-core,
+# go-messaging, go-messaging/nats, and go-web-sdk are held at the versions the emulator is written
+# against: porting the emulator to those libraries' converted APIs is experiment.html's intake's
+# work, not a currency bump's.
+go_held=$(
+  cat <<'HELD'
+github.com/standards-lab/go-core v0.10.0
+github.com/standards-lab/go-messaging v0.2.0
+github.com/standards-lab/go-messaging/nats v0.2.0
+github.com/standards-lab/go-web-sdk v0.15.2
+HELD
+)
+
 for mod in $GO_MODULES; do
   # Direct requirements with a newer version within their major.
   updates=$(cd "$mod" && go list -m -u -f \
     '{{if and (not .Main) (not .Indirect) .Update}}{{.Path}} {{.Version}} -> {{.Update.Version}}{{end}}' all)
-  while read -r line; do
-    [[ -z "$line" ]] || report "$mod/go.mod: $line"
+  while read -r path version rest; do
+    [[ -n "$path" ]] || continue
+    grep -qxF "$path $version" <<<"$go_held" && continue
+    report "$mod/go.mod: $path $version $rest"
   done <<<"$updates"
 
   # The go directive's minor against the current Go minor: the directive names a minor, with no

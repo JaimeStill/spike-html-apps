@@ -11,8 +11,8 @@
     "@nats-io/nats-core": "3.4.0"
   },
   "devDependencies": {
-    "rolldown": "1.2.16",
-    "vite": "8.3.5",
+    "rolldown": "1.2.19",
+    "vite": "8.3.8",
     "vite-plugin-standard-css-modules": "0.3.0"
   }
 }
