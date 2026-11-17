@@ -8,13 +8,14 @@ it holds, and the release or commit area that proves it.
 
 - **Fix a defect at its source.** Once a defect's source is known, fix and release it there,
   never work around it in a consumer. A workaround leaves the defect for every other consumer.
-  *Proven:* foundation v0.2.1 and v0.2.3 (keys in shadow roots), v0.2.2 (`formatBytes`);
-  components v0.4.0 (`sl-composer`'s `send()`), v0.7.0 (the artifact viewer's header, the stage
-  timeline's reason, the entry's status tone), v0.9.0 and v0.9.1 (the chat thread's following),
-  v0.10.0 (the search results' total and live region), v0.10.1 (`sl-pagination`'s page field),
-  v0.10.2 (`sl-event-log`'s lines); sdk v0.3.0 (text bodies), v0.4.0 (a typed error for a cursor
-  the stream never gave out); tooling v0.3.0 (any server); the emulator's failure, hold, and
-  rich-reply seams.
+  *Proven:* foundation v0.2.1 and v0.2.3 (keys in shadow roots), v0.2.2 (`formatBytes`), v0.3.1
+  (a modal dialog's backdrop alone veiled); components v0.4.0 (`sl-composer`'s `send()`), v0.7.0
+  (the artifact viewer's header, the stage timeline's reason, the entry's status tone), v0.9.0 and
+  v0.9.1 (the chat thread's following), v0.10.0 (the search results' total and live region),
+  v0.10.1 (`sl-pagination`'s page field), v0.10.2 (`sl-event-log`'s lines), v0.10.3
+  (`sl-drawer`'s first focus on its heading); sdk v0.3.0 (text bodies), v0.4.0 (a typed error for
+  a cursor the stream never gave out); tooling v0.3.0 (any server); the emulator's failure,
+  hold, and rich-reply seams.
 - **Keep native behavior.** Use the browser's elements and behavior as they are, and never patch
   them. A patch drifts from the browser and from what users and assistive technology expect.
   *Proven:* foundation v0.3.0 (native `progress`'s track left as Chrome draws it); components
@@ -50,9 +51,13 @@ it holds, and the release or commit area that proves it.
   a record started late or read early misses states, and a DOM observer sees states no frame
   paints. *Proven:* the root's document-moves case (bdae1db, 0 of 40 failing under load, from 9)
   and stage timelines (dd85c7b, 0 of 64, from 2).
-- **Respect supply-chain cooldowns.** Hold a dependency inside pnpm's minimum release age and
-  record the hold; never exclude it from the cooldown. The cooldown is the defense against a
-  compromised release. *Proven:* eslint 10.14.0 and globals 17.14.0, held across the layers.
+- **Install a release the day it ships, after reading its notes.** Set `minimumReleaseAge: 0`
+  in `pnpm-workspace.yaml`, so pnpm installs the latest release the currency report names, and
+  read each release's notes before its bump lands. Reading the notes replaces pnpm's one-day wait,
+  which fails a frozen install of a release published that day. The trade is deliberate: the wait
+  keeps out a compromised publish the registry pulls within hours, and reading the notes doesn't
+  (the architecture's `principles/rolling-currency.md`). *Proven:* every layer's
+  `pnpm-workspace.yaml`, the root's, foundation's, components', sdk's, tooling's, and noctis'.
 - **Measure size at the end.** Measure the whole bundle's gzip and brotli size at the end of a
   session, comparable to peer libraries' published sizes (Material Web's 72.1 kB gzip for
   `all.js` with Lit), rather than failing commits on a budget. A whole-bundle figure compares
