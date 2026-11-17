@@ -19,7 +19,8 @@ workflow; start from `context/README.md`.
   screenshots` captures the pipeline app's walkthrough (`--page <name>`, `--all`). The apps and
   tasks are described in `context/README.md`, "The apps".
 - **Currency:** `mise run currency`: every mise tool, package.json pin, and go.mod go directive
-  and direct requirement behind its latest; silent when all are current.
+  and direct requirement behind its latest, but the holds `scripts/currency.sh` records; silent
+  when all are current.
 - **Consumers:** `mise run consumers`, outside the check since it reads the network: the layers
   installed by tag into a consumer outside the spike under npm, pnpm, and bun, then built and
   loaded, printing a dated table of yes and no rows. "Consumption by tag" in `context/README.md`

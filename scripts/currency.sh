@@ -62,6 +62,15 @@ latest_tag() {
   latest=${latest_tags[$repo]}
 }
 
+# newest_in PACKAGE RANGE: sets latest to the newest release of PACKAGE that RANGE accepts, for a
+# pin held to its dependent's range; pnpm view answers one version as a string, several as an array.
+newest_in() {
+  local accepted
+  accepted=$(pnpm view "$1@$2" version --json)
+  latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
+    sort -V | tail -n 1)
+}
+
 # Each package.json pin against its latest: a github: tag against its repository's tags, a version
 # against the registry. The root's, and the consumer template's, test/consumers/app/, whose pins
 # mise run consumers installs.
@@ -93,18 +102,14 @@ while read -r file package pin; do
   # typescript is held to the newest version typescript-eslint's peer range accepts.
   if [[ $package == typescript ]]; then
     range=$(pnpm view "typescript-eslint@$typescript_eslint" peerDependencies.typescript)
-    accepted=$(pnpm view "typescript@$range" version --json)
-    latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
-      sort -V | tail -n 1)
+    newest_in typescript "$range"
   fi
   # rolldown is held to the newest version vite's dependency range accepts (vite 8.3.8 pins
   # ~1.2.18), since it is declared at the version Vite resolves; a release past the range would
   # install a second rolldown beside Vite's.
   if [[ $package == rolldown ]]; then
     range=$(pnpm view "vite@$vite" dependencies.rolldown)
-    accepted=$(pnpm view "rolldown@$range" version --json)
-    latest=$(node -p '[].concat(JSON.parse(process.argv[1])).join("\n")' "$accepted" |
-      sort -V | tail -n 1)
+    newest_in rolldown "$range"
   fi
   [[ $pin == "$latest" ]] || report "$file: $package $pin -> $latest"
 done <<<"$pins"
